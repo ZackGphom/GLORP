@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/logo.png" alt="GLORP Logo" width="600">
-</p>
-
 # GLORP: The Pixel-to-Vector Beast
 
 **Bzibi&ti tpi$onch… BLAP BLAP BLAAA…**
@@ -145,6 +141,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
