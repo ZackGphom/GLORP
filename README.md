@@ -46,7 +46,7 @@ To avoid cursed, bloated, blurry SVGs — obey:
 
 4. **Pick Your Mutation Mode**
 
-### 🗿 Monolith (Recommended)
+## 🗿 Monolith (Recommended)
 Uses a greedy meshing algorithm:
 - Fuses same-colored pixels into large shapes
 - Generates compact `<path>` blocks
@@ -54,11 +54,9 @@ Uses a greedy meshing algorithm:
 
 *Blu blu blu… MUNCH.*
 
-### 🧱 Lego
+## 🧱 Lego
 Every pixel becomes a 1×1 `<rect>`.  
 Beautiful. Dangerous. Lag-inducing.
-
----
 
 5. **Execute**  
    Hit **Convert** and watch the status bar scream.
@@ -115,6 +113,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
