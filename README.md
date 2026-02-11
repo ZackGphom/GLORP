@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="600" style="image-rendering: pixelated;">
+  <img src="logo.png" width="600" style="image-rendering: pixelated;">
   <br>
 </p>
 
@@ -146,6 +146,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
