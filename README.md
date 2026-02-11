@@ -61,7 +61,7 @@ To avoid cursed, bloated, blurry SVGs — obey:
 3. **Set the Lair**  
    Click **Choose Output Folder**.
 
-4. **Pick Your Mutation Mode**
+4. **Pick Your Mutation Mode :**
 
 # 🗿 Monolith (Recommended)
 Uses a greedy meshing algorithm:
@@ -141,6 +141,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
