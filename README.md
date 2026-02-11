@@ -102,6 +102,17 @@ Beautiful. Dangerous. Lag-inducing.
 -python glorp.py
 
 ---
+## 🍕 Appetite (Batch Processing)
+
+GLORP is a glutton. There is **no hard limit** on how many files you can select at once. 
+
+* **The Queue:** GLORP devours files one by one, so it won't choke.
+* **No Freezing:** Thanks to threaded processing, the UI remains alive while the Beast works.
+* **Memory Limits:** Your RAM is the only ceiling. Converting 1,000 massive images in **Lego Mode** might make your PC sweat.
+
+> *Zup-zup! Give me a single sprite or a whole folder—I will munch them all!* 👾
+
+---
 
 ## Optional offerings (same folder):
 
@@ -113,6 +124,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
