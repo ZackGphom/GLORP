@@ -98,8 +98,9 @@ Beautiful. Dangerous. Lag-inducing.
 ## 🩸 Run the Ritual
 
 ```bash```
-pip install -r requirements.txt
-python glorp.py
+-pip install -r requirements.txt
+
+-python glorp.py
 
 ---
 
@@ -111,4 +112,5 @@ close.png — remove-file button
 
 GLORP does not upscale.
 GLORP does not forgive.
+
 GLORP CONSUMES.
