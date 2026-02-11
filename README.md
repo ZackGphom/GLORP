@@ -35,18 +35,18 @@ To avoid cursed, bloated, blurry SVGs — obey:
 
 - **Original Size Only**  
   Feed GLORP your true pixels.  
-  `16×16`, `32×32`, `64×64` — **no fake upscales**.
+  `16×16`, `32×32`, `64×64` 
 
 - **Nearest Neighbor or Death**  
-  If you resize — **NEAREST ONLY**.  
+  If you resize — **NEAREST ONLY!!!**.  
   Bilinear = heresy. Bicubic = exile.
 
 - **PNG with Transparency**  
   Alpha is holy. JPG is chaos.
 
 - **Hard Edges Only**  
-  No photos. No gradients. No blur.  
-  GLORP only understands square truth.
+  No photos. No hard gradients. No blur.  
+  GLORP only understands square truth. Upload HighRes at your own risk. (But seriously, don't...)
 
 ---
 
@@ -83,7 +83,7 @@ Beautiful. Dangerous. Lag-inducing.
 ## ⚠️ Technical Warnings (Z-Z-ZAP!)
 
 - **Lego Mode Risk**  
-  256×256 = **65,536 objects** 💀  
+  260 × 260 = **67,600** 💀💀💀  
   Your vector editor will lag… then cry.
 
 - **No Photos**  
@@ -114,9 +114,9 @@ Beautiful. Dangerous. Lag-inducing.
 
 ```bash```
 
--pip install -r requirements.txt
+- pip install -r requirements.txt
 
--python glorp.py
+- python glorp.py
 
 ---
 ## 🍕 Appetite (Batch Processing)
@@ -141,6 +141,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
