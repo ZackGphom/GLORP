@@ -1,7 +1,6 @@
 <p align="center">
   <img src="assets/logo.png" width="600" style="image-rendering: pixelated;">
   <br>
-  <b>"Vectorize your art, not your RAM."</b>
 </p>
 
 # GLORP: The Pixel-to-Vector Beast
@@ -147,6 +146,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
