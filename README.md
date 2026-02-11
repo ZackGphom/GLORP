@@ -8,6 +8,23 @@ GLORP is a tiny desktop monster written in Python + Tkinter that
 Born to serve pixel artists, indie devs, and UI gremlins who demand  
 **crisp edges**, **zero blur**, and **maximum munch**.
 
+## 🚀 Download & Examples
+
+If you just want to use the tool without running the script, you can download the compiled version here:
+
+**[👉 Download GLORP on Itch.io](https://zackdurec.itch.io/glorp-pixel-to-svg)**
+
+On the Itch.io page, you'll also find:
+* **Visual Examples**: Comparison between original PNG and optimized SVG.
+* **Mode Previews**: See the difference between "Monolith" and "Lego" modes.
+* **UI Screenshots**: A quick look at the simple 3-button interface.
+
+  ### 🖼️ Why use GLORP?
+
+* **For Printing**: Perfect for stickers, t-shirts, and posters where you need infinite scaling.
+* **For Web**: Optimized SVGs are tiny and look crisp on any screen.
+* **Batch Processing**: Drop 100 files and convert them all in seconds.
+
 Mi mi mi… *GLORP hungers for squares.* 
 
 ---
@@ -124,6 +141,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
