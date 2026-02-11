@@ -8,7 +8,7 @@ GLORP is a tiny desktop monster written in Python + Tkinter that
 Born to serve pixel artists, indie devs, and UI gremlins who demand  
 **crisp edges**, **zero blur**, and **maximum munch**.
 
-Mi mi mi… *GLORP hungers for squares.* 🧱
+Mi mi mi… *GLORP hungers for squares.* 
 
 ---
 
@@ -115,5 +115,6 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
