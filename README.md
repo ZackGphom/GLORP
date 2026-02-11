@@ -35,7 +35,7 @@ To avoid cursed, bloated, blurry SVGs — obey:
 
 - **Original Size Only**  
   Feed GLORP your true pixels.  
-  `16×16`, `32×32`, `64×64` 
+  `16×16`, `32×32`, `64×64` etc.
 
 - **Nearest Neighbor or Death**  
   If you resize — **NEAREST ONLY!!!**.  
@@ -141,6 +141,7 @@ GLORP does not upscale.
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
 
 
