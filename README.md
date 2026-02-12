@@ -1,14 +1,4 @@
-<p align="center"> <img src="logo.png" width="600" style="image-rendering: pixelated;"> <br> </p>
-# GLORP: The Pixel-to-Vector Beast
-
-**Bzibi&ti tpi\$onch... BLAP BLAP BLAAA...**
-
-GLORP is a desktop monster written in **Python + PySide6 (Qt)** that\
-**devours raster pixels** and **spits out clean, optimized SVG
-vectors**.
-
-Built for pixel artists, indie devs, UI gremlins and anyone who demands\
-**crisp edges**, **zero blur**, and **maximum munch efficiency**.
+<p align="center"> <img src="logo.png" width="600" style="image-rendering: pixelated;"> <br> </p> # GLORP: The Pixel-to-Vector Beast **Bzibi&ti tpi$onch… BLAP BLAP BLAAA…** GLORP is a tiny desktop monster written in Python + Tkinter that **devours raster pixels** and **spits out clean, optimized SVG vectors**. Born to serve pixel artists, indie devs, and UI gremlins who demand **crisp edges**, **zero blur**, and **maximum munch**.
 
 ------------------------------------------------------------------------
 
@@ -159,4 +149,5 @@ GLORP does not upscale.\
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
 
