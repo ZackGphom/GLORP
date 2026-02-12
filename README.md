@@ -1,11 +1,4 @@
-```{=html}
-<p align="center">
-```
-`<img src="logo.png" width="600" style="image-rendering: pixelated;">`{=html}
-`<br>`{=html}
-```{=html}
-</p>
-```
+<p align="center"> <img src="logo.png" width="600" style="image-rendering: pixelated;"> <br> </p>
 # GLORP: The Pixel-to-Vector Beast
 
 **Bzibi&ti tpi\$onch... BLAP BLAP BLAAA...**
@@ -22,7 +15,7 @@ Built for pixel artists, indie devs, UI gremlins and anyone who demands\
 ## 🚀 Download & Examples
 
 👉 **Download compiled version:**\
-https://zackdurec.itch.io/glorp-pixel-to-svg
+[https://zack-gphom.itch.io/glorp-pixel-to-svg]
 
 On the Itch.io page you'll find:
 
@@ -166,3 +159,4 @@ GLORP does not upscale.\
 GLORP does not forgive.
 
 GLORP CONSUMES.
+
