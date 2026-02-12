@@ -1,163 +1,168 @@
+```{=html}
 <p align="center">
-  <img src="logo.png" width="600" style="image-rendering: pixelated;">
-  <br>
+```
+`<img src="logo.png" width="600" style="image-rendering: pixelated;">`{=html}
+`<br>`{=html}
+```{=html}
 </p>
-
+```
 # GLORP: The Pixel-to-Vector Beast
 
-**Bzibi&ti tpi$onch… BLAP BLAP BLAAA…**
+**Bzibi&ti tpi\$onch... BLAP BLAP BLAAA...**
 
-GLORP is a tiny desktop monster written in Python + Tkinter that  
-**devours raster pixels** and **spits out clean, optimized SVG vectors**.
+GLORP is a desktop monster written in **Python + PySide6 (Qt)** that\
+**devours raster pixels** and **spits out clean, optimized SVG
+vectors**.
 
-Born to serve pixel artists, indie devs, and UI gremlins who demand  
-**crisp edges**, **zero blur**, and **maximum munch**.
+Built for pixel artists, indie devs, UI gremlins and anyone who demands\
+**crisp edges**, **zero blur**, and **maximum munch efficiency**.
+
+------------------------------------------------------------------------
 
 ## 🚀 Download & Examples
 
-If you just want to use the tool without running the script, you can download the compiled version here:
+👉 **Download compiled version:**\
+https://zackdurec.itch.io/glorp-pixel-to-svg
 
-**[👉 Download GLORP on Itch.io](https://zackdurec.itch.io/glorp-pixel-to-svg)**
+On the Itch.io page you'll find:
 
-On the Itch.io page, you'll also find:
-* **Visual Examples**: Comparison between original PNG and optimized SVG.
-* **Mode Previews**: See the difference between "Monolith" and "Lego" modes.
-* **UI Screenshots**: A quick look at the simple 3-button interface.
+-   PNG vs SVG comparisons\
+-   Monolith vs Lego previews\
+-   Updated UI screenshots (Qt engine version)
 
-  ### 🖼️ Why use GLORP?
+------------------------------------------------------------------------
 
-* **For Printing**: Perfect for stickers, t-shirts, and posters where you need infinite scaling.
-* **For Web**: Optimized SVGs are tiny and look crisp on any screen.
-* **Batch Processing**: Drop 100 files and convert them all in seconds.
+## 🧠 Engine Upgrade
 
-Mi mi mi… *GLORP hungers for squares.* 
+GLORP now runs on:
 
----
+-   **PySide6 (Qt)** --- smooth animations & modern UI
+-   Threaded processing (no UI freeze)
+-   Drag & Drop support
+-   Live hover previews
+-   Animated transitions
+-   Performance warning overlays
 
-## 🧪 The Sacred Rules (Preparation)
+The Beast evolved.
 
-To avoid cursed, bloated, blurry SVGs — obey:
+------------------------------------------------------------------------
 
-- **Original Size Only**  
-  Feed GLORP your true pixels.  
-  `16×16`, `32×32`, `64×64` etc.
+## 🖼️ Why use GLORP?
 
-- **Nearest Neighbor or Death**  
-  If you resize — **NEAREST ONLY!!!**.  
-  Bilinear = heresy. Bicubic = exile.
+-   **Printing** --- stickers, posters, merch with infinite scaling
+-   **Web** --- tiny optimized SVGs, crisp everywhere
+-   **Batch Processing** --- convert hundreds of sprites in seconds
 
-- **PNG with Transparency**  
-  Alpha is holy. JPG is chaos.
+*Mi mi mi... GLORP hungers for squares.*
 
-- **Hard Edges Only**  
-  No photos. No hard gradients. No blur.  
-  GLORP only understands square truth. Upload HighRes at your own risk. (But seriously, don't...)
+------------------------------------------------------------------------
 
----
+## 🧪 The Sacred Rules
 
-## 🛠 How to Use the Beast
+To avoid cursed, bloated SVGs --- obey:
 
-1. **Feed the Beast**  
-   Click **Select Images** → add files to the queue.
+-   **Original Size Only**\
+    Feed real pixels: 16×16, 32×32, 64×64, etc.
 
-2. **Gaze into the Void**  
-   Hover over a filename to see a pixel-perfect preview.
+-   **Nearest Neighbor Only**\
+    Bilinear = heresy. Bicubic = exile.
 
-3. **Set the Lair**  
-   Click **Choose Output Folder**.
+-   **PNG with Transparency**\
+    Alpha is holy. JPG is chaos.
 
-4. **Pick Your Mutation Mode :**
+-   **Hard Edges Only**\
+    No photos. No blur. No gradients.
 
-# 🗿 Monolith (Recommended)
-Uses a greedy meshing algorithm:
-- Fuses same-colored pixels into large shapes
-- Generates compact `<path>` blocks
-- Fast and editor-friendly
+GLORP understands square truth.
 
-*Blu blu blu… MUNCH.*
+------------------------------------------------------------------------
 
-# 🧱 Lego
-Every pixel becomes a 1×1 `<rect>`.  
-Beautiful. Dangerous. Lag-inducing.
+## 🛠 How to Use
 
-5. **Execute**  
-   Hit **Convert** and watch the status bar scream.
+1.  Click **Select Images** or drag & drop files\
+2.  Choose **Output Folder**\
+3.  Pick a mutation mode\
+4.  Hit **Convert**
 
----
+Watch the status bar type dramatically.
 
-## ⚠️ Technical Warnings (Z-Z-ZAP!)
+------------------------------------------------------------------------
 
-- **Lego Mode Risk**  
-  260 × 260 = **67,600** 💀💀💀  
-  Your vector editor will lag… then cry.
+## 🗿 Monolith (Recommended)
 
-- **No Photos**  
-  Blur creates massive, broken SVGs.
+Greedy meshing algorithm:
 
-- **Give Me the Truth**  
-  Upscaled pixel art will ruin optimization.
+-   Merges same-colored pixels
+-   Generates compact `<path>` blocks
+-   Fast & editor-friendly
+-   Dramatically smaller SVG size
 
-**BZIBI&TI TPI$ONCH!!**
+*Blu blu blu... MUNCH.*
 
----
+------------------------------------------------------------------------
 
-## 🧬 What’s Inside
+## 🧱 Lego
 
-- Python + Tkinter GUI
-- Pillow (PIL) for image processing
-- Two conversion modes:
-  - `lego` → `<rect>` per pixel
-  - `monolith` → greedy merged `<path>`
-- Alpha support
-- Auto file renaming
-- Hover previews
-- Threaded processing (no UI freeze)
+Every pixel becomes a 1×1 `<rect>`.
 
----
+-   Perfect visual fidelity
+-   Massive object counts
+-   Can lag vector editors
 
-## 🩸 Run the Ritual
+260 × 260 = 67,600 objects 💀
 
-```bash```
+Use responsibly.
 
-- pip install -r requirements.txt
+------------------------------------------------------------------------
 
-- python glorp.py
+## ⚙️ Technical Features
 
----
-## 🍕 Appetite (Batch Processing)
+-   RGBA support
+-   Auto file renaming
+-   Safe pixel limit (1,000,000 px)
+-   Lego danger detection
+-   Hover preview tooltips
+-   Animated UI panels
 
-GLORP is a glutton. There is **no hard limit** on how many files you can select at once. 
+------------------------------------------------------------------------
 
-* **The Queue:** GLORP devours files one by one, so it won't choke.
-* **No Freezing:** Thanks to threaded processing, the UI remains alive while the Beast works.
-* **Memory Limits:** Your RAM is the only ceiling. Converting 1,000 massive images in **Lego Mode** might make your PC sweat.
+## 🩸 Run From Source
 
-> *Zup-zup! Give me a single sprite or a whole folder—I will munch them all!* 👾
+``` bash
+pip install -r requirements.txt
+python glorp.py
+```
 
----
+Requires:
 
-## Optional offerings (same folder):
+-   Python 3.10+
+-   PySide6
+-   Pillow
 
-logo.png — app icon / splash
+------------------------------------------------------------------------
 
-close.png — remove-file button
+## 🍕 Batch Appetite
 
-GLORP does not upscale.
+There is **no hard file limit**.
+
+GLORP processes files one by one.\
+Your RAM is the only ceiling.
+
+1 sprite or 1000 sprites ---\
+GLORP CONSUMES.
+
+------------------------------------------------------------------------
+
+## Optional Assets (same folder)
+
+-   logo.png\
+-   favicon.png\
+-   lego_warning.gif\
+-   DropUrStuffHere.png
+
+------------------------------------------------------------------------
+
+GLORP does not upscale.\
 GLORP does not forgive.
 
 GLORP CONSUMES.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
