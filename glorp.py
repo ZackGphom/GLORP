@@ -12,7 +12,6 @@ from PIL import Image, ImageTk
 from collections import defaultdict
 import threading
 
-# Стили
 APP_BG = "#0f0f0f"
 APP_LIGHT = "#1a1a1a"
 APP_TEXT = "#e6e6e6"
@@ -316,4 +315,5 @@ class GlorpApp:
 if __name__ == "__main__":
     root = tk.Tk()
     app = GlorpApp(root)
+
     root.mainloop()
