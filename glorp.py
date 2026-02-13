@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QRadioButton, QScrollArea, QFrame, QGraphicsOpacityEffect, QMessageBox)
 from PySide6.QtCore import Qt, QSize, QPropertyAnimation, QPoint, Signal, QObject, QTimer, QRect, QEasingCurve, QParallelAnimationGroup
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QMovie, QIcon
+import numpy as np
+from glorp_meshing import *
 
 # --- Global UI Constants ---
 APP_BG = "#0f0f0f"
@@ -94,41 +96,25 @@ def build_svg_optimized(file_path, mode="monolith"):
                 r, g, b, a = pixels[x, y]
                 if a > 0:
                     color_hex = f"#{r:02x}{g:02x}{b:02x}"
-                    svg.append(f'<rect x="{x}" y="{y}" width="1" height="1" fill="{color_hex}"'
-                               f'{f' fill-opacity="{a/255}"' if a < 255 else ""}/>')
+                    opacity = f' fill-opacity="{a/255}"' if a < 255 else ""
+                    svg.append(f'<rect x="{x}" y="{y}" width="1" height="1" fill="{color_hex}"' f'{opacity}/>')
     else:
-        # Optimized mode: Groups pixels by color and performs 2D rectangular merging
-        color_map = defaultdict(set)
-        for y in range(h):
-            for x in range(w):
-                r, g, b, a = pixels[x, y]
-                if a > 0: color_map[(r, g, b, a)].add((x, y))
-        
-        classes = {c: f"c{idx}" for idx, c in enumerate(color_map.keys())}
+        pixels = np.asarray(img)
+        # unique colors in RGBA
+        colors = np.unique(pixels.reshape(-1, 4), axis=0)
+        # remove transparent
+        colors = colors[np.where(colors[:,3] != 0)]
         svg.append("<style>")
-        for c, cls in classes.items(): svg.append(f'.{cls} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
+        for i in range(colors.shape[0]):
+            c = colors[i]
+            svg.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
         svg.append("</style>")
-        
-        for color, coords in color_map.items():
-            cls = classes[color]
-            path_data = []
-            visited = set()
-            sorted_coords = sorted(coords, key=lambda p: (p[1], p[0]))
-            for x, y in sorted_coords:
-                if (x, y) in visited: continue
-                rw = 1
-                while (x + rw, y) in coords and (x + rw, y) not in visited: rw += 1
-                rh = 1
-                while True:
-                    can_v = True
-                    for i in range(rw):
-                        if (x + i, y + rh) not in coords or (x + i, y + rh) in visited: can_v = False; break
-                    if not can_v: break
-                    rh += 1
-                path_data.append(f"M{x},{y}h{rw}v{rh}h-{rw}z")
-                for i in range(rw):
-                    for j in range(rh): visited.add((x + i, y + j))
-            svg.append(f'<path class="{cls}" d="{"".join(path_data)}"/>')
+
+        grid = pixels.view(np.uint32).reshape(pixels.shape[0], pixels.shape[1])
+        for i in range(colors.shape[0]):
+            color = colors[i].view(np.uint32)[0]
+            path = path_finding(grid, color)
+            svg.append(f'<path class="c{i}" d="{path}"/>')
     
     svg.append("</svg>")
     return "\n".join(svg), w, h
