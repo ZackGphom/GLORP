@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PySide6.QtCore import Qt, QSize, QPropertyAnimation, QPoint, Signal, QObject, QTimer, QRect, QEasingCurve, QParallelAnimationGroup
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QMovie, QIcon
 
-# --- Global UI Configuration ---
+# --- Global UI Constants ---
 APP_BG = "#0f0f0f"
 APP_LIGHT = "#1a1a1a"
 APP_HOVER = "#252525"
@@ -31,15 +31,20 @@ MAX_PIXELS = 1_000_000
 LEGO_DANGER_LIMIT = 50_000 
 
 def resource_path(relative_path):
-    """ Bundle resources for PyInstaller """
+    """
+    Retrieves the absolute path to resources for both development and frozen application states.
+    Nuitka/PyInstaller unpacks resources into a temporary directory during onefile execution.
+    """
     try:
-        base_path = sys._MEIPASS
+        # sys._MEIPASS is used by bootloaders to store resource temporary paths
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
 # --- UI Components ---
 class ClickableLabel(QLabel):
+    """ Custom QLabel implementation to handle mouse click signals. """
     clicked = Signal()
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
@@ -50,6 +55,7 @@ class ClickableLabel(QLabel):
             event.accept() 
 
 class AnimatedButton(QPushButton):
+    """ QPushButton subclass with hover state styling and custom padding support. """
     def __init__(self, text, base_color=APP_LIGHT, hover_color=APP_HOVER, is_accent=False, padding=10):
         super().__init__(text)
         self.base_color = ACCENT if is_accent else base_color
@@ -59,7 +65,8 @@ class AnimatedButton(QPushButton):
         self.update_style(self.base_color)
 
     def update_style(self, color):
-        self.setStyleSheet(f"QPushButton {{ background-color: {color}; border: none; border-radius: {RADIUS}; font-weight: bold; color: white; padding: {self.padding}px; }}")
+        self.setStyleSheet(f"QPushButton {{ background-color: {color}; border: none; border-radius: {RADIUS}; "
+                           f"font-weight: bold; color: white; padding: {self.padding}px; }}")
 
     def set_custom_padding(self, p):
         self.padding = p
@@ -70,21 +77,27 @@ class AnimatedButton(QPushButton):
 
 # --- Core Logic ---
 def build_svg_optimized(file_path, mode="monolith"):
-    """ Core conversion algorithm: Pixel array to SVG paths """
+    """
+    Main transformation engine: Converts pixel data into optimized SVG vector paths.
+    Implements a greedy rectangular path merger to reduce total object count in 'monolith' mode.
+    """
     img = Image.open(file_path).convert("RGBA")
     w, h = img.size
-    if w * h > MAX_PIXELS: raise ValueError(f"Too big ({w}x{h}). Max {MAX_PIXELS} px.")
+    if w * h > MAX_PIXELS: raise ValueError(f"Image dimensions exceed limit ({w}x{h}). Max {MAX_PIXELS} pixels.")
     pixels = img.load()
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
     
     if mode == "lego":
+        # Unoptimized mode: Every pixel becomes an individual rect element
         for y in range(h):
             for x in range(w):
                 r, g, b, a = pixels[x, y]
                 if a > 0:
                     color_hex = f"#{r:02x}{g:02x}{b:02x}"
-                    svg.append(f'<rect x="{x}" y="{y}" width="1" height="1" fill="{color_hex}"{f' fill-opacity="{a/255}"' if a < 255 else ""}/>')
+                    svg.append(f'<rect x="{x}" y="{y}" width="1" height="1" fill="{color_hex}"'
+                               f'{f' fill-opacity="{a/255}"' if a < 255 else ""}/>')
     else:
+        # Optimized mode: Groups pixels by color and performs 2D rectangular merging
         color_map = defaultdict(set)
         for y in range(h):
             for x in range(w):
@@ -121,10 +134,11 @@ def build_svg_optimized(file_path, mode="monolith"):
     return "\n".join(svg), w, h
 
 class WorkerSignals(QObject):
+    """ Signal bridge for cross-thread communication between backend and UI. """
     update_status = Signal(str); finished = Signal(); error = Signal(str)
 
 class FileLabel(QLabel):
-    """ UI element with image preview on hover """
+    """ Interactive UI label with dynamic tooltip preview on mouse hover. """
     def __init__(self, text, path):
         super().__init__(text); self.path = path; self.preview_window = None
     def enterEvent(self, event):
@@ -139,17 +153,21 @@ class FileLabel(QLabel):
 
 # --- Main Application Window ---
 class GlorpApp(QMainWindow):
+    """ Main GUI Controller responsible for state management and user interaction. """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("GLORP")
         self.setFixedSize(680, 560)
         
+        # Load window icon using resource path resolution
         fav_path = resource_path("favicon.png")
         if os.path.exists(fav_path):
             self.setWindowIcon(QIcon(fav_path))
         
         self.setStyleSheet(f"background-color: {APP_BG}; color: {APP_TEXT}; font-family: 'Segoe UI';")
         self.setAcceptDrops(True); self.selected_files = []; self.output_folder = ""; self.signals = WorkerSignals()
+        
+        # Initialize animated resources
         self.movie = QMovie(resource_path("lego_warning.gif"))
         
         self.type_timer = QTimer(); self.type_timer.timeout.connect(self.tick_typewriter)
@@ -164,6 +182,7 @@ class GlorpApp(QMainWindow):
         self.init_ui(); self.setup_lego_overlay(); self.setup_drag_overlay()
 
     def init_ui(self):
+        """ Initializes and positions all static and interactive UI elements. """
         self.main_container = QWidget(self); self.setCentralWidget(self.main_container)
         
         self.logo_label = QLabel(self.main_container); pix = QPixmap(resource_path("logo.png"))
@@ -207,6 +226,7 @@ class GlorpApp(QMainWindow):
 
     def on_mode_changed(self): self.update_stats()
     def update_stats(self):
+        """ Dynamically updates pixel count estimation and UI warnings based on the selected mode. """
         is_lego = self.rb_lego.isChecked()
         self.lego_warning_lbl.setVisible(is_lego)
         if not self.selected_files or not is_lego: self.stats_label.setText(""); return
@@ -219,6 +239,7 @@ class GlorpApp(QMainWindow):
         self.stats_label.setText(f"Lego Mode: ~{total:,} shapes"); self.stats_label.setStyleSheet(f"color:{color}; text-decoration:underline; font-size: 11px;")
 
     def show_status(self, msg):
+        """ Triggers typewriter animation for status label updates. """
         self.type_timer.stop(); self.erase_timer.stop(); self.wait_timer.stop()
         self.full_msg = msg; self.current_idx = 0; self.status_label.setText(""); self.type_timer.start(40)
 
@@ -235,14 +256,15 @@ class GlorpApp(QMainWindow):
     def show_critical_error(self, text): QMessageBox.critical(self, "Error", text)
 
     def animate_transition(self, show_queue):
+        """ Smoothly transitions UI layout between 'Empty' and 'Processing' states using parallel animations. """
         self.group = QParallelAnimationGroup(); self.select_btn.raise_()
         anim_logo = QPropertyAnimation(self.logo_label, b"geometry"); anim_btn = QPropertyAnimation(self.select_btn, b"geometry")
         anim_status = QPropertyAnimation(self.status_label, b"geometry")
         anim_panel = QPropertyAnimation(self.right_panel, b"pos"); anim_fade = QPropertyAnimation(self.extra_opacity, b"opacity")
         if show_queue:
-            self.extra_controls.show(); self.extra_controls.raise_()
+            self.extra_controls.show(); self.extra_controls.raise_(); self.status_label.raise_()
             anim_logo.setEndValue(QRect(-110, 15, 680, 240)); anim_btn.setEndValue(QRect(130, 260, 200, 42)) 
-            anim_status.setEndValue(QRect(100, 510, 260, 30))
+            anim_status.setEndValue(QRect(113, 510, 260, 30))
             anim_panel.setEndValue(QPoint(460, 0)); anim_fade.setEndValue(1); self.select_btn.set_custom_padding(10)
         else:
             anim_logo.setEndValue(QRect(0, 40, 680, 240)); anim_btn.setEndValue(QRect(220, 310, 240, 52)) 
@@ -254,6 +276,7 @@ class GlorpApp(QMainWindow):
         self.group.start()
 
     def setup_lego_overlay(self):
+        """ Configures the full-screen warning overlay for high-complexity conversion modes. """
         self.lego_overlay = QFrame(self); self.lego_overlay.setGeometry(0, 560, 680, 560); self.lego_overlay.setStyleSheet(f"background:{APP_BG};")
         glay = QVBoxLayout(self.lego_overlay); glay.setContentsMargins(40, 40, 40, 20)
         t1 = QLabel("LEGO MODE PERFORMANCE WARNING"); t1.setStyleSheet(f"color:{WARNING_COLOR}; font-weight:bold; font-size:18px;")
@@ -273,6 +296,7 @@ class GlorpApp(QMainWindow):
         if self.movie: self.lego_anim.finished.connect(self.movie.stop); self.lego_anim.start()
 
     def setup_drag_overlay(self):
+        """ Prepares the drop-zone overlay that activates during file drag-and-drop operations. """
         self.drag_overlay = QFrame(self); self.drag_overlay.setGeometry(self.rect()); self.drag_overlay.setStyleSheet(f"background-color: {OVERLAY_COLOR};"); self.drag_overlay.setAttribute(Qt.WA_TransparentForMouseEvents); self.drag_overlay.hide()
         self.drag_opacity = QGraphicsOpacityEffect(self.drag_overlay); self.drag_overlay.setGraphicsEffect(self.drag_opacity)
         lay = QVBoxLayout(self.drag_overlay); self.drop_img = QLabel(); pix = QPixmap(resource_path("DropUrStuffHere.png"))
@@ -280,6 +304,7 @@ class GlorpApp(QMainWindow):
         self.drop_img.setAlignment(Qt.AlignCenter); lay.addWidget(self.drop_img)
 
     def fade_overlay(self, show=True):
+        """ Smoothly fades the drag-and-drop overlay in or out. """
         if show:
             self.drag_overlay.show(); self.drag_overlay.raise_(); self.drag_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, False); self.anim_drag = QPropertyAnimation(self.drag_opacity, b"opacity")
             self.anim_drag.setDuration(250); self.anim_drag.setStartValue(0.0); self.anim_drag.setEndValue(1.0); self.anim_drag.start()
@@ -297,6 +322,7 @@ class GlorpApp(QMainWindow):
         self.refresh_file_list()
 
     def refresh_file_list(self):
+        """ Updates the visual queue with selected file names and triggers appropriate layout animations. """
         count = len(self.selected_files); self.q_count.setText(f"({count})")
         if count > 0 and self.right_panel.pos().x() >= 680: self.animate_transition(True)
         elif count == 0 and self.right_panel.pos().x() < 680: self.animate_transition(False)
@@ -327,6 +353,7 @@ class GlorpApp(QMainWindow):
         self.convert_btn.setEnabled(False); threading.Thread(target=self.process, daemon=True).start()
 
     def process(self):
+        """ Background processing loop: Converts queued images to SVG and writes them to the target directory. """
         mode = "lego" if self.rb_lego.isChecked() else "monolith"; done = []
         for i, file in enumerate(list(self.selected_files)):
             try:
@@ -344,11 +371,15 @@ class GlorpApp(QMainWindow):
     def on_process_finished(self): self.refresh_file_list(); self.convert_btn.setEnabled(True); self.show_status("Done!")
 
 if __name__ == "__main__":
+    # Windows shell ID configuration for taskbar icon grouping
     try:
         myappid = u'zackgphom.glorp.converter.v1' 
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     except Exception: pass
     app = QApplication(sys.argv)
+    
+    # App icon initialization
     fav_path = resource_path("favicon.png")
     if os.path.exists(fav_path): app.setWindowIcon(QIcon(fav_path))
+    
     win = GlorpApp(); win.show(); sys.exit(app.exec())
