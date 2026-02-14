@@ -113,6 +113,7 @@ editors
 
 -   Python + PySide6 (Qt6)
 -   Pillow (PIL) for RGBA processing
+-   NumPy – Fast matrix operations for contour detection
 -   Greedy meshing vector optimization
 -   Drag & Drop support
 -   Hover preview tooltips
@@ -145,3 +146,4 @@ There is **no hard limit** on selected files.
 Give it a single sprite or an entire folder.
 
 GLORP CONSUMES.
+
