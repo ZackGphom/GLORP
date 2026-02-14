@@ -83,12 +83,15 @@ GLORP is optimized strictly for pixel-perfect artwork.
 Uses a greedy meshing algorithm: - Merges adjacent pixels of identical
 color - Produces compact `<path>` elements - Significantly reduces SVG
 size - Ideal for editing in vector software
+![monolith](https://github.com/user-attachments/assets/37f87012-e1bd-4dc6-98a9-1d4391fd9c5a)
+
 
 # 🧱 Lego
 
 Each pixel becomes an individual 1×1 `<rect>`. - Exact pixel
 representation - Large object count - May reduce performance in vector
 editors
+![121214](https://github.com/user-attachments/assets/0fca3a9d-4fcf-44ac-87a6-7092478f8723)
 
 5.  **Convert** Execute conversion. Processing runs in a separate thread
     to prevent UI freezing.
@@ -152,6 +155,7 @@ Special thanks to **[Harry Tsang](https://www.linkedin.com/in/cheuk-nam-tsang-29
 ------------------------------------------------------------------------
 
 GLORP CONSUMES.
+
 
 
 
