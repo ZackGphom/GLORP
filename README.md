@@ -145,5 +145,8 @@ There is **no hard limit** on selected files.
 
 Give it a single sprite or an entire folder.
 
+Special thanks to **[Harry Tsang](https://www.linkedin.com/in/cheuk-nam-tsang-2997671b3/)** for Algorithm Optimization  ❤️
+
 GLORP CONSUMES.
+
 
