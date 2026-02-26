@@ -93,10 +93,34 @@ representation - Large object count - May reduce performance in vector
 editors
 ![121214](https://github.com/user-attachments/assets/0fca3a9d-4fcf-44ac-87a6-7092478f8723)
 
+# 🌐 WebP
+
+Exports the image as a high-quality **lossless WebP** file.
+- Preserves transparency and color accuracy
+- Significantly smaller file size than PNG
+- Raster format (not vector)
+- Ideal for web optimization and fast loading
+
 5.  **Convert** Execute conversion. Processing runs in a separate thread
     to prevent UI freezing.
 
 ------------------------------------------------------------------------
+
+## ⚖ Mode Comparison
+
+| Mode      | Output Type | Optimization | Editing Friendly | File Size |
+|-----------|------------|--------------|------------------|-----------|
+| Monolith  | SVG       | High         | Excellent        | Small     |
+| Lego      | SVG       | None         | Limited (heavy)  | Large     |
+| WebP      | Raster    | N/A          | No (not vector)  | Very Small |
+
+
+## ❌ Not Intended For
+
+- Photographs
+- Soft shading artwork
+- AI-generated gradients
+- Anti-aliased raster illustrations
 
 ## ⚠️ Technical Warnings
 
@@ -115,16 +139,19 @@ editors
 ## 🧬 What's Inside (Current Version)
 
 -   Python + PySide6 (Qt6)
--   Pillow (PIL) for RGBA processing
+-   Pillow (PIL) for RGBA processing & WebP export
 -   NumPy – Fast matrix operations for contour detection
--   Greedy meshing vector optimization
+-   High-performance contour meshing engine
+-   Greedy meshing vector optimization (Monolith mode)
+-   Lego mode (1×1 pixel-to-rect SVG generation)
+-   Lossless WebP export mode
 -   Drag & Drop support
--   Hover preview tooltips
+-   Hover preview tooltips with pixel-art detection
 -   Animated UI transitions
 -   Threaded batch conversion
 -   Automatic file renaming
 -   Lego performance detection overlay
-
+  
 ------------------------------------------------------------------------
 
 ## 🩸 Run the Ritual
@@ -148,6 +175,11 @@ There is **no hard limit** on selected files.
 
 Give it a single sprite or an entire folder.
 
+## And Remember
+GLORP is optimized for deterministic pixel geometry.
+It does not guess, smooth, or approximate.
+It preserves structure exactly as defined in the raster grid.
+
 ------------------------------------------------------------------------
 
 Special thanks to **[Harry Tsang](https://www.linkedin.com/in/cheuk-nam-tsang-2997671b3/)** for Algorithm Optimization  ❤️
@@ -155,6 +187,7 @@ Special thanks to **[Harry Tsang](https://www.linkedin.com/in/cheuk-nam-tsang-29
 ------------------------------------------------------------------------
 
 GLORP CONSUMES.
+
 
 
 
