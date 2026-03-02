@@ -185,8 +185,9 @@ It preserves structure exactly as defined in the raster grid.
 Special thanks to **[Harry Tsang](https://www.linkedin.com/in/cheuk-nam-tsang-2997671b3/)** for Algorithm Optimization  ❤️
 
 ------------------------------------------------------------------------
-
+<p align="center"> <img src="processing.gif" width="200" style="gif-rendering: pixelated;"> <br> </p>
 GLORP CONSUMES.
+
 
 
 
