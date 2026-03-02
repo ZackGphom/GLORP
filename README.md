@@ -25,8 +25,8 @@ download the compiled version here:
 **[👉 Download GLORP on
 Itch.io](https://zackdurec.itch.io/glorp-pixel-to-svg)**
 
-On the Itch.io page, you'll also find: \* **Visual Examples**:
-Comparison between original PNG and optimized SVG. \ **Mode Previews**:
+On the Itch.io page, you'll also find **Visual Examples**:
+Comparison between original PNG and optimized SVG.**Mode Previews** -
 See the difference between "Monolith" and "Lego" modes.
 
 ### 🖼️ Why use GLORP?
@@ -187,6 +187,7 @@ Special thanks to **[Harry Tsang](https://www.linkedin.com/in/cheuk-nam-tsang-29
   GLORP CONSUMES.
 
   <p align="center"> <img src="processing.gif" width="100" style="gif-rendering: pixelated;"> <br> </p>
+
 
 
 
