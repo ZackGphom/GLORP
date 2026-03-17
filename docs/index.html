@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLORP: Pixel-to-Vector Beast</title>
+    <title>GLORP</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <style>
@@ -12,96 +12,207 @@
             --light: #1a1a1a;
             --hover: #252525;
             --text: #e6e6e6;
-            --accent: #ff4444;
+            --warning: #ff4444;
+            --overlay: rgba(21, 21, 21, 0.95);
             --radius: 10px;
+            --ease: cubic-bezier(0.19, 1, 0.22, 1);
         }
+
+        * { box-sizing: border-box; user-select: none; }
 
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
+            margin: 0; background-color: #000; display: flex;
+            justify-content: center; align-items: center; min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif; color: var(--text);
         }
 
-        .container { width: 100%; max-width: 680px; padding: 40px 20px; text-align: center; }
-        
-        .logo-img { height: 220px; margin-bottom: 20px; pointer-events: none; }
-
-        #drop-zone {
-            background: var(--light);
-            border: 2px dashed #333;
-            border-radius: var(--radius);
-            padding: 60px 20px;
-            cursor: pointer;
-            transition: 0.3s;
+        #app {
+            width: 680px; height: 600px; background-color: var(--bg);
+            position: relative; overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
         }
-        #drop-zone.hover { border-color: var(--accent); background: var(--hover); }
 
-        .controls { margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-        
-        .radio-group { display: flex; gap: 15px; background: var(--light); padding: 10px 20px; border-radius: var(--radius); }
-        .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 14px; }
-        
-        button {
-            background: var(--light); color: white; border: none; padding: 12px 35px;
-            border-radius: var(--radius); font-weight: bold; cursor: pointer; transition: 0.2s;
-            text-transform: uppercase; letter-spacing: 1px;
+        .anim-layer {
+            position: absolute; transition: all 0.6s var(--ease);
         }
-        button:hover { background: var(--hover); border: 1px solid #333; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        #status { margin-top: 20px; color: #666; font-size: 11px; height: 15px; text-transform: uppercase; }
+        #logo { left: 0; top: 40px; width: 680px; height: 240px; object-fit: contain; pointer-events: none; }
         
+        #btn-select {
+            left: 220px; top: 310px; width: 240px; height: 52px;
+            background: var(--light); color: white; border: none; border-radius: var(--radius);
+            font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px;
+        }
+        #btn-select:hover, .btn-anim:hover { background: var(--hover); }
+
+        #status {
+            left: 220px; top: 410px; width: 240px; height: 30px;
+            color: #aaa; font-size: 11px; text-align: center; line-height: 30px;
+        }
+
+        #proc-indicator {
+            left: 12px; top: 8px; width: 32px; height: 32px;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+
+        #extra-controls {
+            left: 100px; top: 310px; width: 260px; height: 240px;
+            opacity: 0; pointer-events: none; transition: opacity 0.6s var(--ease);
+        }
+
+        .btn-anim {
+            position: absolute; background: var(--light); color: white; border: none;
+            border-radius: var(--radius); font-weight: bold; cursor: pointer; transition: background 0.2s;
+        }
+        #btn-folder { left: 30px; top: 0; width: 200px; height: 42px; opacity: 0.5; cursor: not-allowed; }
+        #btn-convert { left: 30px; top: 90px; width: 200px; height: 42px; }
+
+        #mode-container {
+            position: absolute; left: 30px; top: 50px; width: 200px; height: 30px;
+            display: flex; justify-content: center; gap: 15px; align-items: center;
+        }
+        
+        .radio-label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+        .radio-label input { appearance: none; width: 14px; height: 14px; border-radius: 7px; border: 2px solid #555; margin: 0; cursor: pointer; }
+        .radio-label input:checked { background-color: #e6e6e6; border: 2px solid #2a2a2a; }
+
+        #chk-save-container {
+            position: absolute; left: 30px; top: 135px; width: 200px; height: 20px;
+            display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: not-allowed; opacity: 0.5;
+        }
+
+        #lego-warn-label {
+            position: absolute; left: 0; top: 160px; width: 260px; height: 30px;
+            color: var(--warning); font-size: 11px; text-decoration: underline; text-align: center;
+            line-height: 30px; cursor: pointer; display: none;
+        }
+
+        #stats-label {
+            position: absolute; left: 0; top: 185px; width: 260px; height: 30px;
+            color: #666; font-size: 11px; text-decoration: underline; text-align: center; line-height: 30px;
+        }
+
+        #right-panel {
+            left: 680px; top: 0; width: 220px; height: 600px;
+            background: var(--bg); border-left: 1px solid #1a1a1a; display: flex; flex-direction: column;
+        }
+        
+        #queue-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; font-size: 12px;
+        }
+        #queue-count { color: #555; font-weight: bold; margin-left: 5px; flex-grow: 1; }
+        #btn-clear { background: none; border: none; color: #777; font-size: 10px; text-decoration: underline; cursor: pointer; }
+
+        #queue-list {
+            flex-grow: 1; overflow-y: auto; padding: 0 10px;
+        }
+        #queue-list::-webkit-scrollbar { display: none; }
+        
+        .q-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 5px; font-size: 12px; position: relative;
+        }
+        .q-name {
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
+            cursor: pointer; padding: 2px 0;
+        }
+        .q-remove {
+            background: none; border: none; color: #777; font-size: 18px; font-weight: bold;
+            cursor: pointer; width: 24px; height: 24px; line-height: 24px; text-align: center;
+        }
+        .q-remove:hover { color: var(--warning); }
+
+        #preview-tooltip {
+            position: fixed; width: 180px; height: 190px; background: var(--bg);
+            border: 1px solid #444; border-radius: var(--radius); padding: 4px;
+            display: none; flex-direction: column; align-items: center; z-index: 1000; pointer-events: none;
+        }
+        #preview-img { width: 170px; height: 132px; object-fit: contain; background: var(--light); border-radius: 6px; }
+        #preview-warn { color: var(--warning); font-size: 11px; margin-top: 10px; display: none; text-align: center; }
+
+        #drag-overlay {
+            position: absolute; inset: 0; background: var(--overlay); z-index: 50;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+        #drag-overlay img { max-width: 50%; max-height: 50%; object-fit: contain; pointer-events: none; }
+
+        #lego-overlay {
+            position: absolute; left: 0; top: 600px; width: 680px; height: 600px;
+            background: var(--bg); z-index: 60; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: top 0.4s var(--ease);
+            padding: 40px; text-align: center;
+        }
+
         #loading-screen {
-            position: fixed; inset: 0; background: var(--bg);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+            position: absolute; inset: 0; background: var(--bg); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        
-        .proc-gif { width: 32px; height: 32px; margin-bottom: 15px; }
-
-        #output-list { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
-        .result-card { background: var(--light); padding: 10px; border-radius: var(--radius); width: 120px; text-align: center; }
-        .result-card img { width: 100%; image-rendering: pixelated; margin-bottom: 8px; border-radius: 4px; }
-        .result-card a { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: bold; }
+        .load-text { font-size: 12px; letter-spacing: 2px; font-weight: bold; margin-top: 15px; color: #777; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">
-        <img src="processing.gif" class="proc-gif">
-        <div style="font-weight: bold; letter-spacing: 2px;">GLORP ENGINE STARTING...</div>
+    <div id="app">
+        <div id="loading-screen">
+            <img src="processing.gif" width="32" height="32">
+            <div class="load-text" id="init-text">GLORP ENGINE STARTING...</div>
+        </div>
+
+        <img src="processing.gif" id="proc-indicator" class="anim-layer">
+        <img src="logo.png" id="logo" class="anim-layer">
+        
+        <button id="btn-select" class="anim-layer" onclick="document.getElementById('file-input').click()">Select Images</button>
+        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+        
+        <div id="status" class="anim-layer"></div>
+
+        <div id="extra-controls" class="anim-layer">
+            <button id="btn-folder" class="btn-anim">Output: Auto Download</button>
+            <div id="mode-container">
+                <label class="radio-label"><input type="radio" name="mode" value="monolith" checked> Monolith</label>
+                <label class="radio-label"><input type="radio" name="mode" value="lego"> Lego</label>
+                <label class="radio-label"><input type="radio" name="mode" value="webp"> WebP</label>
+            </div>
+            <button id="btn-convert" class="btn-anim">Convert</button>
+            <div id="chk-save-container">
+                <input type="checkbox" disabled> Save to source
+            </div>
+            <div id="lego-warn-label">⚠️ Performance Warning (Click for info)</div>
+            <div id="stats-label"></div>
+        </div>
+
+        <div id="right-panel" class="anim-layer">
+            <div id="queue-header">
+                <div>FILE QUEUE</div>
+                <div id="queue-count">(0)</div>
+                <button id="btn-clear">Clear All</button>
+            </div>
+            <div id="queue-list"></div>
+        </div>
+
+        <div id="drag-overlay">
+            <img src="DropUrStuffHere.png">
+        </div>
+
+        <div id="lego-overlay">
+            <div style="color: var(--warning); font-weight: bold; font-size: 18px; margin-bottom: 5px;">LEGO MODE PERFORMANCE WARNING</div>
+            <div style="color: #888; font-size: 13px; margin-bottom: auto;">Software may lag or crash due to high object count.</div>
+            <img src="lego_warning.gif" style="width: 500px; height: 350px; object-fit: contain;">
+            <div style="color: #444; font-size: 10px; margin-top: auto; text-decoration: underline; cursor: pointer;">Click anywhere to close</div>
+        </div>
     </div>
 
-    <div class="container">
-        <img src="logo.png" class="logo-img">
-        
-        <div id="drop-zone">
-            <div id="drop-text">CLICK OR DRAG PIXEL ART HERE</div>
-            <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-        </div>
-
-        <div class="controls">
-            <div class="radio-group">
-                <label><input type="radio" name="mode" value="monolith" checked> MONOLITH</label>
-                <label><input type="radio" name="mode" value="lego"> LEGO</label>
-                <label><input type="radio" name="mode" value="webp"> WEBP</label>
-            </div>
-            <button id="convert-btn">CONVERT</button>
-        </div>
-
-        <div id="status"></div>
-        <div id="output-list"></div>
+    <div id="preview-tooltip">
+        <img id="preview-img">
+        <div id="preview-warn">This doesn't look like pixel art.</div>
     </div>
 
     <script>
         const MESHING_CODE = `
 import numpy as np
 CLOCKWISE, ANTICLOCKWISE = 1, 2
-
 def edge_finding(grid, color):
     mask = np.where(grid == color)
     pos_h = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8)
@@ -161,72 +272,230 @@ def path_finding(grid, color):
     return path
         `;
 
+        // STATE
         let pyodide;
-        const statusEl = document.getElementById('status');
-        const convertBtn = document.getElementById('convert-btn');
-        const outputList = document.getElementById('output-list');
-        const fileInput = document.getElementById('file-input');
-        const dropZone = document.getElementById('drop-zone');
         let selectedFiles = [];
+        let isExpanded = false;
+        
+        // TYPEWRITER STATE
+        let twFullMsg = "";
+        let twIndex = 0;
+        let twMode = 0;
+        let twInterval = null;
 
-        async function init() {
-            pyodide = await loadPyodide();
-            await pyodide.loadPackage("numpy");
-            await pyodide.runPython(MESHING_CODE);
-            document.getElementById('loading-screen').style.display = 'none';
+        // DOM ELEMENTS
+        const elApp = document.getElementById('app');
+        const elLogo = document.getElementById('logo');
+        const elBtnSelect = document.getElementById('btn-select');
+        const elStatus = document.getElementById('status');
+        const elProcInd = document.getElementById('proc-indicator');
+        const elExtra = document.getElementById('extra-controls');
+        const elRight = document.getElementById('right-panel');
+        const elQList = document.getElementById('queue-list');
+        const elQCount = document.getElementById('queue-count');
+        const elFileInput = document.getElementById('file-input');
+        const elDragOver = document.getElementById('drag-overlay');
+        const elLegoWarnBtn = document.getElementById('lego-warn-label');
+        const elLegoOverlay = document.getElementById('lego-overlay');
+        const elStats = document.getElementById('stats-label');
+        const elConvertBtn = document.getElementById('btn-convert');
+        const elTooltip = document.getElementById('preview-tooltip');
+        const elTooltipImg = document.getElementById('preview-img');
+        const elTooltipWarn = document.getElementById('preview-warn');
+
+        // INIT ENGINE
+        async function initEngine() {
+            try {
+                pyodide = await loadPyodide();
+                await pyodide.loadPackage("numpy");
+                await pyodide.runPython(MESHING_CODE);
+                document.getElementById('loading-screen').style.display = 'none';
+            } catch (e) {
+                document.getElementById('init-text').innerText = "ENGINE INIT FAILED";
+            }
         }
-        init();
+        initEngine();
 
-        dropZone.onclick = () => fileInput.click();
-        fileInput.onchange = (e) => { 
-            selectedFiles = Array.from(e.target.files); 
-            statusEl.innerText = `${selectedFiles.length} FILES READY`; 
-        };
+        // UI ANIMATIONS
+        function updateLayout() {
+            if (selectedFiles.length > 0 && !isExpanded) {
+                isExpanded = true;
+                elLogo.style.left = '-110px'; elLogo.style.top = '15px';
+                elBtnSelect.style.left = '130px'; elBtnSelect.style.top = '260px'; elBtnSelect.style.width = '200px'; elBtnSelect.style.height = '42px';
+                elStatus.style.left = '113px'; elStatus.style.top = '550px'; elStatus.style.width = '260px';
+                elRight.style.left = '460px';
+                elExtra.style.opacity = '1'; elExtra.style.pointerEvents = 'auto';
+            } else if (selectedFiles.length === 0 && isExpanded) {
+                isExpanded = false;
+                elLogo.style.left = '0'; elLogo.style.top = '40px';
+                elBtnSelect.style.left = '220px'; elBtnSelect.style.top = '310px'; elBtnSelect.style.width = '240px'; elBtnSelect.style.height = '52px';
+                elStatus.style.left = '220px'; elStatus.style.top = '410px'; elStatus.style.width = '240px';
+                elRight.style.left = '680px';
+                elExtra.style.opacity = '0'; elExtra.style.pointerEvents = 'none';
+            }
+        }
 
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('hover'); };
-        dropZone.ondragleave = () => dropZone.classList.remove('hover');
-        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('hover'); selectedFiles = Array.from(e.dataTransfer.files); statusEl.innerText = `${selectedFiles.length} FILES READY`; };
+        function setStatus(msg) {
+            twFullMsg = msg; twIndex = 0; twMode = 1; elStatus.innerText = "";
+            clearInterval(twInterval);
+            twInterval = setInterval(typewriterTick, 40);
+        }
 
-        convertBtn.onclick = async () => {
+        function typewriterTick() {
+            if (twMode === 1) {
+                if (twIndex < twFullMsg.length) {
+                    twIndex++; elStatus.innerText = twFullMsg.substring(0, twIndex);
+                } else {
+                    twMode = 0; clearInterval(twInterval);
+                    twInterval = setTimeout(() => { twMode = -1; twInterval = setInterval(typewriterTick, 30); }, 5000);
+                }
+            } else if (twMode === -1) {
+                if (twIndex > 0) {
+                    twIndex--; elStatus.innerText = twFullMsg.substring(0, twIndex);
+                } else {
+                    twMode = 0; clearInterval(twInterval);
+                }
+            }
+        }
+
+        function showProcessing(state) {
+            elProcInd.style.opacity = state ? '1' : '0';
+        }
+
+        function transientProc() {
+            showProcessing(true); setTimeout(() => showProcessing(false), 800);
+        }
+
+        // QUEUE MANAGEMENT
+        async function renderQueue() {
+            elQList.innerHTML = '';
+            elQCount.innerText = `(${selectedFiles.length})`;
+            
+            let totalPixels = 0;
             const mode = document.querySelector('input[name="mode"]:checked').value;
-            convertBtn.disabled = true;
 
-            for (const file of selectedFiles) {
-                statusEl.innerText = `PROCESSING: ${file.name.toUpperCase()}`;
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const f = selectedFiles[i];
+                const div = document.createElement('div'); div.className = 'q-item';
                 
-                const img = await new Promise(r => { 
-                    const reader = new FileReader(); 
-                    reader.onload = e => { const i = new Image(); i.onload = () => r(i); i.src = e.target.result; };
-                    reader.readAsDataURL(file);
-                });
+                const nameSpan = document.createElement('div'); nameSpan.className = 'q-name';
+                nameSpan.innerText = f.file.name;
                 
-                if (mode === 'lego' && (img.width * img.height) > 50000) {
-                    if (!confirm("Large image in LEGO mode may be slow. Continue?")) continue;
+                let isLarge = false;
+                if (f.img) {
+                    totalPixels += (f.img.width * f.img.height);
+                    if (f.img.width > 512 || f.img.height > 512) isLarge = true;
                 }
 
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width; canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
+                if (isLarge && mode !== 'webp') nameSpan.style.color = 'var(--warning)';
+                else nameSpan.style.color = '#e6e6e6';
+
+                nameSpan.onmouseenter = (e) => {
+                    if (!f.img) return;
+                    elTooltipImg.src = f.img.src;
+                    elTooltipWarn.style.display = (isLarge && mode !== 'webp') ? 'block' : 'none';
+                    elTooltip.style.display = 'flex';
+                    
+                    const rect = nameSpan.getBoundingClientRect();
+                    let tx = rect.left - 190; let ty = rect.top - 50;
+                    if (tx < 0) tx = rect.right + 10;
+                    if (ty < 10) ty = 10;
+                    
+                    elTooltip.style.left = tx + 'px'; elTooltip.style.top = ty + 'px';
+                };
+                nameSpan.onmouseleave = () => { elTooltip.style.display = 'none'; };
+
+                const btn = document.createElement('button'); btn.className = 'q-remove'; btn.innerText = '×';
+                btn.onclick = () => { selectedFiles.splice(i, 1); renderQueue(); updateLayout(); };
+
+                div.appendChild(nameSpan); div.appendChild(btn); elQList.appendChild(div);
+            }
+
+            if (mode === 'lego') {
+                elLegoWarnBtn.style.display = 'block';
+                elStats.innerText = `Lego Mode: ~${totalPixels.toLocaleString()} shapes`;
+                elStats.style.color = totalPixels > 50000 ? 'var(--warning)' : '#666';
+            } else {
+                elLegoWarnBtn.style.display = 'none'; elStats.innerText = '';
+            }
+        }
+
+        function handleFiles(files) {
+            transientProc();
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => {
+                        selectedFiles.push({ file, img });
+                        renderQueue(); updateLayout();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // EVENT LISTENERS
+        elFileInput.onchange = e => handleFiles(e.target.files);
+        
+        document.getElementById('btn-clear').onclick = () => {
+            selectedFiles = []; renderQueue(); updateLayout();
+        };
+
+        elApp.ondragenter = e => { e.preventDefault(); elDragOver.style.opacity = '1'; elDragOver.style.pointerEvents = 'auto'; };
+        elDragOver.ondragleave = e => { e.preventDefault(); elDragOver.style.opacity = '0'; elDragOver.style.pointerEvents = 'none'; };
+        elDragOver.ondrop = e => {
+            e.preventDefault(); elDragOver.style.opacity = '0'; elDragOver.style.pointerEvents = 'none';
+            handleFiles(e.dataTransfer.files);
+        };
+        elDragOver.ondragover = e => e.preventDefault();
+
+        document.querySelectorAll('input[name="mode"]').forEach(r => r.onchange = renderQueue);
+
+        elLegoWarnBtn.onclick = () => { elLegoOverlay.style.top = '0'; };
+        elLegoOverlay.onclick = () => { elLegoOverlay.style.top = '600px'; };
+
+        // PROCESSING LOGIC
+        async function convertItem(item, mode) {
+            const { file, img } = item;
+            let extension = ".svg";
+            let content = "";
+            let mime = "image/svg+xml";
+
+            if (mode === 'webp') {
+                const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                content = canvas.toDataURL('image/webp', 0.9);
+                extension = ".webp"; mime = "image/webp";
+            } else {
+                const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d', {willReadFrequently: true}); ctx.drawImage(img, 0, 0);
                 const imageData = ctx.getImageData(0, 0, img.width, img.height);
-
-                pyodide.globals.set("raw", imageData.data);
-                pyodide.globals.set("w", img.width);
-                pyodide.globals.set("h", img.height);
-
-                let content;
-                let extension = ".svg";
-
-                if (mode === 'monolith') {
+                
+                if (mode === 'lego') {
+                    content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+                    const d = imageData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        if (d[i+3] > 0) {
+                            const x = (i/4) % img.width; const y = Math.floor((i/4) / img.width);
+                            const hex = "#" + ((1<<24)+(d[i]<<16)+(d[i+1]<<8)+d[i+2]).toString(16).slice(1);
+                            content += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}" fill-opacity="${d[i+3]/255}"/>`;
+                        }
+                    }
+                    content += `</svg>`;
+                } else if (mode === 'monolith') {
+                    pyodide.globals.set("raw", imageData.data);
+                    pyodide.globals.set("w", img.width);
+                    pyodide.globals.set("h", img.height);
                     content = await pyodide.runPythonAsync(`
 pixels = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
 colors = np.unique(pixels.reshape(-1, 4), axis=0)
 colors = colors[colors[:, 3] > 0]
 grid = (pixels[:,:,0].astype(np.uint32) << 24) | (pixels[:,:,1].astype(np.uint32) << 16) | (pixels[:,:,2].astype(np.uint32) << 8) | pixels[:,:,3]
-res = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
-res.append("<style>")
-for i, c in enumerate(colors):
-    res.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
+res = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">', "<style>"]
+for i, c in enumerate(colors): res.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
 res.append("</style>")
 for i, c in enumerate(colors):
     c_int = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
@@ -235,36 +504,40 @@ for i, c in enumerate(colors):
 res.append("</svg>")
 "\\n".join(res)
                     `);
-                } else if (mode === 'lego') {
-                    content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
-                    const d = imageData.data;
-                    for (let i = 0; i < d.length; i += 4) {
-                        if (d[i+3] > 0) {
-                            const x = (i/4) % img.width; const y = Math.floor((i/4) / img.width);
-                            const hex = "#" + ((1 << 24) + (d[i] << 16) + (d[i+1] << 8) + d[i+2]).toString(16).slice(1);
-                            content += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}" fill-opacity="${d[i+3]/255}"/>`;
-                        }
-                    }
-                    content += `</svg>`;
-                } else {
-                    content = img.src; // Simplified WebP handling for browser
-                    extension = ".webp";
                 }
-
-                createResultCard(content, file.name.split('.')[0] + extension);
             }
-            statusEl.innerText = "DONE";
-            convertBtn.disabled = false;
+            
+            const baseName = file.name.split('.').slice(0, -1).join('.') || file.name;
+            const finalName = baseName + extension;
+            
+            const a = document.createElement('a');
+            if (mode === 'webp') {
+                a.href = content;
+            } else {
+                const blob = new Blob([content], {type: mime});
+                a.href = URL.createObjectURL(blob);
+            }
+            a.download = finalName;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            
+            await new Promise(r => setTimeout(r, 100)); // Delay for multi-downloads
+        }
+
+        elConvertBtn.onclick = async () => {
+            if (!selectedFiles.length) return;
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            
+            elConvertBtn.disabled = true; showProcessing(true); setStatus("Processing...");
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                elStatus.innerText = `Processing ${i+1}/${selectedFiles.length}...`;
+                await convertItem(selectedFiles[i], mode);
+            }
+            
+            elConvertBtn.disabled = false; showProcessing(false); setStatus("Done!");
+            selectedFiles = []; renderQueue(); updateLayout();
         };
 
-        function createResultCard(content, fileName) {
-            const blob = new Blob([content], {type: fileName.endsWith('.svg') ? 'image/svg+xml' : 'image/webp'});
-            const url = URL.createObjectURL(blob);
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            card.innerHTML = `<img src="${url}"><a href="${url}" download="${fileName}">SAVE</a>`;
-            outputList.appendChild(card);
-        }
     </script>
 </body>
 </html>
