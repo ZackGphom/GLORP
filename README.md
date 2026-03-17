@@ -29,6 +29,8 @@ On the Itch.io page, you'll also find **Visual Examples**:
 - Comparison between original PNG and optimized SVG.
 - **Mode Previews** - See the difference between "Monolith" and "Lego" modes.
 
+------------------------------------------------------------------------
+
 ### 🖼️ Why use GLORP?
 
 -   **For Printing**: Perfect for stickers, t-shirts, and posters where
