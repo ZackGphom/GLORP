@@ -3,474 +3,452 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLORP</title>
+    <title>GLORP | Pixel-to-Vector Beast</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <style>
+        /* --- CONFIGURATION & VARIABLES --- */
         :root {
-            --bg: #0f0f0f;
-            --light: #1a1a1a;
-            --hover: #252525;
+            --bg: #0a0a0a;
+            --light: #161616;
+            --hover: #222222;
             --text: #e6e6e6;
             --warning: #ff4444;
-            --overlay: rgba(21, 21, 21, 0.95);
-            --radius: 10px;
+            --accent: #ffffff;
+            --radius: 14px;
             --ease: cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        * { box-sizing: border-box; user-select: none; outline: none; }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            background-color: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text);
-            overflow: hidden;
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; outline: none; }
+        html { scroll-behavior: smooth; }
+        body, html { 
+            margin: 0; padding: 0; background: var(--bg); 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            color: var(--text); overflow-x: hidden; 
         }
 
-        #app-container {
-            width: 100vw; height: 100vh; display: flex; position: relative;
+        /* --- LOADING SCREEN --- */
+        #loading-screen {
+            position: fixed; inset: 0; background: var(--bg); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 1s var(--ease), visibility 1s, filter 1s var(--ease);
         }
-        
-        #main-panel {
-            flex: 1; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            position: relative; transition: all 0.6s var(--ease);
-            z-index: 10; height: 100%; overflow: hidden;
+        #loading-screen.loaded { opacity: 0; visibility: hidden; filter: blur(20px); }
+
+        /* --- HEADER ISLAND --- */
+        header {
+            position: fixed; top: 20px; left: 20px; right: 20px; height: 56px;
+            background: rgba(22, 22, 22, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius);
+            z-index: 1000; display: flex; align-items: center; padding: 0 20px;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .header-logo { width: 22px; height: 22px; image-rendering: pixelated; }
+        .header-title { font-weight: 800; font-size: 16px; letter-spacing: 1px; }
+
+        nav { display: flex; gap: 30px; flex: 2; justify-content: center; }
+        nav a { 
+            color: #888; text-decoration: none; font-size: 11px; font-weight: 700; 
+            text-transform: uppercase; transition: 0.3s; letter-spacing: 0.5px; 
+        }
+        nav a:hover { color: var(--accent); }
+
+        .header-right { flex: 1; display: flex; justify-content: flex-end; }
+        .btn-support-head {
+            background: var(--accent); color: #000; padding: 8px 18px;
+            border-radius: 10px; font-size: 10px; font-weight: 800; text-decoration: none;
+            transition: 0.3s; text-transform: uppercase;
+        }
+        .btn-support-head:hover { transform: scale(1.05); filter: brightness(0.9); }
+
+        /* --- SECTIONS --- */
+        section { 
+            min-height: 100vh; width: 100%; display: flex; 
+            flex-direction: column; align-items: center; padding: 120px 20px; 
+            position: relative; 
         }
 
-        #logo {
-            height: 220px; max-width: 90%; object-fit: contain;
-            transition: all 0.6s var(--ease); pointer-events: none; margin-bottom: 30px;
+        /* HERO BLOCK */
+        #app { justify-content: center; padding-top: 60px; }
+        #logo-big { height: 180px; margin-bottom: 40px; pointer-events: none; }
+        .drop-area {
+            width: 340px; height: 200px; border: 2px dashed #252525; border-radius: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: 0.4s var(--ease);
         }
-
-        #central-action {
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            transition: all 0.6s var(--ease); width: 100%; max-width: 300px;
-        }
-
+        .drop-area.active { border-color: var(--accent); background: rgba(255,255,255,0.03); transform: scale(1.02); }
         #btn-select {
-            width: 240px; height: 52px; background: var(--light);
-            color: white; border: none; border-radius: var(--radius);
-            font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px;
+            width: 220px; height: 52px; background: var(--light); color: #fff;
+            border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s;
         }
         #btn-select:hover { background: var(--hover); }
+        .drag-hint { font-size: 10px; color: #555; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
 
-        #extra-controls {
-            display: flex; flex-direction: column; align-items: center;
-            width: 260px; height: 0; opacity: 0; overflow: hidden;
-            transition: all 0.6s var(--ease); pointer-events: none;
+        #mode-selector { display: flex; gap: 15px; margin-top: 25px; }
+        .mode-label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; color: #666; transition: 0.3s; }
+        .mode-label:hover { color: #aaa; }
+        .mode-label input:checked + span { color: var(--accent); font-weight: bold; }
+        .mode-label input { display: none; }
+
+        /* COMPARISON BLOCK */
+        #compare { background: #080808; }
+        .comp-row { width: 100%; max-width: 1050px; display: flex; align-items: center; gap: 70px; margin-bottom: 120px; }
+        .comp-row.reverse { flex-direction: row-reverse; }
+        .gif-wrap { flex: 1.2; }
+        .gif-wrap img { 
+            width: 100%; border-radius: 16px; border: 1px solid #1a1a1a;
+            box-shadow: 0 40px 80px -15px rgba(0,0,0,0.8); 
+        }
+        .comp-info { flex: 1; }
+        .comp-info h2 { font-size: 36px; margin-bottom: 20px; font-weight: 800; }
+        .comp-info p { color: #888; line-height: 1.8; font-size: 15px; }
+
+        /* ENGINE LOGIC BLOCK */
+        #logic { text-align: center; justify-content: center; }
+        .logic-content { max-width: 700px; }
+        .logic-content h2 { font-size: 42px; margin-bottom: 20px; }
+        .logic-content p { color: #777; font-size: 16px; line-height: 1.8; }
+        .logic-content b { color: var(--accent); }
+
+        /* FAQ BLOCK */
+        .faq-grid { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 12px; margin-top: 50px; }
+        .faq-card { 
+            background: var(--light); border-radius: 14px; overflow: hidden; 
+            transition: 0.3s var(--ease); border: 1px solid rgba(255,255,255,0.02); 
+        }
+        .faq-card:hover { transform: translateY(-3px) scale(1.01); background: var(--hover); border-color: #333; }
+        .faq-btn {
+            width: 100%; padding: 22px 25px; background: none; border: none; color: #fff;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+            font-size: 14px; font-weight: 600; text-align: left;
+        }
+        .faq-dot { width: 7px; height: 7px; background: #333; border-radius: 50%; transition: 0.4s; }
+        .faq-card.open .faq-dot { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+        .faq-ans { max-height: 0; padding: 0 25px; color: #888; font-size: 13px; line-height: 1.7; transition: 0.5s var(--ease); }
+        .faq-card.open .faq-ans { max-height: 200px; padding-bottom: 25px; }
+
+        /* FOOTER & LINKS */
+        .footer-links { margin-top: 80px; display: flex; gap: 40px; }
+        .footer-links a { color: #444; text-decoration: none; font-size: 11px; font-weight: 800; transition: 0.3s; letter-spacing: 1px; }
+        .footer-links a:hover { color: var(--accent); }
+
+        /* --- PARABOLIC BLUR EFFECT --- */
+        .blur-container {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 160px;
+            pointer-events: none; z-index: 950; overflow: hidden;
+        }
+        .parabolic-overlay {
+            width: 100%; height: 100%;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            mask-image: radial-gradient(circle at bottom, black 30%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at bottom, black 30%, transparent 80%);
+            background: linear-gradient(to top, var(--bg) 20%, transparent);
         }
 
-        #mode-container {
-            display: flex; gap: 15px; align-items: center; height: 30px; margin-top: 20px;
-        }
-        .radio-label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
-        .radio-label input {
-            appearance: none; width: 14px; height: 14px; border-radius: 7px;
-            border: 2px solid #555; margin: 0; cursor: pointer; background: transparent;
-        }
-        .radio-label input:checked { background-color: #e6e6e6; border: 2px solid #2a2a2a; }
-
-        #btn-convert {
-            width: 200px; height: 42px; background: var(--light);
-            color: white; border: none; border-radius: var(--radius);
-            font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 15px;
-        }
-        #btn-convert:hover { background: var(--hover); }
-
-        #lego-warn-label {
-            color: var(--warning); font-size: 11px; text-decoration: underline;
-            cursor: pointer; margin-top: 15px; display: none; text-align: center; width: 100%;
-        }
-
-        #stats-label {
-            color: #666; font-size: 11px; text-decoration: underline;
-            text-align: center; margin-top: 5px; width: 100%; height: 15px;
-        }
-
-        #status {
-            color: #aaa; font-size: 11px; text-align: center; height: 30px;
-            line-height: 30px; width: 240px; margin-top: 20px;
-        }
-
-        #proc-indicator {
-            position: absolute; left: 12px; top: 8px; width: 32px; height: 32px;
-            opacity: 0; transition: opacity 0.3s;
-        }
-
-        #btn-support {
-            position: absolute; bottom: 20px; left: 20px;
-            background: transparent; border: 1px solid #333; color: #555;
-            padding: 8px 15px; border-radius: 20px; font-size: 10px;
-            text-decoration: none; transition: 0.3s; z-index: 100;
-            letter-spacing: 1px;
-        }
-        #btn-support:hover { color: #fff; border-color: #666; background: #111; }
-
-        #right-panel {
-            width: 0; height: 100%; background: var(--bg); border-left: 0px solid #1a1a1a;
-            transition: all 0.6s var(--ease); display: flex; flex-direction: column;
-            overflow: hidden; flex-shrink: 0;
-        }
-
-        #queue-header {
-            padding: 20px; font-size: 12px; display: flex; justify-content: space-between;
-            align-items: center; white-space: nowrap; height: 60px;
-        }
-        
-        #btn-clear {
-            background: transparent; border: none; color: #777; font-size: 10px;
-            text-decoration: underline; cursor: pointer; padding: 0;
-        }
-
-        #queue-list { flex: 1; overflow-y: auto; padding: 0 15px; }
-        #queue-list::-webkit-scrollbar { display: none; }
-
-        .q-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 5px 5px; font-size: 12px;
-        }
-        .q-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; cursor: pointer; }
-        .q-remove { background: transparent; border: none; color: #777; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .q-remove:hover { color: var(--warning); }
-
-        body.has-files #logo { height: 150px; margin-bottom: 20px; }
-        body.has-files #right-panel { width: 220px; border-left: 1px solid #1a1a1a; }
-        body.has-files #btn-select { width: 200px; height: 42px; padding: 10px; }
-        body.has-files #extra-controls { height: 150px; opacity: 1; pointer-events: auto; }
-        body.has-files #status { margin-top: 10px; }
-
-        #drag-overlay {
-            position: fixed; inset: 0; background-color: var(--overlay); z-index: 9999;
-            display: none; justify-content: center; align-items: center; pointer-events: none;
-        }
-        #drag-overlay img { width: 50%; max-width: 500px; object-fit: contain; pointer-events: none; }
-
-        #loading-screen {
-            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-
-        #lego-overlay {
-            position: fixed; inset: 0; background: var(--bg); z-index: 1500;
-            transform: translateY(100%); transition: 0.4s var(--ease);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
-        }
-        #lego-overlay.show { transform: translateY(0); }
+        /* UI ELEMENTS */
+        #proc-indicator { position: fixed; top: 95px; right: 45px; opacity: 0; transition: 0.3s; z-index: 1100; pointer-events: none; }
+        #status-msg { margin-top: 25px; font-size: 11px; color: #555; height: 20px; font-weight: bold; letter-spacing: 1px; }
 
         #preview-tooltip {
-            position: fixed; width: 180px; min-height: 190px; background: var(--bg); border: 1px solid #444;
-            border-radius: var(--radius); padding: 4px; display: none; flex-direction: column;
-            align-items: center; z-index: 3000; pointer-events: none;
+            position: fixed; width: 200px; background: var(--bg); border: 1px solid #333;
+            border-radius: 14px; padding: 6px; display: none; z-index: 3000; pointer-events: none;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
         }
-        #preview-img { 
-            width: 170px; height: 132px; object-fit: contain; 
-            background: var(--light); border-radius: 6px;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
+        #preview-img { width: 100%; height: 150px; object-fit: contain; image-rendering: pixelated; border-radius: 10px; background: #111; }
+
+        @media (max-width: 900px) {
+            .comp-row, .comp-row.reverse { flex-direction: column; text-align: center; gap: 30px; }
+            nav { display: none; }
         }
-        #preview-warn { color: var(--warning); font-size: 11px; margin-top: 10px; display: none; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <img src="processing.gif" width="64" height="64">
-        <div style="margin-top:10px; font-weight:bold; font-size:12px; letter-spacing:2px; color:#555; width: 300px; text-align: center;" id="init-status">GLORP ENGINE STARTING</div>
+        <div id="load-label" style="font-weight: 900; font-size: 12px; letter-spacing: 5px; color: #333; text-transform: uppercase;">GLORP ENGINE STARTING</div>
     </div>
 
-    <a href="https://www.donationalerts.com/r/zackgphom" id="btn-support" target="_blank">SUPPORT PROJECT</a>
+    <header>
+        <div class="header-left">
+            <img src="favicon.png" class="header-logo">
+            <span class="header-title">GLORP</span>
+        </div>
+        <nav>
+            <a href="#app">Application</a>
+            <a href="#compare">Processing Modes</a>
+            <a href="#logic">Architecture</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+        <div class="header-right">
+            <a href="https://www.donationalerts.com/r/zackgphom" class="btn-support-head" target="_blank">Support Project</a>
+        </div>
+    </header>
 
-    <div id="app-container">
-        <img src="processing.gif" id="proc-indicator">
+    <div id="proc-indicator"><img src="processing.gif" width="28"></div>
+
+    <section id="app">
+        <img src="logo.png" id="logo-big">
+        <div class="drop-area" id="drop-area">
+            <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT IMAGES</button>
+            <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+            <span class="drag-hint">OR DRAG N DROP YOUR IMAGE HERE</span>
+        </div>
         
-        <div id="main-panel">
-            <img src="logo.png" id="logo">
-            <div id="central-action">
-                <button id="btn-select" onclick="document.getElementById('file-input').click()">Select Images</button>
-                <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-                <div id="extra-controls">
-                    <div id="mode-container">
-                        <label class="radio-label"><input type="radio" name="mode" value="monolith" checked> Monolith</label>
-                        <label class="radio-label"><input type="radio" name="mode" value="lego"> Lego</label>
-                        <label class="radio-label"><input type="radio" name="mode" value="webp"> WebP</label>
-                    </div>
-                    <button id="btn-convert">Convert</button>
-                    <div id="lego-warn-label">⚠️ Performance Warning (Click for info)</div>
-                    <div id="stats-label"></div>
-                </div>
-                <div id="status"></div>
+        <div id="mode-selector">
+            <label class="mode-label"><input type="radio" name="conv-mode" value="monolith" checked><span>MONOLITH</span></label>
+            <label class="mode-label"><input type="radio" name="conv-mode" value="lego"><span>LEGO</span></label>
+            <label class="mode-label"><input type="radio" name="conv-mode" value="webp"><span>WEBP</span></label>
+        </div>
+
+        <div id="status-msg"></div>
+    </section>
+
+    <section id="compare">
+        <div class="comp-row">
+            <div class="gif-wrap"><img src="Monolith.gif" alt="Monolith optimization"></div>
+            <div class="comp-info">
+                <h2>Monolith Mode</h2>
+                <p>Sophisticated path-tracing that identifies color clusters and merges them into singular, optimized vector paths. This mode is essential for keeping file sizes small and shapes clean for production.</p>
+            </div>
+        </div>
+        <div class="comp-row reverse">
+            <div class="gif-wrap"><img src="lego.gif" alt="Lego pixel grid"></div>
+            <div class="comp-info">
+                <h2>Lego Mode</h2>
+                <p>Every single pixel is translated into a discrete SVG rectangle. While heavy on performance, it provides a perfect 1:1 mapping for technical grid-based designs or voxel-like extrusions.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="logic">
+        <div class="logic-content">
+            <h2>The Architecture</h2>
+            <p>
+                GLORP is powered by a custom <b>Contour Meshing Engine</b>. Using <b>NumPy-accelerated</b> processing, the engine performs a high-speed boundary scan to detect pixel transitions. A <b>Greedy Search</b> algorithm then traces these boundaries to build resolution-independent paths with minimal vertex counts. It ensures <b>crisp edges</b> and mathematical precision without using neural networks.
+            </p>
+        </div>
+    </section>
+
+    <section id="faq">
+        <h2 style="font-size: 42px; font-weight: 800;">FAQ</h2>
+        <div class="faq-grid">
+            <div class="faq-card">
+                <button class="faq-btn">IS MY DATA SECURE? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Absolutely. All processing occurs locally in your browser sandbox via Pyodide. No image data is ever transmitted to a server.</div>
+            </div>
+            <div class="faq-card">
+                <button class="faq-btn">WEB VS DESKTOP VERSION? <span class="faq-dot"></span></button>
+                <div class="faq-ans">The web version is optimized for single-file tasks. The desktop version (Itch.io) supports multi-folder batch processing and native speeds.</div>
+            </div>
+            <div class="faq-card">
+                <button class="faq-btn">LEGO MODE LIMITATIONS? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Lego mode generates a separate object for every pixel. Large images can create hundreds of thousands of objects, which might crash your browser.</div>
+            </div>
+            <div class="faq-card">
+                <button class="faq-btn">SUPPORTED FILE FORMATS? <span class="faq-dot"></span></button>
+                <div class="faq-ans">GLORP handles PNG, JPG, and GIF. For the best vectorization results, high-contrast pixel art works best.</div>
+            </div>
+            <div class="faq-card">
+                <button class="faq-btn">COMMERCIAL USAGE? <span class="faq-dot"></span></button>
+                <div class="faq-ans">GLORP is free for non-commercial projects. For commercial licenses or enterprise use, please reach out via email.</div>
             </div>
         </div>
 
-        <div id="right-panel">
-            <div id="queue-header">
-                <div>FILE QUEUE <span id="queue-count" style="color:#555; font-weight:bold; margin-left:5px;">(0)</span></div>
-                <button id="btn-clear">Clear All</button>
-            </div>
-            <div id="queue-list"></div>
+        <div class="footer-links">
+            <a href="https://github.com/ZackGphom/GLORP" target="_blank">REPOSITRY</a>
+            <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank">ITCH.IO</a>
+            <a href="mailto:zackgphom@gmail.com">ZACKGPHOM@GMAIL.COM</a>
         </div>
-    </div>
+    </section>
 
-    <div id="drag-overlay"><img src="DropUrStuffHere.png"></div>
-
-    <div id="lego-overlay">
-        <h2 style="color:var(--warning); margin-bottom: 5px;">LEGO MODE PERFORMANCE WARNING</h2>
-        <p style="color:#888; font-size:13px; margin-bottom: 20px;">Software may lag or crash due to high object count.</p>
-        <img src="lego_warning.gif" style="width:500px; height:350px; object-fit:contain;">
-        <p style="color:#444; font-size:10px; margin-top:20px; text-decoration:underline; cursor:pointer;" onclick="toggleLegoOverlay(false)">Click anywhere to close</p>
+    <div class="blur-container">
+        <div class="parabolic-overlay"></div>
     </div>
 
     <div id="preview-tooltip">
         <img id="preview-img">
-        <div id="preview-warn">This doesn't look like pixel art.</div>
     </div>
 
     <script>
-        let twInterval, twEraseInterval, twTimeout;
-        let twText = "", twIndex = 0;
-
-        function setStatus(targetId, text, eraseAfter = 5000) {
-            const el = document.getElementById(targetId);
-            clearInterval(twInterval); clearInterval(twEraseInterval); clearTimeout(twTimeout);
-            twText = text; twIndex = 0; el.innerText = "";
-            
-            twInterval = setInterval(() => {
-                if(twIndex < twText.length) {
-                    twIndex++; el.innerText = twText.substring(0, twIndex);
-                } else {
-                    clearInterval(twInterval);
-                    if(eraseAfter > 0) twTimeout = setTimeout(() => startErasing(targetId), eraseAfter);
-                }
-            }, 40);
-        }
-
-        function startErasing(targetId) {
-            const el = document.getElementById(targetId);
-            clearInterval(twInterval); clearInterval(twEraseInterval);
-            twEraseInterval = setInterval(() => {
-                if(twIndex > 0) {
-                    twIndex--; el.innerText = twText.substring(0, twIndex);
-                } else {
-                    clearInterval(twEraseInterval); el.innerText = "";
-                }
-            }, 30);
-        }
-        function runInfiniteLoader() {
-            const el = document.getElementById('init-status');
-            const base = "GLORP ENGINE STARTING";
-            const dots = " ...";
-            let idx = 0;
-            let forward = true;
-            setInterval(() => {
-                if(forward) {
-                    idx++;
-                    el.innerText = base + dots.substring(0, idx);
-                    if(idx >= dots.length) forward = false;
-                } else {
-                    idx--;
-                    el.innerText = base + dots.substring(0, idx);
-                    if(idx <= 0) forward = true;
-                }
-            }, 400);
-        }
-        runInfiniteLoader();
-
-        const MESHING_CODE = `
+        /* --- PYTHON CONTOUR ENGINE --- */
+        const ENGINE_CODE = `
 import numpy as np
-CLOCKWISE, ANTICLOCKWISE = 1, 2
+CW, ACW = 1, 2
+
 def edge_finding(grid, color):
     mask = np.where(grid == color)
-    pos_h = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8); pos_h[mask] = 1
-    hor_edges = (pos_h - np.roll(1 - pos_h, 1, axis=0) == 0) * ANTICLOCKWISE - (pos_h + np.roll(1 - pos_h, 1, axis=0) == 2)
-    pos_v = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8); pos_v[mask] = 1
-    ver_edges = (pos_v - np.roll(1 - pos_v, 1, axis=1) == 0) * CLOCKWISE + (pos_v + np.roll(1 - pos_v, 1, axis=1) == 2)
-    return ver_edges, hor_edges
-def explore_up(x, y, v, h):
-    for dX in range(x, -1, -1):
-        if v[dX, y] == ANTICLOCKWISE: v[dX, y] = 0
+    h_pos = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8); h_pos[mask] = 1
+    h_edges = (h_pos - np.roll(1 - h_pos, 1, axis=0) == 0) * ACW - (h_pos + np.roll(1 - h_pos, 1, axis=0) == 2)
+    v_pos = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8); v_pos[mask] = 1
+    v_edges = (v_pos - np.roll(1 - v_pos, 1, axis=1) == 0) * CW + (v_pos + np.roll(1 - v_pos, 1, axis=1) == 2)
+    return v_edges, h_edges
+
+def ex_up(x, y, v, h):
+    for dx in range(x, -1, -1):
+        if v[dx, y] == ACW: v[dx, y] = 0
         else: break
-    else: dX -= 1
-    p = f"v{dX - x}"
-    if h[dX + 1, y] == CLOCKWISE: return p + explore_right(dX + 1, y, v, h)
-    elif y > 0 and h[dX + 1, y - 1] == ANTICLOCKWISE: return p + explore_left(dX + 1, y - 1, v, h)
+    else: dx -= 1
+    p = f"v{dx-x}"
+    if h[dx+1, y] == CW: return p + ex_right(dx+1, y, v, h)
+    elif y > 0 and h[dx+1, y-1] == ACW: return p + ex_left(dx+1, y-1, v, h)
     return p
-def explore_left(x, y, v, h):
-    for dY in range(y, -1, -1):
-        if h[x, dY] == ANTICLOCKWISE: h[x, dY] = 0
+
+def ex_left(x, y, v, h):
+    for dy in range(y, -1, -1):
+        if h[x, dy] == ACW: h[x, dy] = 0
         else: break
-    else: dY -= 1
-    p = f"h{dY - y}"
-    if x > 0 and v[x - 1, dY + 1] == ANTICLOCKWISE: return p + explore_up(x - 1, dY + 1, v, h)
-    elif dY < v.shape[1] and v[x, dY + 1] == CLOCKWISE: return p + explore_down(x, dY + 1, v, h)
+    else: dy -= 1
+    p = f"h{dy-y}"
+    if x > 0 and v[x-1, dy+1] == ACW: return p + ex_up(x-1, dy+1, v, h)
+    elif dy < v.shape[1] and v[x, dy+1] == CW: return p + ex_down(x, dy+1, v, h)
     return p
-def explore_down(x, y, v, h):
-    for dX in range(x, v.shape[0]):
-        if v[dX, y] == CLOCKWISE: v[dX, y] = 0
+
+def ex_down(x, y, v, h):
+    for dx in range(x, v.shape[0]):
+        if v[dx, y] == CW: v[dx, y] = 0
         else: break
-    else: dX += 1
-    p = f"v{dX - x}"
-    if y > 0 and h[dX, y - 1] == ANTICLOCKWISE: return p + explore_left(dX, y - 1, v, h)
-    elif dX < h.shape[0] and h[dX, y] == CLOCKWISE: return p + explore_right(dX, y, v, h)
+    else: dx += 1
+    p = f"v{dx-x}"
+    if y > 0 and h[dx, y-1] == ACW: return p + ex_left(dx, y-1, v, h)
+    elif dx < h.shape[0] and h[dx, y] == CW: return p + ex_right(dx, y, v, h)
     return p
-def explore_right(x, y, v, h):
-    for dY in range(y, h.shape[1]):
-        if h[x, dY] == CLOCKWISE: h[x, dY] = 0
+
+def ex_right(x, y, v, h):
+    for dy in range(y, h.shape[1]):
+        if h[x, dy] == CW: h[x, dy] = 0
         else: break
-    else: dY += 1
-    p = f"h{dY - y}"
-    if dY < v.shape[1] and v[x, dY] == CLOCKWISE: return p + explore_down(x, dY + 1, v, h)
-    elif x > 0 and v[x - 1, dY] == ANTICLOCKWISE: return p + explore_up(x - 1, dY, v, h)
+    else: dy += 1
+    p = f"h{dy-y}"
+    if dy < v.shape[1] and v[x, dy] == CW: return p + ex_down(x, dy+1, v, h)
+    elif x > 0 and v[x-1, dy] == ACW: return p + ex_up(x-1, dy, v, h)
     return p
+
 def path_finding(grid, color):
     v, h = edge_finding(grid, color); path = ""
-    while np.any(h == CLOCKWISE):
-        x, y = np.argwhere(h == CLOCKWISE)[0]
-        path += f"M{y},{x}" + explore_right(x, y, v, h) + "z"
+    while np.any(h == CW):
+        c = np.argwhere(h == CW)
+        if len(c) == 0: break
+        x, y = c[0]
+        path += f"M{y},{x}" + ex_right(x, y, v, h) + "z"
     return path
 `;
 
+        /* --- PYODIDE INITIALIZATION --- */
         let pyodide;
-        let selectedFiles = [];
-
-        async function init() {
-            try {
-                pyodide = await loadPyodide();
-                await pyodide.loadPackage("numpy");
-                await pyodide.runPython(MESHING_CODE);
-                document.getElementById('loading-screen').style.display = 'none';
-            } catch(e) { document.getElementById('init-status').innerText = "ERROR LOADING ENGINE"; }
-        }
-        init();
-
-        function transientProc() {
-            document.getElementById('proc-indicator').style.opacity = "1";
-            setTimeout(() => document.getElementById('proc-indicator').style.opacity = "0", 800);
-        }
-
-        function handleFiles(files) {
-            transientProc();
-            Array.from(files).forEach(f => {
-                if(!f.type.startsWith('image/')) return;
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const img = new Image();
-                    img.onload = () => { selectedFiles.push({file: f, img}); renderQueue(); };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(f);
-            });
-        }
-
-        function renderQueue() {
-            const list = document.getElementById('queue-list');
-            list.innerHTML = "";
-            document.getElementById('queue-count').innerText = `(${selectedFiles.length})`;
+        async function startEngine() {
+            const label = document.getElementById('load-label');
+            let d = 0;
+            const t = setInterval(() => { d = (d+1)%4; label.innerText = "GLORP ENGINE STARTING" + ".".repeat(d); }, 400);
             
-            if(selectedFiles.length > 0) document.body.classList.add('has-files');
-            else document.body.classList.remove('has-files');
-
-            const mode = document.querySelector('input[name="mode"]:checked').value;
-            let totalPixels = 0;
-
-            selectedFiles.forEach((item, idx) => {
-                const isLarge = (item.img.width > 512 || item.img.height > 512);
-                totalPixels += (item.img.width * item.img.height);
-                const div = document.createElement('div'); div.className = 'q-item';
-                const color = (isLarge && mode !== 'webp') ? 'var(--warning)' : '#e6e6e6';
-                div.innerHTML = `<span class="q-name" style="color:${color}">${item.file.name}</span><button class="q-remove" onclick="removeFile(${idx})">×</button>`;
-                const name = div.querySelector('.q-name');
-                name.onmouseenter = (e) => showTooltip(item.img.src, isLarge && mode !== 'webp', e);
-                name.onmouseleave = hideTooltip;
-                list.appendChild(div);
-            });
-
-            const warnLbl = document.getElementById('lego-warn-label');
-            const statLbl = document.getElementById('stats-label');
-            if (mode === 'lego') {
-                warnLbl.style.display = 'block';
-                statLbl.innerText = `Lego Mode: ~${totalPixels.toLocaleString()} shapes`;
-                statLbl.style.color = totalPixels > 50000 ? 'var(--warning)' : '#666';
-            } else {
-                warnLbl.style.display = 'none'; statLbl.innerText = '';
-            }
+            pyodide = await loadPyodide();
+            await pyodide.loadPackage("numpy");
+            await pyodide.runPython(ENGINE_CODE);
+            
+            clearInterval(t);
+            document.getElementById('loading-screen').classList.add('loaded');
         }
+        startEngine();
 
-        function removeFile(i) { selectedFiles.splice(i, 1); renderQueue(); }
-        
-        function showTooltip(src, showWarn, e) { 
-            const t = document.getElementById('preview-tooltip');
-            document.getElementById('preview-img').src = src;
-            document.getElementById('preview-warn').style.display = showWarn ? 'block' : 'none';
-            t.style.display = 'flex';
-            let tx = e.clientX + 20; let ty = e.clientY - 100;
-            if (tx + 180 > window.innerWidth) tx = window.innerWidth - 190;
-            if (ty < 10) ty = 10;
-            t.style.left = tx + 'px'; t.style.top = ty + 'px';
-        }
+        /* --- UI LOGIC: FAQ & NAVIGATION --- */
+        document.querySelectorAll('.faq-btn').forEach(btn => {
+            btn.onclick = () => {
+                const card = btn.parentElement;
+                const isOpen = card.classList.contains('open');
+                document.querySelectorAll('.faq-card').forEach(c => c.classList.remove('open'));
+                if (!isOpen) card.classList.add('open');
+            };
+        });
 
-        function hideTooltip() { document.getElementById('preview-tooltip').style.display = 'none'; }
-        function toggleLegoOverlay(show) { document.getElementById('lego-overlay').classList.toggle('show', show); }
+        document.querySelectorAll('nav a').forEach(a => {
+            a.onclick = (e) => {
+                e.preventDefault();
+                document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+            };
+        });
 
-        document.getElementById('file-input').onchange = e => handleFiles(e.target.files);
-        document.getElementById('btn-clear').onclick = () => { selectedFiles = []; renderQueue(); };
-        document.getElementById('lego-warn-label').onclick = () => toggleLegoOverlay(true);
-        document.getElementById('lego-overlay').onclick = () => toggleLegoOverlay(false);
-        document.querySelectorAll('input[name="mode"]').forEach(r => r.onchange = renderQueue);
-
-        const overlay = document.getElementById('drag-overlay');
-        window.addEventListener('dragover', (e) => { e.preventDefault(); overlay.style.display = "flex"; });
-        window.addEventListener('dragleave', (e) => { if (e.relatedTarget === null || e.fromElement === null) overlay.style.display = "none"; });
-        window.addEventListener('drop', (e) => { e.preventDefault(); overlay.style.display = "none"; handleFiles(e.dataTransfer.files); });
-
-        document.getElementById('btn-convert').onclick = async () => {
-            if (selectedFiles.length === 0) return;
-            const mode = document.querySelector('input[name="mode"]:checked').value;
-            document.getElementById('proc-indicator').style.opacity = "1";
-            document.getElementById('btn-convert').disabled = true;
-
-            for(let i=0; i<selectedFiles.length; i++) {
-                const item = selectedFiles[i];
-                setStatus('status', `Processing ${i+1}/${selectedFiles.length}...`, 0);
-                const {file, img} = item;
-                const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
-                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
-                const imageData = ctx.getImageData(0, 0, img.width, img.height);
-                
-                let content, ext = ".svg";
-                if(mode === 'monolith') {
-                    pyodide.globals.set("raw", imageData.data); pyodide.globals.set("w", img.width); pyodide.globals.set("h", img.height);
-                    content = await pyodide.runPythonAsync(`
-pixels = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
-colors = np.unique(pixels.reshape(-1, 4), axis=0); colors = colors[colors[:, 3] > 0]
-grid = (pixels[:,:,0].astype(np.uint32) << 24) | (pixels[:,:,1].astype(np.uint32) << 16) | (pixels[:,:,2].astype(np.uint32) << 8) | pixels[:,:,3]
-res = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">', "<style>"]
-for i, c in enumerate(colors): res.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
-res.append("</style>")
-for i, c in enumerate(colors):
-    c_int = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
-    p_data = path_finding(grid, c_int)
-    if p_data: res.append(f'<path class="c{i}" d="{p_data}"/>')
-res.append("</svg>")
-"\\n".join(res)`);
-                } else if(mode === 'lego') {
-                    content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
-                    const d = imageData.data;
-                    for(let j=0; j<d.length; j+=4) if(d[j+3]>0) {
-                        const x=(j/4)%img.width, y=Math.floor((j/4)/img.width);
-                        content += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`;
-                    }
-                    content += `</svg>`;
-                } else { content = canvas.toDataURL('image/webp'); ext = ".webp"; }
-
-                const a = document.createElement('a'); a.href = ext === ".svg" ? URL.createObjectURL(new Blob([content], {type:'image/svg+xml'})) : content;
-                a.download = file.name.split('.')[0] + ext; a.click();
-                await new Promise(r => setTimeout(r, 100));
-            }
-            document.getElementById('proc-indicator').style.opacity = "0";
-            document.getElementById('btn-convert').disabled = false;
-            setStatus('status', "Done!");
-            selectedFiles = []; renderQueue();
+        /* --- DRAG N DROP (Hero Block Exclusive) --- */
+        const dropArea = document.getElementById('drop-area');
+        dropArea.ondragover = (e) => { e.preventDefault(); dropArea.classList.add('active'); };
+        dropArea.ondragleave = () => dropArea.classList.remove('active');
+        dropArea.ondrop = (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('active');
+            handleFiles(e.dataTransfer.files);
         };
+
+        /* --- CORE CONVERSION LOGIC --- */
+        async function handleFiles(files) {
+            if (!files.length) return;
+            const mode = document.querySelector('input[name="conv-mode"]:checked').value;
+            const indicator = document.getElementById('proc-indicator');
+            const status = document.getElementById('status-msg');
+            
+            indicator.style.opacity = 1;
+            status.innerText = `PROCESSING ${files.length} ASSETS...`;
+
+            for (let file of files) {
+                if (!file.type.startsWith('image/')) continue;
+                
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                await new Promise(resolve => {
+                    reader.onload = async (e) => {
+                        const img = new Image();
+                        img.src = e.target.result;
+                        img.onload = async () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width; canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            const iData = ctx.getImageData(0, 0, img.width, img.height);
+                            
+                            let result, ext = ".svg";
+                            
+                            if (mode === 'monolith') {
+                                pyodide.globals.set("raw", iData.data);
+                                pyodide.globals.set("w", img.width);
+                                pyodide.globals.set("h", img.height);
+                                result = await pyodide.runPythonAsync(`
+px = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
+clrs = np.unique(px.reshape(-1, 4), axis=0); clrs = clrs[clrs[:, 3] > 0]
+grd = (px[:,:,0].astype(np.uint32) << 24) | (px[:,:,1].astype(np.uint32) << 16) | (px[:,:,2].astype(np.uint32) << 8) | px[:,:,3]
+svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">', "<style>"]
+for i, c in enumerate(clrs): svg.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
+svg.append("</style>")
+for i, c in enumerate(clrs):
+    c_i = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
+    p_d = path_finding(grd, c_i)
+    if p_d: svg.append(f'<path class="c{i}" d="{p_d}"/>')
+svg.append("</svg>")
+"\\n".join(svg)`);
+                            } else if (mode === 'lego') {
+                                result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+                                const d = iData.data;
+                                for(let j=0; j<d.length; j+=4) if(d[j+3]>0) {
+                                    const x=(j/4)%img.width, y=Math.floor((j/4)/img.width);
+                                    result += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`;
+                                }
+                                result += `</svg>`;
+                            } else {
+                                result = canvas.toDataURL('image/webp'); ext = ".webp";
+                            }
+
+                            const link = document.createElement('a');
+                            link.href = ext === ".svg" ? URL.createObjectURL(new Blob([result], {type:'image/svg+xml'})) : result;
+                            link.download = file.name.split('.')[0] + ext;
+                            link.click();
+                            resolve();
+                        };
+                    };
+                });
+            }
+            
+            indicator.style.opacity = 0;
+            status.innerText = "DONE!";
+            setTimeout(() => status.innerText = "", 3000);
+        }
+
+        document.getElementById('file-input').onchange = (e) => handleFiles(e.target.files);
     </script>
 </body>
 </html>
