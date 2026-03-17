@@ -69,8 +69,8 @@
     .remove-file{color:#444;cursor:pointer;font-weight:bold;padding:0 5px;transition:.2s;font-size:14px}
     .remove-file:hover{color:#fff}
     .comp-row{width:100%;max-width:1100px;display:flex;align-items:center;gap:80px;margin-bottom:120px}
-    .gif-container{flex:1.3}
-    .gif-container img{width:100%;display:block;border-radius:20px;image-rendering:pixelated;box-shadow:0 40px 80px -20px rgba(0,0,0,0.6)}
+    .vid-container{flex:1.3}
+    .vid-container video{width:100%;display:block;border-radius:20px;image-rendering:pixelated;box-shadow:0 40px 80px -20px rgba(0,0,0,0.6);outline:none}
     .comp-info{flex:1;text-align:left}
     .comp-info h2{font-size:36px;margin-bottom:20px;font-weight:800}
     .comp-info p{color:#888;line-height:1.8;font-size:15px}
@@ -148,8 +148,8 @@
       <div id="convert-block">
         <button id="btn-convert">CONVERT</button>
         <div class="mode-tabs" id="mode-tabs">
-          <div class="mode-tab active" data-mode="monolith">Monolith mod</div>
-          <div class="mode-tab" data-mode="lego">Lego mod</div>
+          <div class="mode-tab active" data-mode="monolith">Monolith</div>
+          <div class="mode-tab" data-mode="lego">Lego</div>
           <div class="mode-tab" data-mode="webp">WebP</div>
         </div>
       </div>
@@ -161,16 +161,26 @@
 
   <section id="compare">
     <div class="comp-row">
-      <div class="gif-container"><img src="Monolith.gif" alt="Monolith Preview"></div>
+      <div class="vid-container">
+        <video autoplay loop muted playsinline>
+          <source src="Monolith.webm" type="video/webm">
+          Your browser does not support the video tag.
+        </video>
+      </div>
       <div class="comp-info">
-        <h2>Monolith Engine</h2>
-        <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths using greedy meshing optimization. Version 4.0 improves vertex merging for even cleaner vector outputs.</p>
+        <h2>Monolith Mode</h2>
+        <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths using greedy meshing optimization. Version 4.0.0 improves vertex merging for even cleaner vector outputs.</p>
       </div>
     </div>
     <div class="comp-row" style="flex-direction:row-reverse">
-      <div class="gif-container"><img src="lego.gif" alt="Lego Preview"></div>
+      <div class="vid-container">
+        <video autoplay loop muted playsinline>
+          <source src="Lego.webm" type="video/webm">
+          Your browser does not support the video tag.
+        </video>
+      </div>
       <div class="comp-info" style="text-align:right">
-        <h2>Lego Stability</h2>
+        <h2>Lego Mode</h2>
         <p>Exact 1:1 pixel-to-rect representation. In v4.0.0, we've implemented a performance detection overlay that warns you before generating heavy SVGs, preventing browser lag on massive grids.</p>
       </div>
     </div>
@@ -577,7 +587,6 @@ svg_parts.append("</svg>")
       status.innerText = "CONVERSION COMPLETE";
       showToast("Conversion complete", "success", 1800);
       
-      // Таймер очистки статуса (через 4 секунды)
       setTimeout(() => {
         if (status.innerText === "CONVERSION COMPLETE") {
           status.innerText = "";
@@ -588,7 +597,6 @@ svg_parts.append("</svg>")
       updateUI();
     };
 
-    // UI Listeners
     document.querySelectorAll('.faq-btn').forEach(btn=>{btn.onclick=()=>{const card=btn.parentElement;const wasOpen=card.classList.contains('open');document.querySelectorAll('.faq-card').forEach(c=>c.classList.remove('open'));if(!wasOpen)card.classList.add('open')}});
     const sectionObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.intersectionRatio>0.10){e.target.classList.add('revealed')}else{e.target.classList.remove('revealed')}})},{threshold:[0,0.10,0.4]});
     document.querySelectorAll('section').forEach(s=>sectionObserver.observe(s));
