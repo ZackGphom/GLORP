@@ -178,7 +178,7 @@
         <div style="margin-top:10px; font-weight:bold; font-size:12px; letter-spacing:2px; color:#555; width: 300px; text-align: center;" id="init-status">GLORP ENGINE STARTING</div>
     </div>
 
-    <a href="https://boosty.to/zackgphom" id="btn-support" target="_blank">SUPPORT PROJECT</a>
+    <a href="https://www.donationalerts.com/r/zackgphom" id="btn-support" target="_blank">SUPPORT PROJECT</a>
 
     <div id="app-container">
         <img src="processing.gif" id="proc-indicator">
@@ -226,7 +226,6 @@
     </div>
 
     <script>
-        // --- ЛОГИКА ТЕКСТА ---
         let twInterval, twEraseInterval, twTimeout;
         let twText = "", twIndex = 0;
 
@@ -256,8 +255,6 @@
                 }
             }, 30);
         }
-
-        // --- БЕСКОНЕЧНЫЕ ТОЧКИ ПРИ ЗАГРУЗКЕ ---
         function runInfiniteLoader() {
             const el = document.getElementById('init-status');
             const base = "GLORP ENGINE STARTING";
@@ -278,7 +275,6 @@
         }
         runInfiniteLoader();
 
-        // --- ПИТОН И ДВИЖОК ---
         const MESHING_CODE = `
 import numpy as np
 CLOCKWISE, ANTICLOCKWISE = 1, 2
