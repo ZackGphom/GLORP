@@ -18,7 +18,7 @@
             --ease: cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        * { box-sizing: border-box; user-select: none; }
+        * { box-sizing: border-box; user-select: none; outline: none; }
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -30,6 +30,7 @@
             width: 100vw; height: 100vh; display: flex; position: relative;
         }
 
+        /* Центрирование основного блока */
         #main-panel {
             flex: 1; display: flex; flex-direction: column;
             align-items: center; justify-content: center;
@@ -97,6 +98,16 @@
             opacity: 0; transition: opacity 0.3s;
         }
 
+        /* Кнопка поддержки */
+        #btn-support {
+            position: absolute; bottom: 20px; left: 20px;
+            background: transparent; border: 1px solid #333; color: #555;
+            padding: 8px 15px; border-radius: 20px; font-size: 10px;
+            text-decoration: none; transition: 0.3s; z-index: 100;
+            letter-spacing: 1px;
+        }
+        #btn-support:hover { color: #fff; border-color: #666; background: #111; }
+
         #right-panel {
             width: 0; height: 100%; background: var(--bg); border-left: 0px solid #1a1a1a;
             transition: all 0.6s var(--ease); display: flex; flex-direction: column;
@@ -124,6 +135,7 @@
         .q-remove { background: transparent; border: none; color: #777; font-size: 18px; font-weight: bold; cursor: pointer; }
         .q-remove:hover { color: var(--warning); }
 
+        /* Состояние при наличии файлов */
         body.has-files #logo { height: 150px; margin-bottom: 20px; }
         body.has-files #right-panel { width: 220px; border-left: 1px solid #1a1a1a; }
         body.has-files #btn-select { width: 200px; height: 42px; padding: 10px; }
@@ -148,32 +160,38 @@
         }
         #lego-overlay.show { transform: translateY(0); }
 
+        /* Четкое превью пикселей */
         #preview-tooltip {
-            position: fixed; width: 180px; height: 190px; background: var(--bg); border: 1px solid #444;
+            position: fixed; width: 180px; min-height: 190px; background: var(--bg); border: 1px solid #444;
             border-radius: var(--radius); padding: 4px; display: none; flex-direction: column;
             align-items: center; z-index: 3000; pointer-events: none;
         }
-        #preview-img { width: 170px; height: 132px; object-fit: contain; background: var(--light); border-radius: 6px; }
+        #preview-img { 
+            width: 170px; height: 132px; object-fit: contain; 
+            background: var(--light); border-radius: 6px;
+            image-rendering: pixelated; /* ДЛЯ ЧЕТКОСТИ ПИКСЕЛЕЙ */
+            image-rendering: crisp-edges;
+        }
         #preview-warn { color: var(--warning); font-size: 11px; margin-top: 10px; display: none; text-align: center; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <img src="processing.gif" width="64" height="64">
-        <div style="margin-top:10px; font-weight:bold; font-size:12px; letter-spacing:2px; color:#777;" id="init-status">GLORP ENGINE STARTING...</div>
+        <img src="processing.gif" width="32" height="32">
+        <div style="margin-top:15px; font-weight:bold; font-size:12px; letter-spacing:2px; color:#555; width: 300px; text-align: center;" id="init-status">GLORP ENGINE STARTING</div>
     </div>
+
+    <a href="https://boosty.to/your_nick" id="btn-support" target="_blank">SUPPORT PROJECT</a>
 
     <div id="app-container">
         <img src="processing.gif" id="proc-indicator">
         
         <div id="main-panel">
             <img src="logo.png" id="logo">
-            
             <div id="central-action">
                 <button id="btn-select" onclick="document.getElementById('file-input').click()">Select Images</button>
                 <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-                
                 <div id="extra-controls">
                     <div id="mode-container">
                         <label class="radio-label"><input type="radio" name="mode" value="monolith" checked> Monolith</label>
@@ -184,7 +202,6 @@
                     <div id="lego-warn-label">⚠️ Performance Warning (Click for info)</div>
                     <div id="stats-label"></div>
                 </div>
-
                 <div id="status"></div>
             </div>
         </div>
@@ -213,6 +230,59 @@
     </div>
 
     <script>
+        // --- ЛОГИКА ТЕКСТА ---
+        let twInterval, twEraseInterval, twTimeout;
+        let twText = "", twIndex = 0;
+
+        function setStatus(targetId, text, eraseAfter = 5000) {
+            const el = document.getElementById(targetId);
+            clearInterval(twInterval); clearInterval(twEraseInterval); clearTimeout(twTimeout);
+            twText = text; twIndex = 0; el.innerText = "";
+            
+            twInterval = setInterval(() => {
+                if(twIndex < twText.length) {
+                    twIndex++; el.innerText = twText.substring(0, twIndex);
+                } else {
+                    clearInterval(twInterval);
+                    if(eraseAfter > 0) twTimeout = setTimeout(() => startErasing(targetId), eraseAfter);
+                }
+            }, 40);
+        }
+
+        function startErasing(targetId) {
+            const el = document.getElementById(targetId);
+            clearInterval(twInterval); clearInterval(twEraseInterval);
+            twEraseInterval = setInterval(() => {
+                if(twIndex > 0) {
+                    twIndex--; el.innerText = twText.substring(0, twIndex);
+                } else {
+                    clearInterval(twEraseInterval); el.innerText = "";
+                }
+            }, 30);
+        }
+
+        // --- БЕСКОНЕЧНЫЕ ТОЧКИ ПРИ ЗАГРУЗКЕ ---
+        function runInfiniteLoader() {
+            const el = document.getElementById('init-status');
+            const base = "GLORP ENGINE STARTING";
+            const dots = " ...";
+            let idx = 0;
+            let forward = true;
+            setInterval(() => {
+                if(forward) {
+                    idx++;
+                    el.innerText = base + dots.substring(0, idx);
+                    if(idx >= dots.length) forward = false;
+                } else {
+                    idx--;
+                    el.innerText = base + dots.substring(0, idx);
+                    if(idx <= 0) forward = true;
+                }
+            }, 400);
+        }
+        runInfiniteLoader();
+
+        // --- ПИТОН И ДВИЖОК ---
         const MESHING_CODE = `
 import numpy as np
 CLOCKWISE, ANTICLOCKWISE = 1, 2
@@ -256,7 +326,7 @@ def explore_right(x, y, v, h):
         else: break
     else: dY += 1
     p = f"h{dY - y}"
-    if dY < v.shape[1] and v[x, dY] == CLOCKWISE: return p + explore_down(x, dY, v, h)
+    if dY < v.shape[1] and v[x, dY] == CLOCKWISE: return p + explore_down(x, dY + 1, v, h)
     elif x > 0 and v[x - 1, dY] == ANTICLOCKWISE: return p + explore_up(x - 1, dY, v, h)
     return p
 def path_finding(grid, color):
@@ -269,8 +339,6 @@ def path_finding(grid, color):
 
         let pyodide;
         let selectedFiles = [];
-        let twInterval, twEraseInterval, twTimeout;
-        let twText = "", twIndex = 0;
 
         async function init() {
             try {
@@ -281,31 +349,6 @@ def path_finding(grid, color):
             } catch(e) { document.getElementById('init-status').innerText = "ERROR LOADING ENGINE"; }
         }
         init();
-
-        function setStatus(text) {
-            clearInterval(twInterval); clearInterval(twEraseInterval); clearTimeout(twTimeout);
-            twText = text; twIndex = 0; document.getElementById('status').innerText = "";
-            
-            twInterval = setInterval(() => {
-                if(twIndex < twText.length) {
-                    twIndex++; document.getElementById('status').innerText = twText.substring(0, twIndex);
-                } else {
-                    clearInterval(twInterval);
-                    twTimeout = setTimeout(startErasing, 5000);
-                }
-            }, 40);
-        }
-
-        function startErasing() {
-            clearInterval(twInterval); clearInterval(twEraseInterval);
-            twEraseInterval = setInterval(() => {
-                if(twIndex > 0) {
-                    twIndex--; document.getElementById('status').innerText = twText.substring(0, twIndex);
-                } else {
-                    clearInterval(twEraseInterval); document.getElementById('status').innerText = "";
-                }
-            }, 30);
-        }
 
         function transientProc() {
             document.getElementById('proc-indicator').style.opacity = "1";
@@ -340,26 +383,23 @@ def path_finding(grid, color):
             selectedFiles.forEach((item, idx) => {
                 const isLarge = (item.img.width > 512 || item.img.height > 512);
                 totalPixels += (item.img.width * item.img.height);
-                
                 const div = document.createElement('div'); div.className = 'q-item';
                 const color = (isLarge && mode !== 'webp') ? 'var(--warning)' : '#e6e6e6';
-                
                 div.innerHTML = `<span class="q-name" style="color:${color}">${item.file.name}</span><button class="q-remove" onclick="removeFile(${idx})">×</button>`;
-                
                 const name = div.querySelector('.q-name');
                 name.onmouseenter = (e) => showTooltip(item.img.src, isLarge && mode !== 'webp', e);
                 name.onmouseleave = hideTooltip;
                 list.appendChild(div);
             });
 
+            const warnLbl = document.getElementById('lego-warn-label');
+            const statLbl = document.getElementById('stats-label');
             if (mode === 'lego') {
-                document.getElementById('lego-warn-label').style.display = 'block';
-                const statLbl = document.getElementById('stats-label');
+                warnLbl.style.display = 'block';
                 statLbl.innerText = `Lego Mode: ~${totalPixels.toLocaleString()} shapes`;
                 statLbl.style.color = totalPixels > 50000 ? 'var(--warning)' : '#666';
             } else {
-                document.getElementById('lego-warn-label').style.display = 'none';
-                document.getElementById('stats-label').innerText = '';
+                warnLbl.style.display = 'none'; statLbl.innerText = '';
             }
         }
 
@@ -370,13 +410,12 @@ def path_finding(grid, color):
             document.getElementById('preview-img').src = src;
             document.getElementById('preview-warn').style.display = showWarn ? 'block' : 'none';
             t.style.display = 'flex';
-            
             let tx = e.clientX + 20; let ty = e.clientY - 100;
             if (tx + 180 > window.innerWidth) tx = window.innerWidth - 190;
             if (ty < 10) ty = 10;
             t.style.left = tx + 'px'; t.style.top = ty + 'px';
         }
-        
+
         function hideTooltip() { document.getElementById('preview-tooltip').style.display = 'none'; }
         function toggleLegoOverlay(show) { document.getElementById('lego-overlay').classList.toggle('show', show); }
 
@@ -388,23 +427,18 @@ def path_finding(grid, color):
 
         const overlay = document.getElementById('drag-overlay');
         window.addEventListener('dragover', (e) => { e.preventDefault(); overlay.style.display = "flex"; });
-        window.addEventListener('dragenter', (e) => { e.preventDefault(); });
         window.addEventListener('dragleave', (e) => { if (e.relatedTarget === null || e.fromElement === null) overlay.style.display = "none"; });
-        window.addEventListener('drop', (e) => {
-            e.preventDefault(); overlay.style.display = "none";
-            if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files);
-        });
+        window.addEventListener('drop', (e) => { e.preventDefault(); overlay.style.display = "none"; handleFiles(e.dataTransfer.files); });
 
         document.getElementById('btn-convert').onclick = async () => {
             if (selectedFiles.length === 0) return;
             const mode = document.querySelector('input[name="mode"]:checked').value;
             document.getElementById('proc-indicator').style.opacity = "1";
             document.getElementById('btn-convert').disabled = true;
-            setStatus("Processing...");
 
             for(let i=0; i<selectedFiles.length; i++) {
                 const item = selectedFiles[i];
-                setStatus(`Processing ${i+1}/${selectedFiles.length}...`);
+                setStatus('status', `Processing ${i+1}/${selectedFiles.length}...`, 0);
                 const {file, img} = item;
                 const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
                 const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
@@ -442,7 +476,7 @@ res.append("</svg>")
             }
             document.getElementById('proc-indicator').style.opacity = "0";
             document.getElementById('btn-convert').disabled = false;
-            setStatus("Done!");
+            setStatus('status', "Done!");
             selectedFiles = []; renderQueue();
         };
     </script>
