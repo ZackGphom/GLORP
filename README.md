@@ -19,7 +19,7 @@ smooth animations, and stable threaded batch processing.
 
 ## 🚀 Access & Download
 
-### 🌐 **[RUN GLORP IN BROWSER (NEW)](https://zackgphom.github.io/GLORP/)**
+### 🌐 **[RUN GLORP IN BROWSER (NEW)](https://glorp.art/)**
 No installation required. Pure WebAssembly mutation.
 
 ### 💻 **[Download GLORP on Itch.io](https://zackdurec.itch.io/glorp-pixel-to-svg)**
