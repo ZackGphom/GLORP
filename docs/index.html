@@ -18,196 +18,185 @@
             --ease: cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        * { box-sizing: border-box; user-select: none; }
+        * { box-sizing: border-box; user-select: none; -webkit-drag-none: none; }
 
-        body {
-            margin: 0; background-color: #000; display: flex;
-            justify-content: center; align-items: center; min-height: 100vh;
-            font-family: 'Segoe UI', sans-serif; color: var(--text);
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #000; font-family: 'Segoe UI', sans-serif; color: var(--text);
+            overflow: hidden;
         }
 
-        #app {
-            width: 680px; height: 600px; background-color: var(--bg);
-            position: relative; overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        #app-container {
+            width: 100vw; height: 100vh; background-color: var(--bg);
+            display: flex; position: relative;
         }
 
-        .anim-layer {
-            position: absolute; transition: all 0.6s var(--ease);
+        /* LEFT MAIN PANEL */
+        #main-panel {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            position: relative; transition: all 0.6s var(--ease);
+            z-index: 10;
         }
 
-        #logo { left: 0; top: 40px; width: 680px; height: 240px; object-fit: contain; pointer-events: none; }
-        
+        #logo {
+            width: 80%; max-width: 500px; height: auto;
+            transition: all 0.6s var(--ease);
+            pointer-events: none; margin-bottom: 40px;
+        }
+
+        /* BUTTONS & CONTROLS */
+        #central-action {
+            display: flex; flex-direction: column; align-items: center;
+            transition: all 0.6s var(--ease);
+        }
+
         #btn-select {
-            left: 220px; top: 310px; width: 240px; height: 52px;
-            background: var(--light); color: white; border: none; border-radius: var(--radius);
-            font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px;
+            width: 240px; height: 52px; background: var(--light);
+            color: white; border: none; border-radius: var(--radius);
+            font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px;
         }
-        #btn-select:hover, .btn-anim:hover { background: var(--hover); }
-
-        #status {
-            left: 220px; top: 410px; width: 240px; height: 30px;
-            color: #aaa; font-size: 11px; text-align: center; line-height: 30px;
-        }
-
-        #proc-indicator {
-            left: 12px; top: 8px; width: 32px; height: 32px;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none;
-        }
+        #btn-select:hover { background: var(--hover); }
 
         #extra-controls {
-            left: 100px; top: 310px; width: 260px; height: 240px;
-            opacity: 0; pointer-events: none; transition: opacity 0.6s var(--ease);
+            margin-top: 20px; display: none; flex-direction: column;
+            align-items: center; gap: 15px; opacity: 0; transition: opacity 0.5s;
         }
 
         .btn-anim {
-            position: absolute; background: var(--light); color: white; border: none;
-            border-radius: var(--radius); font-weight: bold; cursor: pointer; transition: background 0.2s;
+            width: 220px; height: 42px; background: var(--light);
+            color: white; border: none; border-radius: var(--radius);
+            font-weight: bold; cursor: pointer; transition: 0.2s;
         }
-        #btn-folder { left: 30px; top: 0; width: 200px; height: 42px; opacity: 0.5; cursor: not-allowed; }
-        #btn-convert { left: 30px; top: 90px; width: 200px; height: 42px; }
+        .btn-anim:hover { background: var(--hover); }
+        #btn-convert { background: var(--light); border: 1px solid #333; }
 
-        #mode-container {
-            position: absolute; left: 30px; top: 50px; width: 200px; height: 30px;
-            display: flex; justify-content: center; gap: 15px; align-items: center;
-        }
-        
+        /* MODES */
+        #mode-container { display: flex; gap: 15px; align-items: center; }
         .radio-label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
         .radio-label input { appearance: none; width: 14px; height: 14px; border-radius: 7px; border: 2px solid #555; margin: 0; cursor: pointer; }
         .radio-label input:checked { background-color: #e6e6e6; border: 2px solid #2a2a2a; }
 
-        #chk-save-container {
-            position: absolute; left: 30px; top: 135px; width: 200px; height: 20px;
-            display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: not-allowed; opacity: 0.5;
+        #status {
+            margin-top: 30px; color: #aaa; font-size: 11px;
+            text-align: center; height: 20px; min-width: 200px;
         }
 
-        #lego-warn-label {
-            position: absolute; left: 0; top: 160px; width: 260px; height: 30px;
-            color: var(--warning); font-size: 11px; text-decoration: underline; text-align: center;
-            line-height: 30px; cursor: pointer; display: none;
+        #proc-indicator {
+            position: absolute; left: 20px; top: 20px; width: 32px; height: 32px;
+            opacity: 0; transition: opacity 0.3s;
         }
 
-        #stats-label {
-            position: absolute; left: 0; top: 185px; width: 260px; height: 30px;
-            color: #666; font-size: 11px; text-decoration: underline; text-align: center; line-height: 30px;
-        }
-
+        /* RIGHT QUEUE PANEL */
         #right-panel {
-            left: 680px; top: 0; width: 220px; height: 600px;
-            background: var(--bg); border-left: 1px solid #1a1a1a; display: flex; flex-direction: column;
+            width: 0; background: var(--bg); border-left: 0px solid #1a1a1a;
+            transition: all 0.6s var(--ease); display: flex; flex-direction: column;
+            overflow: hidden;
         }
-        
-        #queue-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px; font-size: 12px;
-        }
-        #queue-count { color: #555; font-weight: bold; margin-left: 5px; flex-grow: 1; }
-        #btn-clear { background: none; border: none; color: #777; font-size: 10px; text-decoration: underline; cursor: pointer; }
 
-        #queue-list {
-            flex-grow: 1; overflow-y: auto; padding: 0 10px;
+        #queue-header {
+            padding: 20px; font-size: 12px; display: flex;
+            justify-content: space-between; align-items: center; white-space: nowrap;
         }
-        #queue-list::-webkit-scrollbar { display: none; }
-        
+        #queue-list { flex: 1; overflow-y: auto; padding: 0 15px; }
+        #queue-list::-webkit-scrollbar { width: 4px; }
+        #queue-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
         .q-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 5px; font-size: 12px; position: relative;
+            padding: 8px 5px; font-size: 12px; border-bottom: 1px solid #151515;
         }
-        .q-name {
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;
-            cursor: pointer; padding: 2px 0;
-        }
-        .q-remove {
-            background: none; border: none; color: #777; font-size: 18px; font-weight: bold;
-            cursor: pointer; width: 24px; height: 24px; line-height: 24px; text-align: center;
-        }
+        .q-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; cursor: pointer; }
+        .q-remove { background: none; border: none; color: #555; font-size: 18px; cursor: pointer; }
         .q-remove:hover { color: var(--warning); }
 
-        #preview-tooltip {
-            position: fixed; width: 180px; height: 190px; background: var(--bg);
-            border: 1px solid #444; border-radius: var(--radius); padding: 4px;
-            display: none; flex-direction: column; align-items: center; z-index: 1000; pointer-events: none;
-        }
-        #preview-img { width: 170px; height: 132px; object-fit: contain; background: var(--light); border-radius: 6px; }
-        #preview-warn { color: var(--warning); font-size: 11px; margin-top: 10px; display: none; text-align: center; }
+        /* STATES */
+        body.has-files #main-panel { align-items: flex-start; padding-left: 10%; }
+        body.has-files #logo { width: 200px; margin-bottom: 20px; }
+        body.has-files #right-panel { width: 300px; border-left: 1px solid #1a1a1a; }
+        body.has-files #extra-controls { display: flex; opacity: 1; }
+        body.has-files #btn-select { width: 220px; height: 42px; }
 
+        /* OVERLAYS */
         #drag-overlay {
-            position: absolute; inset: 0; background: var(--overlay); z-index: 50;
+            position: fixed; inset: 0; background: var(--overlay); z-index: 1000;
             display: flex; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+            opacity: 0; pointer-events: none; transition: 0.3s;
         }
-        #drag-overlay img { max-width: 50%; max-height: 50%; object-fit: contain; pointer-events: none; }
-
-        #lego-overlay {
-            position: absolute; left: 0; top: 600px; width: 680px; height: 600px;
-            background: var(--bg); z-index: 60; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; transition: top 0.4s var(--ease);
-            padding: 40px; text-align: center;
-        }
+        #drag-overlay img { max-width: 40%; height: auto; }
 
         #loading-screen {
-            position: absolute; inset: 0; background: var(--bg); z-index: 100;
+            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
         }
-        .load-text { font-size: 12px; letter-spacing: 2px; font-weight: bold; margin-top: 15px; color: #777; }
+
+        #lego-overlay {
+            position: fixed; inset: 0; background: var(--bg); z-index: 1500;
+            transform: translateY(100%); transition: 0.4s var(--ease);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+        }
+        #lego-overlay.show { transform: translateY(0); }
+
+        #preview-tooltip {
+            position: fixed; width: 180px; background: var(--bg); border: 1px solid #444;
+            border-radius: var(--radius); padding: 5px; display: none; z-index: 3000; pointer-events: none;
+        }
+        #preview-img { width: 100%; border-radius: 5px; image-rendering: pixelated; }
+
+        #lego-warn-label { color: var(--warning); font-size: 11px; margin-top: 10px; cursor: pointer; text-decoration: underline; display: none; }
     </style>
 </head>
 <body>
 
-    <div id="app">
-        <div id="loading-screen">
-            <img src="processing.gif" width="32" height="32">
-            <div class="load-text" id="init-text">GLORP ENGINE STARTING...</div>
+    <div id="loading-screen">
+        <img src="processing.gif" width="32">
+        <div style="margin-top:15px; font-weight:bold; font-size:12px; letter-spacing:2px;" id="init-status">GLORP ENGINE STARTING...</div>
+    </div>
+
+    <div id="app-container">
+        <img src="processing.gif" id="proc-indicator">
+        
+        <div id="main-panel">
+            <img src="logo.png" id="logo">
+            
+            <div id="central-action">
+                <button id="btn-select" onclick="document.getElementById('file-input').click()">Select Images</button>
+                <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                
+                <div id="extra-controls">
+                    <button class="btn-anim" style="opacity:0.5; cursor:not-allowed;">Auto Download Mode</button>
+                    <div id="mode-container">
+                        <label class="radio-label"><input type="radio" name="mode" value="monolith" checked> Monolith</label>
+                        <label class="radio-label"><input type="radio" name="mode" value="lego"> Lego</label>
+                        <label class="radio-label"><input type="radio" name="mode" value="webp"> WebP</label>
+                    </div>
+                    <button id="btn-convert" class="btn-anim">Convert</button>
+                    <div id="lego-warn-label">⚠️ Performance Warning</div>
+                </div>
+
+                <div id="status"></div>
+            </div>
         </div>
 
-        <img src="processing.gif" id="proc-indicator" class="anim-layer">
-        <img src="logo.png" id="logo" class="anim-layer">
-        
-        <button id="btn-select" class="anim-layer" onclick="document.getElementById('file-input').click()">Select Images</button>
-        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-        
-        <div id="status" class="anim-layer"></div>
-
-        <div id="extra-controls" class="anim-layer">
-            <button id="btn-folder" class="btn-anim">Output: Auto Download</button>
-            <div id="mode-container">
-                <label class="radio-label"><input type="radio" name="mode" value="monolith" checked> Monolith</label>
-                <label class="radio-label"><input type="radio" name="mode" value="lego"> Lego</label>
-                <label class="radio-label"><input type="radio" name="mode" value="webp"> WebP</label>
-            </div>
-            <button id="btn-convert" class="btn-anim">Convert</button>
-            <div id="chk-save-container">
-                <input type="checkbox" disabled> Save to source
-            </div>
-            <div id="lego-warn-label">⚠️ Performance Warning (Click for info)</div>
-            <div id="stats-label"></div>
-        </div>
-
-        <div id="right-panel" class="anim-layer">
+        <div id="right-panel">
             <div id="queue-header">
-                <div>FILE QUEUE</div>
-                <div id="queue-count">(0)</div>
-                <button id="btn-clear">Clear All</button>
+                <span style="color:#555">FILE QUEUE <b id="queue-count">(0)</b></span>
+                <span id="btn-clear" style="text-decoration:underline; cursor:pointer; color:#777; font-size:10px;">Clear All</span>
             </div>
             <div id="queue-list"></div>
         </div>
-
-        <div id="drag-overlay">
-            <img src="DropUrStuffHere.png">
-        </div>
-
-        <div id="lego-overlay">
-            <div style="color: var(--warning); font-weight: bold; font-size: 18px; margin-bottom: 5px;">LEGO MODE PERFORMANCE WARNING</div>
-            <div style="color: #888; font-size: 13px; margin-bottom: auto;">Software may lag or crash due to high object count.</div>
-            <img src="lego_warning.gif" style="width: 500px; height: 350px; object-fit: contain;">
-            <div style="color: #444; font-size: 10px; margin-top: auto; text-decoration: underline; cursor: pointer;">Click anywhere to close</div>
-        </div>
     </div>
 
-    <div id="preview-tooltip">
-        <img id="preview-img">
-        <div id="preview-warn">This doesn't look like pixel art.</div>
+    <div id="drag-overlay"><img src="DropUrStuffHere.png"></div>
+
+    <div id="lego-overlay">
+        <h2 style="color:var(--warning)">LEGO MODE PERFORMANCE WARNING</h2>
+        <p style="color:#888; font-size:14px;">Large images may cause browser lag.</p>
+        <img src="lego_warning.gif" style="max-width:80%; max-height:60%;">
+        <p style="color:#444; margin-top:20px; cursor:pointer;" onclick="toggleLegoOverlay(false)">Click to close</p>
     </div>
+
+    <div id="preview-tooltip"><img id="preview-img"></div>
 
     <script>
         const MESHING_CODE = `
@@ -215,14 +204,11 @@ import numpy as np
 CLOCKWISE, ANTICLOCKWISE = 1, 2
 def edge_finding(grid, color):
     mask = np.where(grid == color)
-    pos_h = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8)
-    pos_h[mask] = 1
+    pos_h = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8); pos_h[mask] = 1
     hor_edges = (pos_h - np.roll(1 - pos_h, 1, axis=0) == 0) * ANTICLOCKWISE - (pos_h + np.roll(1 - pos_h, 1, axis=0) == 2)
-    pos_v = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8)
-    pos_v[mask] = 1
+    pos_v = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8); pos_v[mask] = 1
     ver_edges = (pos_v - np.roll(1 - pos_v, 1, axis=1) == 0) * CLOCKWISE + (pos_v + np.roll(1 - pos_v, 1, axis=1) == 2)
     return ver_edges, hor_edges
-
 def explore_up(x, y, v, h):
     for dX in range(x, -1, -1):
         if v[dX, y] == ANTICLOCKWISE: v[dX, y] = 0
@@ -232,7 +218,6 @@ def explore_up(x, y, v, h):
     if h[dX + 1, y] == CLOCKWISE: return p + explore_right(dX + 1, y, v, h)
     elif y > 0 and h[dX + 1, y - 1] == ANTICLOCKWISE: return p + explore_left(dX + 1, y - 1, v, h)
     return p
-
 def explore_left(x, y, v, h):
     for dY in range(y, -1, -1):
         if h[x, dY] == ANTICLOCKWISE: h[x, dY] = 0
@@ -242,7 +227,6 @@ def explore_left(x, y, v, h):
     if x > 0 and v[x - 1, dY + 1] == ANTICLOCKWISE: return p + explore_up(x - 1, dY + 1, v, h)
     elif dY < v.shape[1] and v[x, dY + 1] == CLOCKWISE: return p + explore_down(x, dY + 1, v, h)
     return p
-
 def explore_down(x, y, v, h):
     for dX in range(x, v.shape[0]):
         if v[dX, y] == CLOCKWISE: v[dX, y] = 0
@@ -252,7 +236,6 @@ def explore_down(x, y, v, h):
     if y > 0 and h[dX, y - 1] == ANTICLOCKWISE: return p + explore_left(dX, y - 1, v, h)
     elif dX < h.shape[0] and h[dX, y] == CLOCKWISE: return p + explore_right(dX, y, v, h)
     return p
-
 def explore_right(x, y, v, h):
     for dY in range(y, h.shape[1]):
         if h[x, dY] == CLOCKWISE: h[x, dY] = 0
@@ -262,237 +245,110 @@ def explore_right(x, y, v, h):
     if dY < v.shape[1] and v[x, dY] == CLOCKWISE: return p + explore_down(x, dY, v, h)
     elif x > 0 and v[x - 1, dY] == ANTICLOCKWISE: return p + explore_up(x - 1, dY, v, h)
     return p
-
 def path_finding(grid, color):
-    v, h = edge_finding(grid, color)
-    path = ""
+    v, h = edge_finding(grid, color); path = ""
     while np.any(h == CLOCKWISE):
         x, y = np.argwhere(h == CLOCKWISE)[0]
         path += f"M{y},{x}" + explore_right(x, y, v, h) + "z"
     return path
-        `;
+`;
 
-        // STATE
         let pyodide;
         let selectedFiles = [];
-        let isExpanded = false;
-        
-        // TYPEWRITER STATE
-        let twFullMsg = "";
-        let twIndex = 0;
-        let twMode = 0;
-        let twInterval = null;
+        let twInterval;
 
-        // DOM ELEMENTS
-        const elApp = document.getElementById('app');
-        const elLogo = document.getElementById('logo');
-        const elBtnSelect = document.getElementById('btn-select');
-        const elStatus = document.getElementById('status');
-        const elProcInd = document.getElementById('proc-indicator');
-        const elExtra = document.getElementById('extra-controls');
-        const elRight = document.getElementById('right-panel');
-        const elQList = document.getElementById('queue-list');
-        const elQCount = document.getElementById('queue-count');
-        const elFileInput = document.getElementById('file-input');
-        const elDragOver = document.getElementById('drag-overlay');
-        const elLegoWarnBtn = document.getElementById('lego-warn-label');
-        const elLegoOverlay = document.getElementById('lego-overlay');
-        const elStats = document.getElementById('stats-label');
-        const elConvertBtn = document.getElementById('btn-convert');
-        const elTooltip = document.getElementById('preview-tooltip');
-        const elTooltipImg = document.getElementById('preview-img');
-        const elTooltipWarn = document.getElementById('preview-warn');
-
-        // INIT ENGINE
-        async function initEngine() {
+        async function init() {
             try {
                 pyodide = await loadPyodide();
                 await pyodide.loadPackage("numpy");
                 await pyodide.runPython(MESHING_CODE);
                 document.getElementById('loading-screen').style.display = 'none';
-            } catch (e) {
-                document.getElementById('init-text').innerText = "ENGINE INIT FAILED";
-            }
+            } catch(e) { document.getElementById('init-status').innerText = "ERROR LOADING ENGINE"; }
         }
-        initEngine();
+        init();
 
-        // UI ANIMATIONS
-        function updateLayout() {
-            if (selectedFiles.length > 0 && !isExpanded) {
-                isExpanded = true;
-                elLogo.style.left = '-110px'; elLogo.style.top = '15px';
-                elBtnSelect.style.left = '130px'; elBtnSelect.style.top = '260px'; elBtnSelect.style.width = '200px'; elBtnSelect.style.height = '42px';
-                elStatus.style.left = '113px'; elStatus.style.top = '550px'; elStatus.style.width = '260px';
-                elRight.style.left = '460px';
-                elExtra.style.opacity = '1'; elExtra.style.pointerEvents = 'auto';
-            } else if (selectedFiles.length === 0 && isExpanded) {
-                isExpanded = false;
-                elLogo.style.left = '0'; elLogo.style.top = '40px';
-                elBtnSelect.style.left = '220px'; elBtnSelect.style.top = '310px'; elBtnSelect.style.width = '240px'; elBtnSelect.style.height = '52px';
-                elStatus.style.left = '220px'; elStatus.style.top = '410px'; elStatus.style.width = '240px';
-                elRight.style.left = '680px';
-                elExtra.style.opacity = '0'; elExtra.style.pointerEvents = 'none';
-            }
-        }
-
-        function setStatus(msg) {
-            twFullMsg = msg; twIndex = 0; twMode = 1; elStatus.innerText = "";
+        function setStatus(text) {
             clearInterval(twInterval);
-            twInterval = setInterval(typewriterTick, 40);
-        }
-
-        function typewriterTick() {
-            if (twMode === 1) {
-                if (twIndex < twFullMsg.length) {
-                    twIndex++; elStatus.innerText = twFullMsg.substring(0, twIndex);
-                } else {
-                    twMode = 0; clearInterval(twInterval);
-                    twInterval = setTimeout(() => { twMode = -1; twInterval = setInterval(typewriterTick, 30); }, 5000);
-                }
-            } else if (twMode === -1) {
-                if (twIndex > 0) {
-                    twIndex--; elStatus.innerText = twFullMsg.substring(0, twIndex);
-                } else {
-                    twMode = 0; clearInterval(twInterval);
-                }
-            }
-        }
-
-        function showProcessing(state) {
-            elProcInd.style.opacity = state ? '1' : '0';
-        }
-
-        function transientProc() {
-            showProcessing(true); setTimeout(() => showProcessing(false), 800);
-        }
-
-        // QUEUE MANAGEMENT
-        async function renderQueue() {
-            elQList.innerHTML = '';
-            elQCount.innerText = `(${selectedFiles.length})`;
-            
-            let totalPixels = 0;
-            const mode = document.querySelector('input[name="mode"]:checked').value;
-
-            for (let i = 0; i < selectedFiles.length; i++) {
-                const f = selectedFiles[i];
-                const div = document.createElement('div'); div.className = 'q-item';
-                
-                const nameSpan = document.createElement('div'); nameSpan.className = 'q-name';
-                nameSpan.innerText = f.file.name;
-                
-                let isLarge = false;
-                if (f.img) {
-                    totalPixels += (f.img.width * f.img.height);
-                    if (f.img.width > 512 || f.img.height > 512) isLarge = true;
-                }
-
-                if (isLarge && mode !== 'webp') nameSpan.style.color = 'var(--warning)';
-                else nameSpan.style.color = '#e6e6e6';
-
-                nameSpan.onmouseenter = (e) => {
-                    if (!f.img) return;
-                    elTooltipImg.src = f.img.src;
-                    elTooltipWarn.style.display = (isLarge && mode !== 'webp') ? 'block' : 'none';
-                    elTooltip.style.display = 'flex';
-                    
-                    const rect = nameSpan.getBoundingClientRect();
-                    let tx = rect.left - 190; let ty = rect.top - 50;
-                    if (tx < 0) tx = rect.right + 10;
-                    if (ty < 10) ty = 10;
-                    
-                    elTooltip.style.left = tx + 'px'; elTooltip.style.top = ty + 'px';
-                };
-                nameSpan.onmouseleave = () => { elTooltip.style.display = 'none'; };
-
-                const btn = document.createElement('button'); btn.className = 'q-remove'; btn.innerText = '×';
-                btn.onclick = () => { selectedFiles.splice(i, 1); renderQueue(); updateLayout(); };
-
-                div.appendChild(nameSpan); div.appendChild(btn); elQList.appendChild(div);
-            }
-
-            if (mode === 'lego') {
-                elLegoWarnBtn.style.display = 'block';
-                elStats.innerText = `Lego Mode: ~${totalPixels.toLocaleString()} shapes`;
-                elStats.style.color = totalPixels > 50000 ? 'var(--warning)' : '#666';
-            } else {
-                elLegoWarnBtn.style.display = 'none'; elStats.innerText = '';
-            }
+            let i = 0; document.getElementById('status').innerText = "";
+            twInterval = setInterval(() => {
+                if(i < text.length) { document.getElementById('status').innerText += text[i++]; }
+                else { clearInterval(twInterval); }
+            }, 30);
         }
 
         function handleFiles(files) {
-            transientProc();
-            Array.from(files).forEach(file => {
-                if (!file.type.startsWith('image/')) return;
+            Array.from(files).forEach(f => {
+                if(!f.type.startsWith('image/')) return;
                 const reader = new FileReader();
                 reader.onload = e => {
                     const img = new Image();
-                    img.onload = () => {
-                        selectedFiles.push({ file, img });
-                        renderQueue(); updateLayout();
-                    };
+                    img.onload = () => { selectedFiles.push({file: f, img}); renderQueue(); };
                     img.src = e.target.result;
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(f);
             });
         }
 
-        // EVENT LISTENERS
-        elFileInput.onchange = e => handleFiles(e.target.files);
-        
-        document.getElementById('btn-clear').onclick = () => {
-            selectedFiles = []; renderQueue(); updateLayout();
-        };
+        function renderQueue() {
+            const list = document.getElementById('queue-list');
+            list.innerHTML = "";
+            document.getElementById('queue-count').innerText = `(${selectedFiles.length})`;
+            
+            if(selectedFiles.length > 0) document.body.classList.add('has-files');
+            else document.body.classList.remove('has-files');
 
-        elApp.ondragenter = e => { e.preventDefault(); elDragOver.style.opacity = '1'; elDragOver.style.pointerEvents = 'auto'; };
-        elDragOver.ondragleave = e => { e.preventDefault(); elDragOver.style.opacity = '0'; elDragOver.style.pointerEvents = 'none'; };
-        elDragOver.ondrop = e => {
-            e.preventDefault(); elDragOver.style.opacity = '0'; elDragOver.style.pointerEvents = 'none';
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            document.getElementById('lego-warn-label').style.display = mode === 'lego' ? 'block' : 'none';
+
+            selectedFiles.forEach((item, idx) => {
+                const div = document.createElement('div'); div.className = 'q-item';
+                div.innerHTML = `<span class="q-name">${item.file.name}</span><button class="q-remove" onclick="removeFile(${idx})">×</button>`;
+                
+                const name = div.querySelector('.q-name');
+                name.onmouseenter = (e) => showTooltip(item.img.src, e);
+                name.onmouseleave = hideTooltip;
+                list.appendChild(div);
+            });
+        }
+
+        function removeFile(i) { selectedFiles.splice(i, 1); renderQueue(); }
+        function showTooltip(src, e) { 
+            const t = document.getElementById('preview-tooltip');
+            document.getElementById('preview-img').src = src;
+            t.style.display = 'block'; t.style.left = (e.clientX - 200) + 'px'; t.style.top = e.clientY + 'px';
+        }
+        function hideTooltip() { document.getElementById('preview-tooltip').style.display = 'none'; }
+        function toggleLegoOverlay(show) { document.getElementById('lego-overlay').classList.toggle('show', show); }
+
+        document.getElementById('file-input').onchange = e => handleFiles(e.target.files);
+        document.getElementById('btn-clear').onclick = () => { selectedFiles = []; renderQueue(); };
+        document.getElementById('lego-warn-label').onclick = () => toggleLegoOverlay(true);
+
+        window.ondragenter = () => document.getElementById('drag-overlay').style.opacity = "1";
+        document.getElementById('drag-overlay').ondragleave = () => document.getElementById('drag-overlay').style.opacity = "0";
+        document.getElementById('drag-overlay').ondragover = e => e.preventDefault();
+        document.getElementById('drag-overlay').ondrop = e => {
+            e.preventDefault(); document.getElementById('drag-overlay').style.opacity = "0";
             handleFiles(e.dataTransfer.files);
         };
-        elDragOver.ondragover = e => e.preventDefault();
 
-        document.querySelectorAll('input[name="mode"]').forEach(r => r.onchange = renderQueue);
+        document.getElementById('btn-convert').onclick = async () => {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            document.getElementById('proc-indicator').style.opacity = "1";
+            setStatus("Processing...");
 
-        elLegoWarnBtn.onclick = () => { elLegoOverlay.style.top = '0'; };
-        elLegoOverlay.onclick = () => { elLegoOverlay.style.top = '600px'; };
-
-        // PROCESSING LOGIC
-        async function convertItem(item, mode) {
-            const { file, img } = item;
-            let extension = ".svg";
-            let content = "";
-            let mime = "image/svg+xml";
-
-            if (mode === 'webp') {
+            for(const item of selectedFiles) {
+                const {file, img} = item;
                 const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
-                canvas.getContext('2d').drawImage(img, 0, 0);
-                content = canvas.toDataURL('image/webp', 0.9);
-                extension = ".webp"; mime = "image/webp";
-            } else {
-                const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
-                const ctx = canvas.getContext('2d', {willReadFrequently: true}); ctx.drawImage(img, 0, 0);
+                const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
                 const imageData = ctx.getImageData(0, 0, img.width, img.height);
                 
-                if (mode === 'lego') {
-                    content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
-                    const d = imageData.data;
-                    for (let i = 0; i < d.length; i += 4) {
-                        if (d[i+3] > 0) {
-                            const x = (i/4) % img.width; const y = Math.floor((i/4) / img.width);
-                            const hex = "#" + ((1<<24)+(d[i]<<16)+(d[i+1]<<8)+d[i+2]).toString(16).slice(1);
-                            content += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}" fill-opacity="${d[i+3]/255}"/>`;
-                        }
-                    }
-                    content += `</svg>`;
-                } else if (mode === 'monolith') {
-                    pyodide.globals.set("raw", imageData.data);
-                    pyodide.globals.set("w", img.width);
-                    pyodide.globals.set("h", img.height);
+                let content, ext = ".svg";
+                if(mode === 'monolith') {
+                    pyodide.globals.set("raw", imageData.data); pyodide.globals.set("w", img.width); pyodide.globals.set("h", img.height);
                     content = await pyodide.runPythonAsync(`
 pixels = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
-colors = np.unique(pixels.reshape(-1, 4), axis=0)
-colors = colors[colors[:, 3] > 0]
+colors = np.unique(pixels.reshape(-1, 4), axis=0); colors = colors[colors[:, 3] > 0]
 grid = (pixels[:,:,0].astype(np.uint32) << 24) | (pixels[:,:,1].astype(np.uint32) << 16) | (pixels[:,:,2].astype(np.uint32) << 8) | pixels[:,:,3]
 res = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">', "<style>"]
 for i, c in enumerate(colors): res.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
@@ -502,42 +358,23 @@ for i, c in enumerate(colors):
     p_data = path_finding(grid, c_int)
     if p_data: res.append(f'<path class="c{i}" d="{p_data}"/>')
 res.append("</svg>")
-"\\n".join(res)
-                    `);
-                }
-            }
-            
-            const baseName = file.name.split('.').slice(0, -1).join('.') || file.name;
-            const finalName = baseName + extension;
-            
-            const a = document.createElement('a');
-            if (mode === 'webp') {
-                a.href = content;
-            } else {
-                const blob = new Blob([content], {type: mime});
-                a.href = URL.createObjectURL(blob);
-            }
-            a.download = finalName;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            
-            await new Promise(r => setTimeout(r, 100)); // Delay for multi-downloads
-        }
+"\\n".join(res)`);
+                } else if(mode === 'lego') {
+                    content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+                    const d = imageData.data;
+                    for(let i=0; i<d.length; i+=4) if(d[i+3]>0) {
+                        const x=(i/4)%img.width, y=Math.floor((i/4)/img.width);
+                        content += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[i]<<16)+(d[i+1]<<8)+d[i+2]).toString(16).slice(1)}" fill-opacity="${d[i+3]/255}"/>`;
+                    }
+                    content += `</svg>`;
+                } else { content = canvas.toDataURL('image/webp'); ext = ".webp"; }
 
-        elConvertBtn.onclick = async () => {
-            if (!selectedFiles.length) return;
-            const mode = document.querySelector('input[name="mode"]:checked').value;
-            
-            elConvertBtn.disabled = true; showProcessing(true); setStatus("Processing...");
-            
-            for (let i = 0; i < selectedFiles.length; i++) {
-                elStatus.innerText = `Processing ${i+1}/${selectedFiles.length}...`;
-                await convertItem(selectedFiles[i], mode);
+                const a = document.createElement('a'); a.href = ext === ".svg" ? URL.createObjectURL(new Blob([content], {type:'image/svg+xml'})) : content;
+                a.download = file.name.split('.')[0] + ext; a.click();
             }
-            
-            elConvertBtn.disabled = false; showProcessing(false); setStatus("Done!");
-            selectedFiles = []; renderQueue(); updateLayout();
+            document.getElementById('proc-indicator').style.opacity = "0";
+            setStatus("All tasks finished.");
         };
-
     </script>
 </body>
 </html>
