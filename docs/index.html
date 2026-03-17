@@ -29,8 +29,7 @@
         #app-container {
             width: 100vw; height: 100vh; display: flex; position: relative;
         }
-
-        /* Центрирование основного блока */
+        
         #main-panel {
             flex: 1; display: flex; flex-direction: column;
             align-items: center; justify-content: center;
@@ -98,7 +97,6 @@
             opacity: 0; transition: opacity 0.3s;
         }
 
-        /* Кнопка поддержки */
         #btn-support {
             position: absolute; bottom: 20px; left: 20px;
             background: transparent; border: 1px solid #333; color: #555;
@@ -135,7 +133,6 @@
         .q-remove { background: transparent; border: none; color: #777; font-size: 18px; font-weight: bold; cursor: pointer; }
         .q-remove:hover { color: var(--warning); }
 
-        /* Состояние при наличии файлов */
         body.has-files #logo { height: 150px; margin-bottom: 20px; }
         body.has-files #right-panel { width: 220px; border-left: 1px solid #1a1a1a; }
         body.has-files #btn-select { width: 200px; height: 42px; padding: 10px; }
@@ -160,7 +157,6 @@
         }
         #lego-overlay.show { transform: translateY(0); }
 
-        /* Четкое превью пикселей */
         #preview-tooltip {
             position: fixed; width: 180px; min-height: 190px; background: var(--bg); border: 1px solid #444;
             border-radius: var(--radius); padding: 4px; display: none; flex-direction: column;
@@ -169,7 +165,7 @@
         #preview-img { 
             width: 170px; height: 132px; object-fit: contain; 
             background: var(--light); border-radius: 6px;
-            image-rendering: pixelated; /* ДЛЯ ЧЕТКОСТИ ПИКСЕЛЕЙ */
+            image-rendering: pixelated;
             image-rendering: crisp-edges;
         }
         #preview-warn { color: var(--warning); font-size: 11px; margin-top: 10px; display: none; text-align: center; }
@@ -178,11 +174,11 @@
 <body>
 
     <div id="loading-screen">
-        <img src="processing.gif" width="32" height="32">
-        <div style="margin-top:15px; font-weight:bold; font-size:12px; letter-spacing:2px; color:#555; width: 300px; text-align: center;" id="init-status">GLORP ENGINE STARTING</div>
+        <img src="processing.gif" width="64" height="64">
+        <div style="margin-top:10px; font-weight:bold; font-size:12px; letter-spacing:2px; color:#555; width: 300px; text-align: center;" id="init-status">GLORP ENGINE STARTING</div>
     </div>
 
-    <a href="https://boosty.to/your_nick" id="btn-support" target="_blank">SUPPORT PROJECT</a>
+    <a href="https://boosty.to/zackgphom" id="btn-support" target="_blank">SUPPORT PROJECT</a>
 
     <div id="app-container">
         <img src="processing.gif" id="proc-indicator">
