@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <style>
+        /* --- CONFIGURATION --- */
         :root {
             --bg: #0a0a0a;
             --light: #161616;
@@ -25,15 +26,15 @@
             color: var(--text); overflow-x: hidden; 
         }
 
-        /* --- LOADING --- */
+        /* --- LOADING SCREEN --- */
         #loading-screen {
             position: fixed; inset: 0; background: var(--bg); z-index: 9999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 1s var(--ease), visibility 1s;
+            transition: opacity 1s var(--ease), visibility 1s, filter 1s var(--ease);
         }
-        #loading-screen.loaded { opacity: 0; visibility: hidden; }
+        #loading-screen.loaded { opacity: 0; visibility: hidden; filter: blur(20px); }
 
-        /* --- HEADER --- */
+        /* --- COLLAPSIBLE HEADER --- */
         header {
             position: fixed; top: 20px; left: 20px; right: 20px; height: 56px;
             background: rgba(22, 22, 22, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
@@ -49,86 +50,106 @@
         .header-title { font-weight: 800; font-size: 16px; letter-spacing: 1px; }
 
         nav { display: flex; gap: 30px; flex: 2; justify-content: center; }
-        nav a { color: #888; text-decoration: none; font-size: 11px; font-weight: 700; text-transform: uppercase; transition: 0.3s; }
+        nav a { 
+            color: #888; text-decoration: none; font-size: 11px; font-weight: 700; 
+            text-transform: uppercase; transition: 0.3s; letter-spacing: 0.5px; 
+        }
         nav a:hover { color: var(--accent); }
 
         .header-right { flex: 1; display: flex; justify-content: flex-end; }
         .btn-support-head {
             background: var(--accent); color: #000; padding: 8px 18px;
             border-radius: 10px; font-size: 10px; font-weight: 800; text-decoration: none;
-            text-transform: uppercase;
+            transition: 0.3s; text-transform: uppercase;
         }
 
-        /* --- APP SECTION --- */
-        section { min-height: 100vh; width: 100%; display: flex; flex-direction: column; align-items: center; padding: 120px 20px; }
-        #logo-big { height: 160px; margin-bottom: 40px; transition: 0.5s; }
+        /* --- MAIN SECTIONS --- */
+        section { 
+            min-height: 100vh; width: 100%; display: flex; 
+            flex-direction: column; align-items: center; padding: 120px 20px; 
+            position: relative; 
+        }
+
+        /* WORKFLOW BLOCKS */
+        #app { justify-content: center; padding-top: 60px; transition: transform 0.6s var(--ease); }
+        #logo-big { height: 160px; margin-bottom: 40px; pointer-events: none; transition: 0.5s; }
         
-        .workflow-container { width: 340px; display: flex; flex-direction: column; align-items: center; }
+        .workflow-container { width: 340px; position: relative; }
         
+        /* SELECT BLOCK */
+        #select-block {
+            display: flex; flex-direction: column; align-items: center;
+            transition: 0.5s var(--ease);
+        }
         #btn-select, #btn-convert {
             width: 220px; height: 52px; background: var(--light); color: #fff;
             border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s;
             text-transform: uppercase; letter-spacing: 1px;
         }
-        #btn-select:hover { background: var(--hover); }
+        #btn-select:hover, #btn-convert:hover { background: var(--hover); transform: translateY(-2px); }
         #btn-convert { background: var(--accent); color: #000; }
 
-        #convert-block { display: none; opacity: 0; transform: translateY(10px); transition: 0.5s var(--ease); text-align: center; }
-        #convert-block.active { display: block; opacity: 1; transform: translateY(0); }
+        /* CONVERT BLOCK */
+        #convert-block {
+            display: none; flex-direction: column; align-items: center;
+            opacity: 0; transform: translateY(20px); transition: 0.5s var(--ease);
+        }
+        #convert-block.active { display: flex; opacity: 1; transform: translateY(0); }
+        
+        .drag-hint { font-size: 10px; color: #444; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
 
-        /* --- FILE DRAWER --- */
+        /* --- FILE LIST DRAWER --- */
         #file-drawer {
             position: fixed; right: -300px; top: 100px; bottom: 100px; width: 280px;
             background: var(--light); border-radius: 20px 0 0 20px;
-            border: 1px solid rgba(255,255,255,0.05); z-index: 1100; transition: 0.6s var(--ease);
+            border: 1px solid rgba(255,255,255,0.05); border-right: none;
+            z-index: 1100; transition: 0.6s var(--ease);
             display: flex; flex-direction: column; padding: 20px;
         }
         #file-drawer.open { right: 0; }
-        .drawer-title { font-size: 10px; font-weight: 900; color: #555; margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase; }
+        .drawer-title { font-size: 10px; font-weight: 900; color: #555; margin-bottom: 15px; letter-spacing: 1px; }
         #file-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #file-list li { font-size: 11px; padding: 10px; background: #0f0f0f; margin-bottom: 8px; border-radius: 8px; color: #888; }
-
-        /* --- COMPARISON (GIFS) --- */
-        .comp-row { width: 100%; max-width: 1000px; display: flex; align-items: center; gap: 60px; margin-bottom: 100px; }
-        .gif-container { flex: 1.2; position: relative; }
-        .gif-container img { 
-            width: 100%; display: block; 
-            border-radius: 20px; /* Твое закругление */
-            border: 1px solid #1a1a1a; 
-            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.5);
+        #file-list li { 
+            font-size: 11px; padding: 10px; background: #0f0f0f; margin-bottom: 8px; 
+            border-radius: 8px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .comp-info { flex: 1; }
-        .comp-info h2 { font-size: 32px; margin-bottom: 15px; }
-        .comp-info p { color: #888; line-height: 1.7; }
 
-        /* --- FAQ --- */
-        .faq-grid { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 12px; }
-        .faq-card { background: var(--light); border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
+        /* --- FAQ BLOCK --- */
+        .faq-grid { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 12px; margin-top: 50px; }
+        .faq-card { 
+            background: var(--light); border-radius: 14px; overflow: hidden; 
+            transition: 0.3s var(--ease); border: 1px solid rgba(255,255,255,0.02); 
+        }
+        .faq-card:hover { background: var(--hover); border-color: #333; }
         .faq-btn {
             width: 100%; padding: 22px 25px; background: none; border: none; color: #fff;
             display: flex; justify-content: space-between; align-items: center; cursor: pointer;
             font-size: 14px; font-weight: 600; text-align: left;
         }
-        .faq-dot { width: 7px; height: 7px; background: #333; border-radius: 50%; }
-        .faq-card.open .faq-dot { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+        .faq-dot { width: 7px; height: 7px; background: #333; border-radius: 50%; transition: 0.4s; }
+        .faq-card.open .faq-dot { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
         .faq-ans { max-height: 0; padding: 0 25px; color: #888; font-size: 13px; line-height: 1.7; transition: 0.5s var(--ease); overflow: hidden; }
         .faq-card.open .faq-ans { max-height: 200px; padding-bottom: 25px; }
 
-        /* --- PARABOLIC BLUR (10PX) --- */
-        .blur-strip {
+        /* --- SMOOTH PARABOLIC BLUR (10PX) --- */
+        .blur-container {
             position: fixed; bottom: 0; left: 0; width: 100%; height: 10px;
             pointer-events: none; z-index: 1500;
-            background: linear-gradient(to top, var(--bg), transparent);
             backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            mask-image: linear-gradient(to top, black, transparent);
+            -webkit-mask-image: linear-gradient(to top, black, transparent);
         }
 
-        #status-msg { margin-top: 25px; font-size: 10px; color: #555; font-weight: 900; letter-spacing: 2px; }
+        #status-msg { margin-top: 25px; font-size: 11px; color: #555; font-weight: bold; letter-spacing: 1px; }
+
+        /* --- UTILS --- */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="load-label" style="font-weight: 900; font-size: 10px; letter-spacing: 5px; color: #333;">INITIALIZING ENGINE</div>
+        <div id="load-label" style="font-weight: 900; font-size: 11px; letter-spacing: 4px; color: #333;">ENGINE COLD START</div>
     </div>
 
     <header id="main-header">
@@ -137,8 +158,9 @@
             <span class="header-title">GLORP</span>
         </div>
         <nav>
-            <a href="#app">Convert</a>
-            <a href="#compare">Showcase</a>
+            <a href="#app">Application</a>
+            <a href="#compare">Processing</a>
+            <a href="#logic">Architecture</a>
             <a href="#faq">FAQ</a>
         </nav>
         <div class="header-right">
@@ -147,7 +169,7 @@
     </header>
 
     <div id="file-drawer">
-        <div class="drawer-title">Queue</div>
+        <div class="drawer-title">SELECTED ASSETS</div>
         <ul id="file-list"></ul>
     </div>
 
@@ -157,14 +179,16 @@
         <div class="workflow-container">
             <div id="select-block">
                 <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT IMAGES</button>
+                <span class="drag-hint">DROP FILES ANYWHERE</span>
             </div>
 
             <div id="convert-block">
-                <button id="btn-convert">CONVERT ALL</button>
-                <div style="margin-top: 15px; display: flex; gap: 15px; justify-content: center;">
-                    <label style="font-size: 10px; color: #555;"><input type="radio" name="m" value="monolith" checked> MONOLITH</label>
-                    <label style="font-size: 10px; color: #555;"><input type="radio" name="m" value="lego"> LEGO</label>
+                <button id="btn-convert">START CONVERSION</button>
+                <div id="mode-selector" style="display: flex; gap: 15px; margin-top: 20px;">
+                    <label style="font-size: 10px; cursor: pointer; color:#666;"><input type="radio" name="m" value="monolith" checked> MONOLITH</label>
+                    <label style="font-size: 10px; cursor: pointer; color:#666;"><input type="radio" name="m" value="lego"> LEGO</label>
                 </div>
+                <span class="drag-hint">DRAG MORE TO ADD</span>
             </div>
         </div>
 
@@ -173,55 +197,51 @@
     </section>
 
     <section id="compare">
-        <div class="comp-row">
-            <div class="gif-container"><img src="Monolith.gif" alt="Monolith Preview"></div>
-            <div class="comp-info">
-                <h2>Monolith Engine</h2>
-                <p>Combines adjacent pixels into complex paths. Best for lightweight production assets.</p>
-            </div>
-        </div>
-        <div class="comp-row" style="flex-direction: row-reverse;">
-            <div class="gif-container"><img src="lego.gif" alt="Lego Preview"></div>
-            <div class="comp-info">
-                <h2>Lego Meshing</h2>
-                <p>Preserves every pixel as a distinct square. Perfect for modular edits.</p>
-            </div>
+        <h2 style="font-size: 32px;">Processing Modes</h2>
+        <p style="color: #666; max-width: 600px; text-align: center;">Advanced algorithms for pixel-perfect vectorization.</p>
+    </section>
+
+    <section id="logic">
+        <div style="text-align: center; max-width: 700px;">
+            <h2>The Architecture</h2>
+            <p style="color: #888; line-height: 1.8;">GLORP utilizes a custom <b>Contour Meshing Engine</b> written in Python and compiled to WASM. It performs boundary analysis to minimize vertex counts while maintaining pixel grid integrity.</p>
         </div>
     </section>
 
     <section id="faq">
-        <h2 style="font-size: 38px; font-weight: 800; margin-bottom: 40px;">FAQ</h2>
+        <h2 style="font-size: 42px; font-weight: 800;">FAQ</h2>
         <div class="faq-grid">
             <div class="faq-card">
-                <button class="faq-btn">WHERE ARE MY FILES SAVED? <span class="faq-dot"></span></button>
-                <div class="faq-ans">The engine triggers an automatic download for each converted file directly into your browser's default download folder.</div>
+                <button class="faq-btn">WHERE DOES THE PROCESSING HAPPEN? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Everything runs locally in your browser using Pyodide (WebAssembly). No images are ever uploaded to a server.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">WHY SVG FORMAT? <span class="faq-dot"></span></button>
-                <div class="faq-ans">SVG is a vector format, meaning you can scale your pixel art to any size (like 4K or billboards) without losing quality.</div>
+                <button class="faq-btn">WHY MONOLITH OVER LEGO? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Monolith creates connected paths which results in much smaller SVG file sizes. Lego is only for specific grid-based editing.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">IS THERE A FILE SIZE LIMIT? <span class="faq-dot"></span></button>
-                <div class="faq-ans">We recommend images up to 256x256. Larger files might cause the browser tab to hang due to heavy geometric calculations.</div>
+                <button class="faq-btn">IS THERE A BATCH LIMIT? <span class="faq-dot"></span></button>
+                <div class="faq-ans">The web version handles up to 50 files comfortably. For unlimited batch processing, use our Desktop version on Itch.io.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">DOES IT WORK OFFLINE? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Once the engine is loaded, GLORP runs entirely on your hardware. You can disconnect from the internet and keep converting.</div>
+                <button class="faq-btn">WHAT ABOUT TRANSPARENCY? <span class="faq-dot"></span></button>
+                <div class="faq-ans">GLORP fully supports alpha channels. Transparent pixels are ignored, and semi-transparent ones retain their opacity values.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">WHO CREATED THE MESHING LOGIC? <span class="faq-dot"></span></button>
-                <div class="faq-ans">The core "Contour Meshing" algorithm was developed and optimized by Harry Tsang for maximum efficiency.</div>
+                <button class="faq-btn">WHO IS HARRY TSANG? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Harry Tsang is the lead engineer behind the high-performance contour algorithms that make GLORP 3.0.0 possible.</div>
             </div>
         </div>
     </section>
 
-    <div class="blur-strip"></div>
+    <div class="blur-container"></div>
 
     <script>
-        /* --- ENGINE CORE --- */
+        /* --- ENGINE SOURCE --- */
         const PY_CODE = `
 import numpy as np
 CW, ACW = 1, 2
+
 def edge_finding(grid, color):
     mask = np.where(grid == color)
     h_pos = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8); h_pos[mask] = 1
@@ -229,6 +249,7 @@ def edge_finding(grid, color):
     v_pos = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8); v_pos[mask] = 1
     v_edges = (v_pos - np.roll(1 - v_pos, 1, axis=1) == 0) * CW + (v_pos + np.roll(1 - v_pos, 1, axis=1) == 2)
     return v_edges, h_edges
+
 def ex_up(x, y, v, h):
     for dx in range(x, -1, -1):
         if v[dx, y] == ACW: v[dx, y] = 0
@@ -238,6 +259,7 @@ def ex_up(x, y, v, h):
     if h[dx+1, y] == CW: return p + ex_right(dx+1, y, v, h)
     elif y > 0 and h[dx+1, y-1] == ACW: return p + ex_left(dx+1, y-1, v, h)
     return p
+
 def ex_left(x, y, v, h):
     for dy in range(y, -1, -1):
         if h[x, dy] == ACW: h[x, dy] = 0
@@ -247,6 +269,7 @@ def ex_left(x, y, v, h):
     if x > 0 and v[x-1, dy+1] == ACW: return p + ex_up(x-1, dy+1, v, h)
     elif dy < v.shape[1] and v[x, dy+1] == CW: return p + ex_down(x, dy+1, v, h)
     return p
+
 def ex_down(x, y, v, h):
     for dx in range(x, v.shape[0]):
         if v[dx, y] == CW: v[dx, y] = 0
@@ -256,6 +279,7 @@ def ex_down(x, y, v, h):
     if y > 0 and h[dx, y-1] == ACW: return p + ex_left(dx, y-1, v, h)
     elif dx < h.shape[0] and h[dx, y] == CW: return p + ex_right(dx, y, v, h)
     return p
+
 def ex_right(x, y, v, h):
     for dy in range(y, h.shape[1]):
         if h[x, dy] == CW: h[x, dy] = 0
@@ -265,6 +289,7 @@ def ex_right(x, y, v, h):
     if dy < v.shape[1] and v[x, dy] == CW: return p + ex_down(x, dy+1, v, h)
     elif x > 0 and v[x-1, dy] == ACW: return p + ex_up(x-1, dy, v, h)
     return p
+
 def path_finding(grid, color):
     v, h = edge_finding(grid, color); path = ""
     while np.any(h == CW):
@@ -273,6 +298,7 @@ def path_finding(grid, color):
     return path
 `;
 
+        /* --- STATE MANAGEMENT --- */
         let pyodide;
         let selectedFiles = [];
 
@@ -282,35 +308,54 @@ def path_finding(grid, color):
                 await pyodide.loadPackage("numpy");
                 await pyodide.runPython(PY_CODE);
                 document.getElementById('loading-screen').classList.add('loaded');
-            } catch(e) { document.getElementById('load-label').innerText = "NETWORK ERROR"; }
+            } catch(e) { 
+                document.getElementById('load-label').innerText = "CORS/NETWORK ERROR";
+            }
         }
         init();
 
-        function updateUI() {
+        /* --- UI ACTIONS --- */
+        function updateUIState() {
             const hasFiles = selectedFiles.length > 0;
-            document.getElementById('main-header').classList.toggle('collapsed', hasFiles);
-            document.getElementById('file-drawer').classList.toggle('open', hasFiles);
-            document.getElementById('select-block').style.display = hasFiles ? 'none' : 'block';
-            document.getElementById('convert-block').classList.toggle('active', hasFiles);
-            document.body.style.overflow = hasFiles ? 'hidden' : 'auto';
+            const header = document.getElementById('main-header');
+            const drawer = document.getElementById('file-drawer');
+            const selectBlock = document.getElementById('select-block');
+            const convertBlock = document.getElementById('convert-block');
 
+            if (hasFiles) {
+                header.classList.add('collapsed');
+                drawer.classList.add('open');
+                selectBlock.style.display = 'none';
+                convertBlock.classList.add('active');
+                document.body.style.overflow = 'hidden'; // Disable scroll
+            } else {
+                header.classList.remove('collapsed');
+                drawer.classList.remove('open');
+                selectBlock.style.display = 'flex';
+                convertBlock.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+
+            // Render List
             const list = document.getElementById('file-list');
             list.innerHTML = selectedFiles.map(f => `<li>${f.name}</li>`).join('');
         }
 
+        /* --- FILE HANDLING --- */
         const handleFiles = (files) => {
             selectedFiles = [...selectedFiles, ...Array.from(files)];
-            updateUI();
+            updateUIState();
         };
 
         window.ondragover = (e) => e.preventDefault();
         window.ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
         document.getElementById('file-input').onchange = (e) => handleFiles(e.target.files);
 
+        /* --- CONVERSION --- */
         document.getElementById('btn-convert').onclick = async () => {
             const mode = document.querySelector('input[name="m"]:checked').value;
             const status = document.getElementById('status-msg');
-            status.innerText = "PROCESSING...";
+            status.innerText = "VECTORIZING...";
 
             for (let file of selectedFiles) {
                 const dataUrl = await new Promise(r => {
@@ -361,11 +406,12 @@ svg.append("</svg>")
                 link.click();
             }
             
-            status.innerText = "DONE";
+            status.innerText = "SUCCESS";
             selectedFiles = [];
-            setTimeout(() => { status.innerText = ""; updateUI(); }, 2000);
+            setTimeout(() => { status.innerText = ""; updateUIState(); }, 2000);
         };
 
+        /* --- FAQ TOGGLE --- */
         document.querySelectorAll('.faq-btn').forEach(btn => {
             btn.onclick = () => {
                 const card = btn.parentElement;
