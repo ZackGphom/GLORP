@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLORP: Pixel-to-Vector Beast</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --light: #1a1a1a;
+            --hover: #252525;
+            --text: #e6e6e6;
+            --accent: #ff4444;
+            --radius: 10px;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container { width: 100%; max-width: 680px; padding: 40px 20px; text-align: center; }
+        
+        .logo-img { height: 220px; margin-bottom: 20px; pointer-events: none; }
+
+        #drop-zone {
+            background: var(--light);
+            border: 2px dashed #333;
+            border-radius: var(--radius);
+            padding: 60px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        #drop-zone.hover { border-color: var(--accent); background: var(--hover); }
+
+        .controls { margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+        
+        .radio-group { display: flex; gap: 15px; background: var(--light); padding: 10px 20px; border-radius: var(--radius); }
+        .radio-group label { cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 14px; }
+        
+        button {
+            background: var(--light); color: white; border: none; padding: 12px 35px;
+            border-radius: var(--radius); font-weight: bold; cursor: pointer; transition: 0.2s;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        button:hover { background: var(--hover); border: 1px solid #333; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        #status { margin-top: 20px; color: #666; font-size: 11px; height: 15px; text-transform: uppercase; }
+        
+        #loading-screen {
+            position: fixed; inset: 0; background: var(--bg);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+        }
+        
+        .proc-gif { width: 32px; height: 32px; margin-bottom: 15px; }
+
+        #output-list { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+        .result-card { background: var(--light); padding: 10px; border-radius: var(--radius); width: 120px; text-align: center; }
+        .result-card img { width: 100%; image-rendering: pixelated; margin-bottom: 8px; border-radius: 4px; }
+        .result-card a { color: var(--accent); text-decoration: none; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <img src="processing.gif" class="proc-gif">
+        <div style="font-weight: bold; letter-spacing: 2px;">GLORP ENGINE STARTING...</div>
+    </div>
+
+    <div class="container">
+        <img src="logo.png" class="logo-img">
+        
+        <div id="drop-zone">
+            <div id="drop-text">CLICK OR DRAG PIXEL ART HERE</div>
+            <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+        </div>
+
+        <div class="controls">
+            <div class="radio-group">
+                <label><input type="radio" name="mode" value="monolith" checked> MONOLITH</label>
+                <label><input type="radio" name="mode" value="lego"> LEGO</label>
+                <label><input type="radio" name="mode" value="webp"> WEBP</label>
+            </div>
+            <button id="convert-btn">CONVERT</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="output-list"></div>
+    </div>
+
+    <script>
+        const MESHING_CODE = `
+import numpy as np
+CLOCKWISE, ANTICLOCKWISE = 1, 2
+
+def edge_finding(grid, color):
+    mask = np.where(grid == color)
+    pos_h = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8)
+    pos_h[mask] = 1
+    hor_edges = (pos_h - np.roll(1 - pos_h, 1, axis=0) == 0) * ANTICLOCKWISE - (pos_h + np.roll(1 - pos_h, 1, axis=0) == 2)
+    pos_v = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8)
+    pos_v[mask] = 1
+    ver_edges = (pos_v - np.roll(1 - pos_v, 1, axis=1) == 0) * CLOCKWISE + (pos_v + np.roll(1 - pos_v, 1, axis=1) == 2)
+    return ver_edges, hor_edges
+
+def explore_up(x, y, v, h):
+    for dX in range(x, -1, -1):
+        if v[dX, y] == ANTICLOCKWISE: v[dX, y] = 0
+        else: break
+    else: dX -= 1
+    p = f"v{dX - x}"
+    if h[dX + 1, y] == CLOCKWISE: return p + explore_right(dX + 1, y, v, h)
+    elif y > 0 and h[dX + 1, y - 1] == ANTICLOCKWISE: return p + explore_left(dX + 1, y - 1, v, h)
+    return p
+
+def explore_left(x, y, v, h):
+    for dY in range(y, -1, -1):
+        if h[x, dY] == ANTICLOCKWISE: h[x, dY] = 0
+        else: break
+    else: dY -= 1
+    p = f"h{dY - y}"
+    if x > 0 and v[x - 1, dY + 1] == ANTICLOCKWISE: return p + explore_up(x - 1, dY + 1, v, h)
+    elif dY < v.shape[1] and v[x, dY + 1] == CLOCKWISE: return p + explore_down(x, dY + 1, v, h)
+    return p
+
+def explore_down(x, y, v, h):
+    for dX in range(x, v.shape[0]):
+        if v[dX, y] == CLOCKWISE: v[dX, y] = 0
+        else: break
+    else: dX += 1
+    p = f"v{dX - x}"
+    if y > 0 and h[dX, y - 1] == ANTICLOCKWISE: return p + explore_left(dX, y - 1, v, h)
+    elif dX < h.shape[0] and h[dX, y] == CLOCKWISE: return p + explore_right(dX, y, v, h)
+    return p
+
+def explore_right(x, y, v, h):
+    for dY in range(y, h.shape[1]):
+        if h[x, dY] == CLOCKWISE: h[x, dY] = 0
+        else: break
+    else: dY += 1
+    p = f"h{dY - y}"
+    if dY < v.shape[1] and v[x, dY] == CLOCKWISE: return p + explore_down(x, dY, v, h)
+    elif x > 0 and v[x - 1, dY] == ANTICLOCKWISE: return p + explore_up(x - 1, dY, v, h)
+    return p
+
+def path_finding(grid, color):
+    v, h = edge_finding(grid, color)
+    path = ""
+    while np.any(h == CLOCKWISE):
+        x, y = np.argwhere(h == CLOCKWISE)[0]
+        path += f"M{y},{x}" + explore_right(x, y, v, h) + "z"
+    return path
+        `;
+
+        let pyodide;
+        const statusEl = document.getElementById('status');
+        const convertBtn = document.getElementById('convert-btn');
+        const outputList = document.getElementById('output-list');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        let selectedFiles = [];
+
+        async function init() {
+            pyodide = await loadPyodide();
+            await pyodide.loadPackage("numpy");
+            await pyodide.runPython(MESHING_CODE);
+            document.getElementById('loading-screen').style.display = 'none';
+        }
+        init();
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => { 
+            selectedFiles = Array.from(e.target.files); 
+            statusEl.innerText = `${selectedFiles.length} FILES READY`; 
+        };
+
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('hover'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('hover');
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('hover'); selectedFiles = Array.from(e.dataTransfer.files); statusEl.innerText = `${selectedFiles.length} FILES READY`; };
+
+        convertBtn.onclick = async () => {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            convertBtn.disabled = true;
+
+            for (const file of selectedFiles) {
+                statusEl.innerText = `PROCESSING: ${file.name.toUpperCase()}`;
+                
+                const img = await new Promise(r => { 
+                    const reader = new FileReader(); 
+                    reader.onload = e => { const i = new Image(); i.onload = () => r(i); i.src = e.target.result; };
+                    reader.readAsDataURL(file);
+                });
+                
+                if (mode === 'lego' && (img.width * img.height) > 50000) {
+                    if (!confirm("Large image in LEGO mode may be slow. Continue?")) continue;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const imageData = ctx.getImageData(0, 0, img.width, img.height);
+
+                pyodide.globals.set("raw", imageData.data);
+                pyodide.globals.set("w", img.width);
+                pyodide.globals.set("h", img.height);
+
+                let content;
+                let extension = ".svg";
+
+                if (mode === 'monolith') {
+                    content = await pyodide.runPythonAsync(`
+pixels = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
+colors = np.unique(pixels.reshape(-1, 4), axis=0)
+colors = colors[colors[:, 3] > 0]
+grid = (pixels[:,:,0].astype(np.uint32) << 24) | (pixels[:,:,1].astype(np.uint32) << 16) | (pixels[:,:,2].astype(np.uint32) << 8) | pixels[:,:,3]
+res = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
+res.append("<style>")
+for i, c in enumerate(colors):
+    res.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
+res.append("</style>")
+for i, c in enumerate(colors):
+    c_int = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
+    p_data = path_finding(grid, c_int)
+    if p_data: res.append(f'<path class="c{i}" d="{p_data}"/>')
+res.append("</svg>")
+"\\n".join(res)
+                    `);
+                } else if (mode === 'lego') {
+                    content = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+                    const d = imageData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        if (d[i+3] > 0) {
+                            const x = (i/4) % img.width; const y = Math.floor((i/4) / img.width);
+                            const hex = "#" + ((1 << 24) + (d[i] << 16) + (d[i+1] << 8) + d[i+2]).toString(16).slice(1);
+                            content += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}" fill-opacity="${d[i+3]/255}"/>`;
+                        }
+                    }
+                    content += `</svg>`;
+                } else {
+                    content = img.src; // Simplified WebP handling for browser
+                    extension = ".webp";
+                }
+
+                createResultCard(content, file.name.split('.')[0] + extension);
+            }
+            statusEl.innerText = "DONE";
+            convertBtn.disabled = false;
+        };
+
+        function createResultCard(content, fileName) {
+            const blob = new Blob([content], {type: fileName.endsWith('.svg') ? 'image/svg+xml' : 'image/webp'});
+            const url = URL.createObjectURL(blob);
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.innerHTML = `<img src="${url}"><a href="${url}" download="${fileName}">SAVE</a>`;
+            outputList.appendChild(card);
+        }
+    </script>
+</body>
+</html>
