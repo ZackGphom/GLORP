@@ -45,7 +45,7 @@
     section{min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 20px;text-align:center;opacity:0;transform:translateY(var(--reveal-translate)) scale(var(--reveal-scale));transition:opacity .9s var(--ease),transform .9s var(--ease);will-change:transform,opacity}
     section.revealed{opacity:1;transform:translateY(0) scale(1)}
     #logo-big{height:160px;margin-bottom:40px}
-    .workflow-container{width:100%;Display:flex;flex-direction:column;align-items:center}
+    .workflow-container{width:100%;display:flex;flex-direction:column;align-items:center}
     #btn-select,#btn-convert{width:240px;height:56px;background:var(--light);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:.25s;text-transform:uppercase;letter-spacing:1px}
     #btn-select:hover{background:var(--hover)}
     #btn-convert{background:var(--accent);color:#000}
@@ -291,7 +291,7 @@ def edge_finding(grid, color):
     ver_edges = (positive - rolled_negative == 0)
     ver_edges = ver_edges * CLOCKWISE + (positive + rolled_negative == 2)
 
-    return ver_edges.astype(np.int8), hor_edges.astype(np.int8)
+    return ver_edges, hor_edges
 
 def explore_up(x, y, ver_edges, hor_edges):
     for destX in range(x, -1, -1):
@@ -354,12 +354,9 @@ def explore_right(x, y, ver_edges, hor_edges):
     return path
 
 def path_finding(grid, color):
-    # ensure grid is numpy array of integers (uint32)
-    grid = np.asarray(grid, dtype=np.uint32)
     ver_edges, hor_edges = edge_finding(grid, color)
     path_data = ""
-    # iterate only while there are CLOCKWISE markers
-    while np.any(hor_edges == CLOCKWISE):
+    while np.any(hor_edges):
         coords = np.argwhere(hor_edges == CLOCKWISE)
         if coords.size == 0:
             break
@@ -385,6 +382,7 @@ def path_finding(grid, color):
       }
     }
     init();
+
     function showToast(msg,type="success",ms=2200){
       const t=document.getElementById('toast');
       t.className="";
@@ -394,14 +392,17 @@ def path_finding(grid, color):
       clearTimeout(t._hideTimeout);
       t._hideTimeout=setTimeout(()=>{t.classList.remove('show','success','error')},ms);
     }
+
     function escapeHtml(s){return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
     let appInView=true;
+
     function syncHeaderState(){
       const header=document.getElementById('main-header');
       const hasFiles=selectedFiles.length>0;
       header.classList.toggle('files-hidden',hasFiles);
       header.classList.toggle('compact',!hasFiles && !appInView);
     }
+
     function updateUI(){
       const hasFiles=selectedFiles.length>0;
       syncHeaderState();
@@ -413,7 +414,9 @@ def path_finding(grid, color):
       const list=document.getElementById('file-list');
       list.innerHTML=selectedFiles.map((f,i)=>`<li><span title="${escapeHtml(f.name)}">${f.name.length>28?f.name.substring(0,25)+'...':f.name}</span><span class="remove-file" onclick="removeFile(${i})">×</span></li>`).join('');
     }
+
     document.getElementById('file-input').onchange=e=>handleFiles(e.target.files);
+
     function handleFiles(list){
       const arr=Array.from(list).filter(f=>f&&f.size!==0&&(f.type.startsWith('image')||/\.(png|jpe?g|gif|webp)$/i.test(f.name)));
       if(arr.length===0){if(list&&list.length>0)showToast("No valid images found","error");return}
@@ -421,6 +424,7 @@ def path_finding(grid, color):
       updateUI();
       showToast(`${arr.length} file(s) added`,"success",1400);
     }
+
     const overlay=document.getElementById('drop-overlay');
     window.addEventListener('dragover',(e)=>{e.preventDefault();overlay.classList.add('visible')});
     window.addEventListener('dragleave',(e)=>{if(e.clientX<=0||e.clientY<=0||e.clientX>=window.innerWidth||e.clientY>=window.innerHeight){overlay.classList.remove('visible')}});
@@ -444,7 +448,7 @@ def path_finding(grid, color):
       }else{
         files=Array.from(e.dataTransfer.files).filter(f=>{if(!f)return false;if(f.size===0&&!/\.(png|jpe?g|gif|webp)$/i.test(f.name)){foldersDetected++;return false}return /\.(png|jpe?g|gif|webp)$/i.test(f.name)});
       }
-      if(foldersDetected>0)showToast('Folder upload available only in the desktop app. Download: <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline">GLORP — itch</a>','error',5000);
+      if(foldersDetected>0)showToast('Folder upload available only in the desktop app.','error',5000);
       if(files.length){
         const first=document.getElementById('app');
         if(first){
@@ -461,111 +465,146 @@ def path_finding(grid, color):
 
     document.querySelectorAll('.mode-tab').forEach(tab=>{tab.addEventListener('click',()=>{document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active')})})
 
-    document.getElementById('btn-convert').onclick=async()=>{
-      const activeTab=document.querySelector('.mode-tab.active');
-      const mode=activeTab?activeTab.dataset.mode:'monolith';
-      const status=document.getElementById('status-msg');
-      if(selectedFiles.length===0){status.innerText="NO FILES SELECTED";showToast("No files selected","error");return}
-      status.innerText=`CONVERTING ${selectedFiles.length} ASSETS...`;
-      showToast(`Converting ${selectedFiles.length} file(s)...`,"success",1400);
-      for(const file of selectedFiles.slice()){
-        try{
-          const dataUrl=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(file)});
-          const img=new Image();
-          img.src=dataUrl;
-          await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error('Image load error'))});
-          const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
-          const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
-          const iData=ctx.getImageData(0,0,img.width,img.height);
-          let result;let extension='.svg';
-          if(mode==='monolith'){
-            // convert JS Uint8Array to python-friendly buffer (to avoid JsProxy errors)
-            const uint8 = new Uint8Array(iData.data.buffer);
-            pyodide.globals.set("raw", pyodide.toPy(uint8));
+    document.getElementById('btn-convert').onclick = async () => {
+      const activeTab = document.querySelector('.mode-tab.active');
+      const mode = activeTab ? activeTab.dataset.mode : 'monolith';
+      const status = document.getElementById('status-msg');
+      
+      if (selectedFiles.length === 0) {
+        status.innerText = "NO FILES SELECTED";
+        showToast("No files selected", "error");
+        return;
+      }
+      
+      status.innerText = `CONVERTING ${selectedFiles.length} ASSETS...`;
+      showToast(`Converting ${selectedFiles.length} file(s)...`, "success", 1400);
+
+      for (const file of selectedFiles.slice()) {
+        try {
+          const dataUrl = await new Promise(r => {
+            const fr = new FileReader();
+            fr.onload = e => r(e.target.result);
+            fr.readAsDataURL(file);
+          });
+          const img = new Image();
+          img.src = dataUrl;
+          await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('Image load error')); });
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width; canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const iData = ctx.getImageData(0, 0, img.width, img.height);
+          
+          let result; let extension = '.svg';
+          
+          if (mode === 'monolith') {
+            pyodide.globals.set("raw", iData.data);
             pyodide.globals.set("w", img.width);
             pyodide.globals.set("h", img.height);
-            const pythonSnippet=`
+            
+            const pythonSnippet = `
 import numpy as np
-# 'raw' is now a bytes-like / buffer-compatible object
-px = np.frombuffer(raw, dtype=np.uint8).reshape((h, w, 4))
+px = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
 clrs = np.unique(px.reshape(-1, 4), axis=0)
 clrs = np.array([c for c in clrs if c[3] > 0], dtype=np.uint8)
-grd = (px[:,:,0].astype(np.uint32) << 24) | (px[:,:,1].astype(np.uint32) << 16) | (px[:,:,2].astype(np.uint32) << 8) | px[:,:,3]
+grd = (px[:,:,0].astype(np.uint32) << 24) | (px[:,:,1].astype(np.uint32) << 16) | (px[:,:,2].astype(np.uint32) << 8) | px[:,:,3].astype(np.uint32)
 svg_parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
 for c in clrs:
-    c_i = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
-    try:
-        p_d = path_finding(grd, c_i)
-    except Exception:
-        p_d = ""
-    if p_d:
-        svg_parts.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255:.6f}" d="{p_d}"/>')
+    c_i = (int(c[0])<<24) | (int(c[1])<<16) | (int(c[2])<<8) | int(c[3])
+    try: p_d = path_finding(grd, c_i)
+    except: p_d = ""
+    if p_d: svg_parts.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255:.6f}" d="{p_d}"/>')
 svg_parts.append("</svg>")
-"\\n".join(svg_parts)
-`;
-            try{
-              result=await pyodide.runPythonAsync(pythonSnippet);
-            }catch(pyErr){
-              console.error("Py error",pyErr);
-              showToast("Conversion error — fallback to Lego mod for "+file.name,"error",2600);
-              result=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
-              const d=iData.data;
-              for(let j=0;j<d.length;j+=4)if(d[j+3]>0){const x=(j/4)%img.width,y=Math.floor((j/4)/img.width);result+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`}
-              result+=`</svg>`;
+"\\n".join(svg_parts)`;
+            try {
+              result = await pyodide.runPythonAsync(pythonSnippet);
+            } catch(pyErr) {
+              console.error("Py error", pyErr);
+              throw pyErr;
             }
-          }else if(mode==='lego'){
-            result=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
-            const d=iData.data;
-            for(let j=0;j<d.length;j+=4)if(d[j+3]>0){const x=(j/4)%img.width,y=Math.floor((j/4)/img.width);result+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`}
-            result+=`</svg>`;
-          }else if(mode==='webp'){
-            result=canvas.toDataURL('image/webp',1.0);
-            extension='.webp';
+          } else if (mode === 'lego') {
+            result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+            const d = iData.data;
+            for (let j = 0; j < d.length; j += 4) {
+              if (d[j+3] > 0) {
+                const x = (j/4) % img.width, y = Math.floor((j/4) / img.width);
+                result += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`;
+              }
+            }
+            result += `</svg>`;
+          } else if (mode === 'webp') {
+            result = canvas.toDataURL('image/webp', 1.0);
+            extension = '.webp';
           }
-          const link=document.createElement('a');
-          if(extension==='.svg'){link.href=URL.createObjectURL(new Blob([result],{type:'image/svg+xml'}))}else{link.href=result}
-          link.download=file.name.split('.')[0]+extension;
+
+          const link = document.createElement('a');
+          if (extension === '.svg') { link.href = URL.createObjectURL(new Blob([result], {type: 'image/svg+xml'})); } 
+          else { link.href = result; }
+          link.download = file.name.split('.')[0] + extension;
           document.body.appendChild(link);
           link.click();
-          setTimeout(()=>{if(link.href&&link.href.startsWith('blob:'))URL.revokeObjectURL(link.href);try{link.remove()}catch(e){}},1500);
-          document.getElementById('status-msg').innerText=`CONVERTED: ${file.name}`;
-          showToast(`Converted: ${file.name}`,'success',1200);
-        }catch(err){
-          console.error("Conversion failed for",file.name,err);
-          document.getElementById('status-msg').innerText=`ERROR converting ${file.name} — skipped (see console)`;
-          showToast(`Error converting ${file.name} (skipped)`,'error',2000);
+          setTimeout(() => { if (link.href && link.href.startsWith('blob:')) URL.revokeObjectURL(link.href); try { link.remove(); } catch(e) {} }, 1500);
+          
+          status.innerText = `CONVERTED: ${file.name}`;
+          showToast(`Converted: ${file.name}`, 'success', 1200);
+        } catch(err) {
+          console.error("Conversion failed for", file.name, err);
+          if (mode === 'monolith') {
+             showToast("Engine error — falling back to Lego mod", "error", 3000);
+             const img = new Image();
+             img.src = await new Promise(r => { const fr = new FileReader(); fr.onload = e => r(e.target.result); fr.readAsDataURL(file); });
+             await new Promise(r => img.onload = r);
+             const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+             const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+             const d = ctx.getImageData(0, 0, img.width, img.height).data;
+             let legoResult = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+             for (let j = 0; j < d.length; j += 4) {
+               if (d[j+3] > 0) {
+                 const x = (j/4) % img.width, y = Math.floor((j/4) / img.width);
+                 legoResult += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`;
+               }
+             }
+             legoResult += `</svg>`;
+             const link = document.createElement('a');
+             link.href = URL.createObjectURL(new Blob([legoResult], {type: 'image/svg+xml'}));
+             link.download = file.name.split('.')[0] + ".svg";
+             link.click();
+          }
         }
       }
-      document.getElementById('status-msg').innerText="CONVERSION COMPLETE";
-      showToast("Conversion complete","success",1800);
-      selectedFiles=[];
+      
+      status.innerText = "CONVERSION COMPLETE";
+      showToast("Conversion complete", "success", 1800);
+      
+      // Таймер очистки статуса (через 4 секунды)
+      setTimeout(() => {
+        if (status.innerText === "CONVERSION COMPLETE") {
+          status.innerText = "";
+        }
+      }, 4000);
+
+      selectedFiles = [];
       updateUI();
-      setTimeout(()=>{document.getElementById('status-msg').innerText=''},2000);
     };
 
+    // UI Listeners
     document.querySelectorAll('.faq-btn').forEach(btn=>{btn.onclick=()=>{const card=btn.parentElement;const wasOpen=card.classList.contains('open');document.querySelectorAll('.faq-card').forEach(c=>c.classList.remove('open'));if(!wasOpen)card.classList.add('open')}});
-
     const sectionObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.intersectionRatio>0.10){e.target.classList.add('revealed')}else{e.target.classList.remove('revealed')}})},{threshold:[0,0.10,0.4]});
     document.querySelectorAll('section').forEach(s=>sectionObserver.observe(s));
-
     const paras=document.querySelectorAll('.reveal-para');
     const paraObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{const el=e.target;if(e.intersectionRatio>0.12){el.classList.add('visible')}else{el.classList.remove('visible')}})},{threshold:[0,0.12,0.5]});
     paras.forEach(p=>paraObserver.observe(p));
-
     const bloom=document.getElementById('bloom');
     function updateBloom(){const max=420;const y=window.scrollY||window.pageYOffset;const progress=Math.min(Math.max(y/max,0),1);const scale=0.95+0.5*progress;const translateY=20-20*progress;const height=80+(180-80)*progress;const opacity=0.85-0.5*progress;bloom.style.transform=`translateX(-50%) translateY(${translateY}px) scaleX(${scale})`;bloom.style.height=`${height}px`;bloom.style.opacity=`${opacity}`}
     window.addEventListener('scroll',updateBloom,{passive:true});
     updateBloom();
-
     const header=document.getElementById('main-header');
     const appSection=document.getElementById('app');
     const appObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{appInView=e.intersectionRatio>=0.6;syncHeaderState()})},{threshold:[0,0.25,0.6,0.95]});
     if(appSection)appObserver.observe(appSection);
     syncHeaderState();
-
     document.querySelectorAll('nav a').forEach(a=>{a.addEventListener('click',(ev)=>{ev.preventDefault();const href=a.getAttribute('href');const target=document.querySelector(href);if(!target)return;if(href==='#app'){header.classList.remove('compact')}else{header.classList.add('compact')}target.scrollIntoView({behavior:'smooth',block:'start'})})});
-
-    setTimeout(()=>{document.getElementById('loading-screen').classList.add('loaded')},8000);
   </script>
 </body>
 </html>
