@@ -1,6 +1,6 @@
 <p align="center"> <img src="logo.png" width="600" style="image-rendering: pixelated;"> <br> </p>
 
-# GLORP | Free Online Pixel Art to SVG Converter
+# GLORP | Free Pixel Art to SVG Converter
 
 **Bzibi&ti tpi\$onch... BLAP BLAP BLAAA...**
 
