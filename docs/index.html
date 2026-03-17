@@ -1,461 +1,571 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLORP | Pixel-to-Vector Beast</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
-    <style>
-        :root {
-            --bg: #0a0a0a;
-            --light: #161616;
-            --hover: #222222;
-            --text: #e6e6e6;
-            --accent: #ffffff;
-            --radius: 14px;
-            --ease: cubic-bezier(0.19, 1, 0.22, 1);
-        }
-
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; outline: none; }
-        html { scroll-behavior: smooth; }
-        body, html { 
-            margin: 0; padding: 0; background: var(--bg); 
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
-            color: var(--text); overflow-x: hidden; 
-        }
-
-        /* --- LOADING SCREEN --- */
-        #loading-screen {
-            position: fixed; inset: 0; background: var(--bg); z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 1s var(--ease), visibility 1s;
-        }
-        #loading-screen.loaded { opacity: 0; visibility: hidden; }
-        
-        .loading-dots {
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 8px;
-        }
-        .dot { width: 6px; height: 6px; background: #333; border-radius: 50%; animation: blink 1.4s infinite both; }
-        .dot:nth-child(2) { animation-delay: 0.2s; }
-        .dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes blink { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
-
-        /* --- HEADER --- */
-        header {
-            position: fixed; top: 20px; left: 20px; right: 20px; height: 56px;
-            background: rgba(22, 22, 22, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius);
-            z-index: 1000; display: flex; align-items: center; padding: 0 20px;
-            transition: 0.6s var(--ease); transform-origin: center;
-        }
-        header.collapsed { transform: scaleX(0); opacity: 0; pointer-events: none; }
-
-        .header-left { display: flex; align-items: center; gap: 10px; flex: 1; }
-        .header-logo { width: 22px; height: 22px; image-rendering: pixelated; }
-        .header-title { font-weight: 800; font-size: 16px; letter-spacing: 1px; }
-
-        nav { display: flex; gap: 30px; flex: 2; justify-content: center; }
-        nav a { color: #888; text-decoration: none; font-size: 11px; font-weight: 700; text-transform: uppercase; transition: 0.3s; }
-        nav a:hover { color: var(--accent); }
-
-        .header-right { flex: 1; display: flex; justify-content: flex-end; }
-        .btn-support-head {
-            background: var(--accent); color: #000; padding: 8px 18px;
-            border-radius: 10px; font-size: 10px; font-weight: 800; text-decoration: none; text-transform: uppercase;
-        }
-
-        /* --- SECTIONS --- */
-        section { min-height: 100vh; width: 100%; display: flex; flex-direction: column; align-items: center; padding: 120px 20px; position: relative; }
-        #logo-big { height: 160px; margin-bottom: 40px; transition: 0.5s; }
-        
-        .workflow-container { width: 340px; display: flex; flex-direction: column; align-items: center; }
-        #btn-select, #btn-convert {
-            width: 220px; height: 52px; background: var(--light); color: #fff;
-            border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        #btn-select:hover { background: var(--hover); }
-        #btn-convert { background: var(--accent); color: #000; }
-
-        #convert-block { display: none; opacity: 0; transform: translateY(10px); transition: 0.5s var(--ease); text-align: center; }
-        #convert-block.active { display: block; opacity: 1; transform: translateY(0); }
-
-        .hint { font-size: 10px; color: #444; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
-
-        /* --- DROP OVERLAY --- */
-        #drop-overlay {
-            position: fixed; inset: 0; background: rgba(10,10,10,0.9); z-index: 2000;
-            display: flex; justify-content: center; align-items: center;
-            opacity: 0; visibility: hidden; transition: 0.3s; pointer-events: none;
-        }
-        #drop-overlay.visible { opacity: 1; visibility: visible; }
-        #drop-overlay img { width: 300px; height: auto; }
-
-        /* --- FILE DRAWER --- */
-        #file-drawer {
-            position: fixed; right: -300px; top: 100px; bottom: 100px; width: 280px;
-            background: var(--light); border-radius: 20px 0 0 20px;
-            border: 1px solid rgba(255,255,255,0.05); z-index: 1100; transition: 0.6s var(--ease);
-            display: flex; flex-direction: column; padding: 20px;
-        }
-        #file-drawer.open { right: 0; }
-        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .drawer-title { font-size: 10px; font-weight: 900; color: #555; letter-spacing: 1px; }
-        .btn-clear { background: none; border: none; color: #ff4444; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
-        
-        #file-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #file-list li { 
-            font-size: 11px; padding: 10px; background: #0f0f0f; margin-bottom: 8px; border-radius: 8px; 
-            color: #888; display: flex; justify-content: space-between; align-items: center;
-        }
-        .remove-file { color: #444; cursor: pointer; font-weight: bold; padding: 0 5px; transition: 0.2s; }
-        .remove-file:hover { color: #fff; }
-
-        /* --- COMPARISON --- */
-        .comp-row { width: 100%; max-width: 1100px; display: flex; align-items: center; gap: 80px; margin-bottom: 120px; }
-        .gif-container { flex: 1.3; }
-        .gif-container img { 
-            width: 100%; display: block; border-radius: 20px; 
-            image-rendering: pixelated; /* Исправляет "кукурузу" */
-            box-shadow: 0 40px 80px -20px rgba(0,0,0,0.6);
-        }
-        .comp-info { flex: 1; }
-        .comp-info h2 { font-size: 36px; margin-bottom: 20px; font-weight: 800; }
-        .comp-info p { color: #888; line-height: 1.8; font-size: 15px; }
-
-        /* --- ARCHITECTURE --- */
-        #logic h2 { font-size: 42px; margin-bottom: 30px; }
-        #logic p { font-size: 18px; color: #aaa; line-height: 1.8; max-width: 800px; text-align: center; }
-
-        /* --- FAQ --- */
-        .faq-grid { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 12px; }
-        .faq-card { background: var(--light); border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
-        .faq-btn {
-            width: 100%; padding: 22px 25px; background: none; border: none; color: #fff;
-            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
-            font-size: 14px; font-weight: 600; text-align: left;
-        }
-        .faq-dot { width: 7px; height: 7px; background: #333; border-radius: 50%; }
-        .faq-card.open .faq-dot { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
-        .faq-ans { max-height: 0; padding: 0 25px; color: #888; font-size: 13px; line-height: 1.7; transition: 0.5s var(--ease); overflow: hidden; }
-        .faq-card.open .faq-ans { max-height: 200px; padding-bottom: 25px; }
-
-        /* --- BLUR STRIP (25PX + SMOOTH) --- */
-        .blur-strip {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 25px;
-            pointer-events: none; z-index: 1500;
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            mask-image: linear-gradient(to top, black, transparent);
-            -webkit-mask-image: linear-gradient(to top, black, transparent);
-        }
-
-        /* --- FOOTER --- */
-        footer { width: 100%; padding: 60px 20px; border-top: 1px solid #161616; text-align: center; color: #444; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
-
-        #status-msg { margin-top: 25px; font-size: 10px; color: #555; font-weight: 900; letter-spacing: 2px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GLORP — pixel to svg</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+  <style>
+    :root{
+      --bg:#0a0a0a;
+      --light:#161616;
+      --hover:#222222;
+      --text:#e6e6e6;
+      --accent:#ffffff;
+      --radius:14px;
+      --ease:cubic-bezier(0.19,1,0.22,1);
+      --reveal-translate:64px;
+      --reveal-scale:0.92;
+      --para-translate:36px;
+      --para-scale:0.94;
+    }
+    html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
+    *{box-sizing:border-box;-webkit-user-select:none;user-select:none;outline:none}
+    body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
+    #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 1s var(--ease),visibility 1s}
+    #loading-screen.loaded{opacity:0;visibility:hidden}
+    .loading-dots{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+    .dot{width:6px;height:6px;background:#333;border-radius:50%;animation:blink 1.4s infinite both}
+    .dot:nth-child(2){animation-delay:.2s}
+    .dot:nth-child(3){animation-delay:.4s}
+    @keyframes blink{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
+    header{position:fixed;top:20px;left:50%;width:calc(100vw - 40px);height:56px;transform:translateX(-50%);background:rgba(22,22,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);z-index:1000;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;overflow:hidden;box-sizing:border-box;transition:transform 1.45s var(--ease),opacity 1.45s var(--ease),background 1.45s var(--ease),padding 1.45s var(--ease),width 1.45s var(--ease),border-color 1.45s var(--ease),box-shadow 1.45s var(--ease);transform-origin:center center;will-change:width,transform,opacity,padding}
+    header.compact{width:min(620px,calc(100vw - 40px));padding:0 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.06)}
+    header.compact .header-left,header.compact .header-right{opacity:1;transform:none;pointer-events:auto}
+    header.compact nav{width:auto;max-width:none;min-width:0;margin:0;padding:0;opacity:1;overflow:hidden;pointer-events:auto;transform:none;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
+    header.files-hidden{width:0;padding:0;opacity:0;border-color:transparent;background:rgba(22,22,22,0);pointer-events:none}
+    header.files-hidden nav,header.files-hidden .header-right,header.files-hidden .header-left{opacity:0;transform:scaleX(0.2);pointer-events:none}
+    .header-left{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
+    .header-title{font-weight:800;font-size:16px;letter-spacing:1px;color:var(--text);transition:transform 1.45s var(--ease),font-size 1.45s var(--ease),opacity 1.45s var(--ease)}
+    nav{display:flex;gap:18px;justify-content:center;align-items:center;min-width:0;overflow:hidden;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
+    nav a{color:#888;text-decoration:none;font-size:12px;font-weight:700;text-transform:uppercase;padding:6px 8px}
+    nav a:hover{color:var(--accent)}
+    .header-right{display:flex;justify-content:flex-end;align-items:center;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
+    .btn-support-head{background:var(--accent);color:#000;padding:8px 18px;border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;text-decoration:none;transition:transform 1.45s var(--ease),background 1.45s var(--ease),opacity 1.45s var(--ease)}
+    section{min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 20px;text-align:center;opacity:0;transform:translateY(var(--reveal-translate)) scale(var(--reveal-scale));transition:opacity .9s var(--ease),transform .9s var(--ease);will-change:transform,opacity}
+    section.revealed{opacity:1;transform:translateY(0) scale(1)}
+    #logo-big{height:160px;margin-bottom:40px}
+    .workflow-container{width:100%;Display:flex;flex-direction:column;align-items:center}
+    #btn-select,#btn-convert{width:240px;height:56px;background:var(--light);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:.25s;text-transform:uppercase;letter-spacing:1px}
+    #btn-select:hover{background:var(--hover)}
+    #btn-convert{background:var(--accent);color:#000}
+    .hint{font-size:10px;color:#444;margin-top:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+    #convert-block{display:none;opacity:0;transform:translateY(10px);transition:.5s var(--ease)}
+    #convert-block.active{display:block;opacity:1;transform:translateY(0)}
+    .mode-tabs{margin-top:25px;display:flex;gap:18px;justify-content:center}
+    .mode-tab{font-size:12px;font-weight:800;color:#888;cursor:pointer;text-transform:none;padding:6px 8px;border-radius:6px;transition:.18s;user-select:none}
+    .mode-tab:hover{color:var(--accent)}
+    .mode-tab.active{color:var(--accent);text-shadow:0 0 10px rgba(255,255,255,0.12);background:rgba(255,255,255,0.02)}
+    #drop-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.9);z-index:2000;display:flex;justify-content:center;align-items:center;opacity:0;visibility:hidden;transition:.3s;pointer-events:none}
+    #drop-overlay.visible{opacity:1;visibility:visible;pointer-events:auto}
+    #drop-overlay img{width:320px;height:auto;image-rendering:pixelated}
+    #file-drawer{position:fixed;right:-300px;top:100px;bottom:100px;width:280px;background:var(--light);border-radius:20px 0 0 20px;border:1px solid rgba(255,255,255,0.05);z-index:1100;transition:.6s var(--ease);display:flex;flex-direction:column;padding:20px}
+    #file-drawer.open{right:0}
+    .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+    .drawer-title{font-size:10px;font-weight:900;color:#555;letter-spacing:1px}
+    .btn-clear{background:none;border:none;color:#ff4444;font-size:9px;font-weight:800;cursor:pointer;text-transform:uppercase}
+    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0}
+    #file-list li{font-size:11px;padding:12px;background:#0f0f0f;margin-bottom:8px;border-radius:8px;color:#888;display:flex;justify-content:space-between;align-items:center}
+    .remove-file{color:#444;cursor:pointer;font-weight:bold;padding:0 5px;transition:.2s;font-size:14px}
+    .remove-file:hover{color:#fff}
+    .comp-row{width:100%;max-width:1100px;display:flex;align-items:center;gap:80px;margin-bottom:120px}
+    .gif-container{flex:1.3}
+    .gif-container img{width:100%;display:block;border-radius:20px;image-rendering:pixelated;box-shadow:0 40px 80px -20px rgba(0,0,0,0.6)}
+    .comp-info{flex:1;text-align:left}
+    .comp-info h2{font-size:36px;margin-bottom:20px;font-weight:800}
+    .comp-info p{color:#888;line-height:1.8;font-size:15px}
+    #logic h2{font-size:42px;margin-bottom:30px;font-weight:800}
+    .tech-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:1000px;text-align:left;margin-top:40px}
+    .tech-item h3{font-size:14px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+    .tech-item p{font-size:15px;color:#888;line-height:1.6;opacity:0;transform:translateY(var(--para-translate)) scale(var(--para-scale));transition:opacity .75s var(--ease),transform .75s var(--ease);will-change:transform,opacity}
+    .tech-item p.visible{opacity:1;transform:translateY(0) scale(1)}
+    .faq-grid{width:100%;max-width:550px;display:flex;flex-direction:column;gap:12px;text-align:left}
+    .faq-card{background:var(--light);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
+    .faq-btn{width:100%;padding:22px 25px;background:none;border:none;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left}
+    .faq-dot{width:7px;height:7px;background:#333;border-radius:50%}
+    .faq-card.open .faq-dot{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+    .faq-ans{max-height:0;padding:0 25px;color:#888;font-size:13px;line-height:1.7;transition:0.5s var(--ease);overflow:hidden}
+    .faq-card.open .faq-ans{max-height:200px;padding-bottom:25px}
+    #contact{padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+    .links{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap}
+    .icon-link{display:inline-flex;align-items:center;justify-content:center;width:100px;height:100px;border-radius:14px;background:rgba(255,255,255,0.03);transition:.18s;text-decoration:none;color:inherit}
+    .icon-link:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+    footer{width:100%;padding:40px 20px;border-top:1px solid #161616;color:#444;font-size:11px;font-weight:800;letter-spacing:2px;text-align:center;display:flex;justify-content:center}
+    #status-msg{margin-top:30px;font-size:10px;color:#555;font-weight:900;letter-spacing:3px}
+    #toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(20,20,20,0.95);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:transform .35s var(--ease),opacity .35s var(--ease);z-index:3000;font-weight:800;letter-spacing:.6px;font-size:13px}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    #toast.success{border:1px solid rgba(100,255,180,0.12)}
+    #toast.error{border:1px solid rgba(255,100,100,0.12)}
+    #bloom{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(20px) scaleX(0.95);width:140%;height:80px;pointer-events:none;z-index:1200;background:radial-gradient(ellipse at center bottom,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 22%,rgba(0,0,0,0) 60%);filter:blur(18px) saturate(110%);opacity:.85;border-radius:50% 50% 0 0 / 100% 100% 0 0;transition:transform .35s var(--ease),height .35s var(--ease),opacity .35s var(--ease);will-change:transform,height,opacity}
+    @media (max-width:900px){
+      .tech-grid{grid-template-columns:1fr}
+      .comp-row{flex-direction:column;gap:30px}
+      #file-drawer{display:none}
+      #bloom{height:50px;width:200%}
+      header.collapsed{width:220px}
+      .icon-link{width:74px;height:74px}
+    }
+  </style>
 </head>
 <body>
+  <div id="loading-screen">
+    <div style="font-weight:900;font-size:10px;letter-spacing:5px;color:#333;text-transform:uppercase">STARTING ENGINE</div>
+    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
 
-    <div id="loading-screen">
-        <div style="font-weight: 900; font-size: 10px; letter-spacing: 5px; color: #333;">INITIALIZING GLORP ENGINE</div>
-        <div class="loading-dots">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
+  <div id="drop-overlay"><img src="DropUrStuffHere.png" alt="Drop Here"></div>
+
+  <header id="main-header">
+    <div class="header-left"><span class="header-title">GLORP</span></div>
+    <nav>
+      <a href="#app">Engine</a>
+      <a href="#compare">Modes</a>
+      <a href="#logic">Core</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Links</a>
+    </nav>
+    <div class="header-right">
+      <a class="btn-support-head" href="https://www.donationalerts.com/r/zackgphom" target="_blank" rel="noopener noreferrer">Support</a>
+    </div>
+  </header>
+
+  <div id="file-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">BATCH QUEUE</div>
+      <button class="btn-clear" onclick="clearAll()">Clear All</button>
+    </div>
+    <ul id="file-list"></ul>
+  </div>
+
+  <section id="app" class="revealed">
+    <img src="logo.png" id="logo-big" alt="GLORP logo">
+    <div class="workflow-container">
+      <div id="select-block">
+        <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT ASSETS</button>
+        <div class="hint">DRAG & DROP ANYWHERE</div>
+      </div>
+
+      <div id="convert-block">
+        <button id="btn-convert">CONVERT</button>
+        <div class="mode-tabs" id="mode-tabs">
+          <div class="mode-tab active" data-mode="monolith">Monolith mod</div>
+          <div class="mode-tab" data-mode="lego">Lego mod</div>
+          <div class="mode-tab" data-mode="webp">WebP</div>
         </div>
+      </div>
     </div>
 
-    <div id="drop-overlay">
-        <img src="drop your stuff here.png" alt="Drop Here">
+    <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+    <div id="status-msg"></div>
+  </section>
+
+  <section id="compare">
+    <div class="comp-row">
+      <div class="gif-container"><img src="Monolith.gif" alt="Monolith Preview"></div>
+      <div class="comp-info">
+        <h2>Monolith Engine</h2>
+        <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths using greedy meshing optimization. Version 4.0 improves vertex merging for even cleaner vector outputs.</p>
+      </div>
     </div>
-
-    <header id="main-header">
-        <div class="header-left">
-            <img src="favicon.png" class="header-logo">
-            <span class="header-title">GLORP</span>
-        </div>
-        <nav>
-            <a href="#app">Engine</a>
-            <a href="#compare">Processing</a>
-            <a href="#logic">Architecture</a>
-            <a href="#faq">FAQ</a>
-        </nav>
-        <div class="header-right">
-            <a href="https://www.donationalerts.com/r/zackgphom" class="btn-support-head" target="_blank">Support</a>
-        </div>
-    </header>
-
-    <div id="file-drawer">
-        <div class="drawer-header">
-            <div class="drawer-title">QUEUE</div>
-            <button class="btn-clear" onclick="clearAll()">Clear All</button>
-        </div>
-        <ul id="file-list"></ul>
+    <div class="comp-row" style="flex-direction:row-reverse">
+      <div class="gif-container"><img src="lego.gif" alt="Lego Preview"></div>
+      <div class="comp-info" style="text-align:right">
+        <h2>Lego Stability</h2>
+        <p>Exact 1:1 pixel-to-rect representation. In v4.0.0, we've implemented a performance detection overlay that warns you before generating heavy SVGs, preventing browser lag on massive grids.</p>
+      </div>
     </div>
+  </section>
 
-    <section id="app">
-        <img src="logo.png" id="logo-big">
-        
-        <div class="workflow-container">
-            <div id="select-block">
-                <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT IMAGES</button>
-                <div class="hint">OR JUST DROP FILES ANYWHERE</div>
-            </div>
+  <section id="logic">
+    <h2>Engine Technical Overview</h2>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <h3>Pixel classification & grid model</h3>
+        <p class="reveal-para">Input raster is read into a dense uint32 grid where each cell encodes RGBA. Fully transparent pixels are ignored during meshing. This compact layout enables vectorization algorithms to operate directly on a single numeric matrix for cache- and SIMD-friendly operations.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Edge detection</h3>
+        <p class="reveal-para">Using a two-pass discrete edge-finder we construct horizontal and vertical edge maps. Edge types are encoded as directional markers (clockwise / anticlockwise) which the path extractor consumes to produce closed contours without redundant vertices.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Greedy contour meshing</h3>
+        <p class="reveal-para">The engine performs greedy scans that consolidate adjacent runs of matching edges into compact path commands (hN / vN). This minimizes SVG node count by merging collinear runs and eliminating one-pixel noise through simple heuristics.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Path extraction & safety guards</h3>
+        <p class="reveal-para">Contour traversal is implemented with boundary checks and fallbacks to prevent out-of-bounds access on irregular shapes. The browser engine simulates performance limits and warns before emitting extremely large vectors to protect the UI thread.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Raster export (WebP)</h3>
+        <p class="reveal-para">Lossless WebP export path preserves alpha and applies browser-native encoding via canvas.toDataURL('image/webp'). This path is used when the user prefers raster output over vector conversion.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Batch & UI integration</h3>
+        <p class="reveal-para">Files are queued in a lightweight drawer and processed sequentially inside a Pyodide worker context. Downloads are triggered per-file; the engine clears its queue after completion and restores scroll behavior reliably across devices.</p>
+      </div>
+    </div>
+  </section>
 
-            <div id="convert-block">
-                <button id="btn-convert">CONVERT ALL</button>
-                <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
-                    <label style="font-size: 9px; font-weight: 800; color: #555; cursor: pointer;"><input type="radio" name="m" value="monolith" checked> MONOLITH</label>
-                    <label style="font-size: 9px; font-weight: 800; color: #555; cursor: pointer;"><input type="radio" name="m" value="lego"> LEGO</label>
-                    <label style="font-size: 9px; font-weight: 800; color: #555; cursor: pointer;"><input type="radio" name="m" value="webp"> WEBP</label>
-                </div>
-            </div>
-        </div>
+  <section id="faq">
+    <h2 style="font-size:42px;font-weight:800;margin-bottom:50px">FAQ</h2>
+    <div class="faq-grid">
+      <div class="faq-card">
+        <button class="faq-btn">CAN I UPLOAD MULTIPLE FILES AT ONCE? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Yes — select several files via the file picker or drag multiple images into the page. They will be queued and processed one by one.</div>
+      </div>
 
-        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-        <div id="status-msg"></div>
-    </section>
+      <div class="faq-card">
+        <button class="faq-btn">CAN I DROP A WHOLE FOLDER? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Folder uploads are supported only in the desktop app. On the web we intentionally block folders. Get the desktop version here: <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline">Itch</a>.</div>
+      </div>
 
-    <section id="compare">
-        <div class="comp-row">
-            <div class="gif-container"><img src="Monolith.gif" alt="Monolith Preview"></div>
-            <div class="comp-info">
-                <h2>Monolith Mode</h2>
-                <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths. This significantly reduces DOM weight and file size while maintaining pixel-perfect sharp edges for production-ready assets.</p>
-            </div>
-        </div>
-        <div class="comp-row" style="flex-direction: row-reverse;">
-            <div class="gif-container"><img src="lego.gif" alt="Lego Preview"></div>
-            <div class="comp-info">
-                <h2>Lego Mode</h2>
-                <p>Preserves the modular integrity of the pixel grid. Every single pixel is rendered as a discrete &lt;rect&gt; element. Ideal for technical breakdowns, modular CSS animations, or scenarios where per-pixel control is required.</p>
-            </div>
-        </div>
-    </section>
+      <div class="faq-card">
+        <button class="faq-btn">WHAT FORMATS ARE SUPPORTED? <span class="faq-dot"></span></button>
+        <div class="faq-ans">PNG is recommended (best alpha support). JPEG and other common raster formats work too, but alpha/transparency handling is limited on those.</div>
+      </div>
 
-    <section id="logic">
-        <h2>Technical Architecture</h2>
-        <p>GLORP 3.0.0 leverages a high-performance <b>Contour Meshing Engine</b> written in optimized Python and executed via WebAssembly. The algorithm performs a topological boundary analysis on raster data to convert discrete color islands into optimized vector loops. This process effectively minimizes vertex density while strictly adhering to the original pixel coordinate system.</p>
-    </section>
+      <div class="faq-card">
+        <button class="faq-btn">HOW LONG DOES CONVERSION TAKE? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Conversion time depends on image size, mode and device power. Small sprites finish quickly; large images with many colors may take longer. The UI displays progress notifications and falls back to the safe 'Lego mod' if the mesher detects instability.</div>
+      </div>
 
-    <section id="faq">
-        <h2 style="font-size: 38px; font-weight: 800; margin-bottom: 40px;">FAQ</h2>
-        <div class="faq-grid">
-            <div class="faq-card">
-                <button class="faq-btn">WHERE ARE MY FILES SAVED? <span class="faq-dot"></span></button>
-                <div class="faq-ans">The engine triggers an automatic download for each converted file directly into your browser's default download folder.</div>
-            </div>
-            <div class="faq-card">
-                <button class="faq-btn">WHY SVG FORMAT? <span class="faq-dot"></span></button>
-                <div class="faq-ans">SVG is a vector format, meaning you can scale your pixel art to any size without losing quality.</div>
-            </div>
-            <div class="faq-card">
-                <button class="faq-btn">IS THERE A FILE SIZE LIMIT? <span class="faq-dot"></span></button>
-                <div class="faq-ans">We recommend images up to 256x256. Larger files may increase processing time due to complex geometric calculations.</div>
-            </div>
-            <div class="faq-card">
-                <button class="faq-btn">DOES IT WORK OFFLINE? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Yes. Once loaded, GLORP runs entirely on your local machine using Pyodide (WASM) without any server interaction.</div>
-            </div>
-            <div class="faq-card">
-                <button class="faq-btn">WHO CREATED THE MESHING LOGIC? <span class="faq-dot"></span></button>
-                <div class="faq-ans">The core engine was optimized and implemented by <a href="https://www.linkedin.com/in/cheuk-nam-tsang-2997671b3/" style="color:white;text-decoration:underline;" target="_blank">Harry Tsang</a>.</div>
-            </div>
-        </div>
-    </section>
+      <div class="faq-card">
+        <button class="faq-btn">IS EVERYTHING PROCESSED LOCALLY? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Yes. All processing runs in your browser using WebAssembly (Pyodide). No image data is sent to any server.</div>
+      </div>
+    </div>
+  </section>
 
-    <footer>
-        GLORP v3.0.0 | DEVELOPED BY ZACKGPHOM | © 2026 ALL RIGHTS RESERVED
-    </footer>
+  <section id="contact">
+    <h2 style="font-size:30px;margin-bottom:6px">Contact & Links</h2>
+    <div class="links" role="list">
+      <a class="icon-link" href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" title="Itch">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="2" y="6" width="20" height="12" rx="2" fill="white" fill-opacity="0.06"></rect>
+          <path d="M6 9h12v6H6z" fill="white" fill-opacity="0.14"></path>
+          <text x="12" y="14" text-anchor="middle" font-size="8" fill="#fff" opacity="0.9" font-family="sans-serif">itch</text>
+        </svg>
+      </a>
 
-    <div class="blur-strip"></div>
+      <a class="icon-link" href="https://github.com/ZackGphom/GLORP" target="_blank" rel="noopener noreferrer" title="GitHub — GLORP">
+        <svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#fff" fill-opacity="0.95" d="M12 .5C5.73.5.93 5.3.93 11.6c0 4.8 3.1 8.9 7.4 10.3.54.1.74-.24.74-.52 0-.26-.01-1-.01-1.9-3.02.66-3.66-1.45-3.66-1.45-.5-1.28-1.22-1.62-1.22-1.62-.99-.67.07-.66.07-.66 1.09.08 1.67 1.12 1.67 1.12.97 1.66 2.56 1.18 3.18.9.1-.7.38-1.18.69-1.45-2.41-.27-4.95-1.21-4.95-5.37 0-1.19.43-2.16 1.13-2.93-.11-.28-.49-1.41.11-2.95 0 0 .93-.3 3.05 1.12.88-.24 1.82-.36 2.75-.36.93 0 1.87.12 2.75.36 2.12-1.42 3.05-1.12 3.05-1.12.6 1.54.22 2.67.11 2.95.7.77 1.13 1.74 1.13 2.93 0 4.17-2.55 5.09-4.98 5.36.39.34.73 1.01.73 2.04 0 1.48-.01 2.67-.01 3.03 0 .28.19.62.75.51 4.26-1.4 7.35-5.53 7.35-10.33C23.07 5.3 18.27.5 12 .5z"/>
+        </svg>
+      </a>
 
-    <script>
-        /* --- ENGINE CORE --- */
-        const PY_CODE = `
+      <a class="icon-link" href="mailto:zackgphom@gmail.com" title="Email">
+        <svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 6.5v11c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-11c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2z" fill="#fff" fill-opacity="0.06"/>
+          <path d="M4 8.3l7.5 5.2c.4.3 1 .3 1.4 0L20 8.3" stroke="#fff" stroke-opacity="0.9" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    GLORP v4.0.0 | DEVELOPED BY ZACKGPHOM | © 2026
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="bloom" aria-hidden="true"></div>
+
+  <script>
+    const PY_CODE = `
 import numpy as np
-CW, ACW = 1, 2
+
+CLOCKWISE = 1
+ANTICLOCKWISE = 2
+
 def edge_finding(grid, color):
     mask = np.where(grid == color)
-    h_pos = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8); h_pos[mask] = 1
-    h_edges = (h_pos - np.roll(1 - h_pos, 1, axis=0) == 0) * ACW - (h_pos + np.roll(1 - h_pos, 1, axis=0) == 2)
-    v_pos = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8); v_pos[mask] = 1
-    v_edges = (v_pos - np.roll(1 - v_pos, 1, axis=1) == 0) * CW + (v_pos + np.roll(1 - v_pos, 1, axis=1) == 2)
-    return v_edges, h_edges
-def ex_up(x, y, v, h):
-    for dx in range(x, -1, -1):
-        if v[dx, y] == ACW: v[dx, y] = 0
-        else: break
-    else: dx -= 1
-    p = f"v{dx-x}"
-    if h[dx+1, y] == CW: return p + ex_right(dx+1, y, v, h)
-    elif y > 0 and h[dx+1, y-1] == ACW: return p + ex_left(dx+1, y-1, v, h)
-    return p
-def ex_left(x, y, v, h):
-    for dy in range(y, -1, -1):
-        if h[x, dy] == ACW: h[x, dy] = 0
-        else: break
-    else: dy -= 1
-    p = f"h{dy-y}"
-    if x > 0 and v[x-1, dy+1] == ACW: return p + ex_up(x-1, dy+1, v, h)
-    elif dy < v.shape[1] and v[x, dy+1] == CW: return p + ex_down(x, dy+1, v, h)
-    return p
-def ex_down(x, y, v, h):
-    for dx in range(x, v.shape[0]):
-        if v[dx, y] == CW: v[dx, y] = 0
-        else: break
-    else: dx += 1
-    p = f"v{dx-x}"
-    if y > 0 and h[dx, y-1] == ACW: return p + ex_left(dx, y-1, v, h)
-    elif dx < h.shape[0] and h[dx, y] == CW: return p + ex_right(dx, y, v, h)
-    return p
-def ex_right(x, y, v, h):
-    for dy in range(y, h.shape[1]):
-        if h[x, dy] == CW: h[x, dy] = 0
-        else: break
-    else: dy += 1
-    p = f"h{dy-y}"
-    if dy < v.shape[1] and v[x, dy] == CW: return p + ex_down(x, dy+1, v, h)
-    elif x > 0 and v[x-1, dy] == ACW: return p + ex_up(x-1, dy, v, h)
-    return p
-def path_finding(grid, color):
-    v, h = edge_finding(grid, color); path = ""
-    while np.any(h == CW):
-        c = np.argwhere(h == CW); x, y = c[0]
-        path += f"M{y},{x}" + ex_right(x, y, v, h) + "z"
+
+    positive = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8)
+    positive[mask] = 1
+    rolled_negative = np.roll(1 - positive, 1, axis=0)
+    hor_edges = (positive - rolled_negative == 0)
+    hor_edges = hor_edges * ANTICLOCKWISE - (positive + rolled_negative == 2)
+
+    positive = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8)
+    positive[mask] = 1
+    rolled_negative = np.roll(1 - positive, 1, axis=1)
+    ver_edges = (positive - rolled_negative == 0)
+    ver_edges = ver_edges * CLOCKWISE + (positive + rolled_negative == 2)
+
+    return ver_edges.astype(np.int8), hor_edges.astype(np.int8)
+
+def explore_up(x, y, ver_edges, hor_edges):
+    for destX in range(x, -1, -1):
+        if ver_edges[destX, y] == ANTICLOCKWISE:
+            ver_edges[destX, y] = 0
+        else:
+            break
+    else:
+        destX -= 1
+    path = f"v{destX - x}"
+    if hor_edges[destX + 1, y] == CLOCKWISE:
+        return path + explore_right(destX + 1, y, ver_edges, hor_edges)
+    elif y > 0 and hor_edges[destX + 1, y - 1] == ANTICLOCKWISE:
+        return path + explore_left(destX + 1, y - 1, ver_edges, hor_edges)
     return path
+
+def explore_left(x, y, ver_edges, hor_edges):
+    for destY in range(y, -1, -1):
+        if hor_edges[x, destY] == ANTICLOCKWISE:
+            hor_edges[x, destY] = 0
+        else:
+            break
+    else:
+        destY -= 1
+    path = f"h{destY - y}"
+    if x > 0 and ver_edges[x - 1, destY + 1] == ANTICLOCKWISE:
+        return path + explore_up(x - 1, destY + 1, ver_edges, hor_edges)
+    elif destY < ver_edges.shape[1] and ver_edges[x, destY + 1] == CLOCKWISE:
+        return path + explore_down(x, destY + 1, ver_edges, hor_edges)
+    return path
+
+def explore_down(x, y, ver_edges, hor_edges):
+    for destX in range(x, ver_edges.shape[0]):
+        if ver_edges[destX, y] == CLOCKWISE:
+            ver_edges[destX, y] = 0
+        else:
+            break
+    else:
+        destX += 1
+    path = f"v{destX - x}"
+    if y > 0 and hor_edges[destX, y - 1] == ANTICLOCKWISE:
+        return path + explore_left(destX, y - 1, ver_edges, hor_edges)
+    elif destX < hor_edges.shape[0] and hor_edges[destX, y] == CLOCKWISE:
+        return path + explore_right(destX, y, ver_edges, hor_edges)
+    return path
+
+def explore_right(x, y, ver_edges, hor_edges):
+    for destY in range(y, hor_edges.shape[1]):
+        if hor_edges[x, destY] == CLOCKWISE:
+            hor_edges[x, destY] = 0
+        else:
+            break
+    else:
+        destY += 1
+    path = f"h{destY - y}"
+    if destY < ver_edges.shape[1] and ver_edges[x, destY] == CLOCKWISE:
+        return path + explore_down(x, destY, ver_edges, hor_edges)
+    elif x > 0 and ver_edges[x - 1, destY] == ANTICLOCKWISE:
+        return path + explore_up(x - 1, destY, ver_edges, hor_edges)
+    return path
+
+def path_finding(grid, color):
+    # ensure grid is numpy array of integers (uint32)
+    grid = np.asarray(grid, dtype=np.uint32)
+    ver_edges, hor_edges = edge_finding(grid, color)
+    path_data = ""
+    # iterate only while there are CLOCKWISE markers
+    while np.any(hor_edges == CLOCKWISE):
+        coords = np.argwhere(hor_edges == CLOCKWISE)
+        if coords.size == 0:
+            break
+        x, y = coords[0]
+        path_data += f"M{y},{x}"
+        path_data += explore_right(x, y, ver_edges, hor_edges)
+        path_data += "z"
+    return path_data
 `;
+    let pyodide;
+    let selectedFiles = [];
+    async function init(){
+      try{
+        pyodide = await loadPyodide();
+        await pyodide.loadPackage("numpy");
+        await pyodide.runPythonAsync(PY_CODE);
+        document.getElementById('loading-screen').classList.add('loaded');
+      }catch(e){
+        console.error("Pyodide init error:", e);
+        document.getElementById('status-msg').innerText = "ENGINE ERROR (see console)";
+        showToast("Engine init error (see console)","error",3500);
+        document.getElementById('loading-screen').classList.add('loaded');
+      }
+    }
+    init();
+    function showToast(msg,type="success",ms=2200){
+      const t=document.getElementById('toast');
+      t.className="";
+      t.classList.add(type==="error"?"error":"success");
+      t.innerHTML=msg;
+      t.classList.add('show');
+      clearTimeout(t._hideTimeout);
+      t._hideTimeout=setTimeout(()=>{t.classList.remove('show','success','error')},ms);
+    }
+    function escapeHtml(s){return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+    let appInView=true;
+    function syncHeaderState(){
+      const header=document.getElementById('main-header');
+      const hasFiles=selectedFiles.length>0;
+      header.classList.toggle('files-hidden',hasFiles);
+      header.classList.toggle('compact',!hasFiles && !appInView);
+    }
+    function updateUI(){
+      const hasFiles=selectedFiles.length>0;
+      syncHeaderState();
+      document.getElementById('file-drawer').classList.toggle('open',hasFiles);
+      document.getElementById('select-block').style.display=hasFiles?'none':'block';
+      document.getElementById('convert-block').classList.toggle('active',hasFiles);
+      document.body.style.overflow=hasFiles?'hidden':'auto';
+      document.documentElement.style.overflow=hasFiles?'hidden':'auto';
+      const list=document.getElementById('file-list');
+      list.innerHTML=selectedFiles.map((f,i)=>`<li><span title="${escapeHtml(f.name)}">${f.name.length>28?f.name.substring(0,25)+'...':f.name}</span><span class="remove-file" onclick="removeFile(${i})">×</span></li>`).join('');
+    }
+    document.getElementById('file-input').onchange=e=>handleFiles(e.target.files);
+    function handleFiles(list){
+      const arr=Array.from(list).filter(f=>f&&f.size!==0&&(f.type.startsWith('image')||/\.(png|jpe?g|gif|webp)$/i.test(f.name)));
+      if(arr.length===0){if(list&&list.length>0)showToast("No valid images found","error");return}
+      for(const f of arr){if(!selectedFiles.some(x=>x.name===f.name&&x.size===f.size))selectedFiles.push(f)}
+      updateUI();
+      showToast(`${arr.length} file(s) added`,"success",1400);
+    }
+    const overlay=document.getElementById('drop-overlay');
+    window.addEventListener('dragover',(e)=>{e.preventDefault();overlay.classList.add('visible')});
+    window.addEventListener('dragleave',(e)=>{if(e.clientX<=0||e.clientY<=0||e.clientX>=window.innerWidth||e.clientY>=window.innerHeight){overlay.classList.remove('visible')}});
 
-        let pyodide;
-        let selectedFiles = [];
-
-        async function init() {
-            try {
-                pyodide = await loadPyodide();
-                await pyodide.loadPackage("numpy");
-                await pyodide.runPython(PY_CODE);
-                document.getElementById('loading-screen').classList.add('loaded');
-            } catch(e) { document.getElementById('status-msg').innerText = "ENGINE ERROR"; }
+    window.addEventListener('drop',async(e)=>{
+      e.preventDefault();
+      overlay.classList.remove('visible');
+      const items=e.dataTransfer&&e.dataTransfer.items;
+      let files=[];
+      let foldersDetected=0;
+      if(items&&items.length){
+        for(let i=0;i<items.length;i++){
+          const it=items[i];
+          if(it.kind==='file'){
+            const entry=(it.webkitGetAsEntry)?it.webkitGetAsEntry():null;
+            if(entry&&entry.isDirectory){foldersDetected++;continue}
+            const file=it.getAsFile();
+            if(file&&file.size!==0&&/\.(png|jpe?g|gif|webp)$/i.test(file.name))files.push(file);
+          }
         }
-        init();
-
-        function updateUI() {
-            const hasFiles = selectedFiles.length > 0;
-            document.getElementById('main-header').classList.toggle('collapsed', hasFiles);
-            document.getElementById('file-drawer').classList.toggle('open', hasFiles);
-            document.getElementById('select-block').style.display = hasFiles ? 'none' : 'block';
-            document.getElementById('convert-block').classList.toggle('active', hasFiles);
-
-            const list = document.getElementById('file-list');
-            list.innerHTML = selectedFiles.map((f, i) => `
-                <li>
-                    <span>${f.name}</span>
-                    <span class="remove-file" onclick="removeFile(${i})">×</span>
-                </li>
-            `).join('');
+      }else{
+        files=Array.from(e.dataTransfer.files).filter(f=>{if(!f)return false;if(f.size===0&&!/\.(png|jpe?g|gif|webp)$/i.test(f.name)){foldersDetected++;return false}return /\.(png|jpe?g|gif|webp)$/i.test(f.name)});
+      }
+      if(foldersDetected>0)showToast('Folder upload available only in the desktop app. Download: <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline">GLORP — itch</a>','error',5000);
+      if(files.length){
+        const first=document.getElementById('app');
+        if(first){
+          first.scrollIntoView({behavior:'smooth',block:'start'});
+          setTimeout(()=>handleFiles(files),160);
+        }else{
+          handleFiles(files);
         }
+      }
+    });
 
-        const handleFiles = (files) => {
-            selectedFiles = [...selectedFiles, ...Array.from(files)];
-            updateUI();
-        };
+    function removeFile(i){selectedFiles.splice(i,1);updateUI();showToast('File removed','success',900)}
+    function clearAll(){selectedFiles=[];updateUI();showToast('Queue cleared','success',900)}
 
-        function removeFile(index) {
-            selectedFiles.splice(index, 1);
-            updateUI();
-        }
+    document.querySelectorAll('.mode-tab').forEach(tab=>{tab.addEventListener('click',()=>{document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active')})})
 
-        function clearAll() {
-            selectedFiles = [];
-            updateUI();
-        }
-
-        const overlay = document.getElementById('drop-overlay');
-        window.ondragover = (e) => { e.preventDefault(); overlay.classList.add('visible'); };
-        window.ondragleave = () => overlay.classList.remove('visible');
-        window.ondrop = (e) => { 
-            e.preventDefault(); 
-            overlay.classList.remove('visible');
-            handleFiles(e.dataTransfer.files); 
-        };
-        
-        document.getElementById('file-input').onchange = (e) => handleFiles(e.target.files);
-
-        document.getElementById('btn-convert').onclick = async () => {
-            const mode = document.querySelector('input[name="m"]:checked').value;
-            const status = document.getElementById('status-msg');
-            status.innerText = "PROCESSING...";
-
-            for (let file of selectedFiles) {
-                const dataUrl = await new Promise(r => {
-                    const fr = new FileReader();
-                    fr.onload = (e) => r(e.target.result);
-                    fr.readAsDataURL(file);
-                });
-
-                const img = new Image();
-                img.src = dataUrl;
-                await new Promise(r => img.onload = r);
-
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width; canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                const iData = ctx.getImageData(0, 0, img.width, img.height);
-
-                let result;
-                let extension = ".svg";
-
-                if (mode === 'monolith') {
-                    pyodide.globals.set("raw", iData.data);
-                    pyodide.globals.set("w", img.width);
-                    pyodide.globals.set("h", img.height);
-                    result = await pyodide.runPythonAsync(`
-px = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
-clrs = np.unique(px.reshape(-1, 4), axis=0); clrs = clrs[clrs[:, 3] > 0]
+    document.getElementById('btn-convert').onclick=async()=>{
+      const activeTab=document.querySelector('.mode-tab.active');
+      const mode=activeTab?activeTab.dataset.mode:'monolith';
+      const status=document.getElementById('status-msg');
+      if(selectedFiles.length===0){status.innerText="NO FILES SELECTED";showToast("No files selected","error");return}
+      status.innerText=`CONVERTING ${selectedFiles.length} ASSETS...`;
+      showToast(`Converting ${selectedFiles.length} file(s)...`,"success",1400);
+      for(const file of selectedFiles.slice()){
+        try{
+          const dataUrl=await new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(file)});
+          const img=new Image();
+          img.src=dataUrl;
+          await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error('Image load error'))});
+          const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+          const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+          const iData=ctx.getImageData(0,0,img.width,img.height);
+          let result;let extension='.svg';
+          if(mode==='monolith'){
+            // convert JS Uint8Array to python-friendly buffer (to avoid JsProxy errors)
+            const uint8 = new Uint8Array(iData.data.buffer);
+            pyodide.globals.set("raw", pyodide.toPy(uint8));
+            pyodide.globals.set("w", img.width);
+            pyodide.globals.set("h", img.height);
+            const pythonSnippet=`
+import numpy as np
+# 'raw' is now a bytes-like / buffer-compatible object
+px = np.frombuffer(raw, dtype=np.uint8).reshape((h, w, 4))
+clrs = np.unique(px.reshape(-1, 4), axis=0)
+clrs = np.array([c for c in clrs if c[3] > 0], dtype=np.uint8)
 grd = (px[:,:,0].astype(np.uint32) << 24) | (px[:,:,1].astype(np.uint32) << 16) | (px[:,:,2].astype(np.uint32) << 8) | px[:,:,3]
-svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
-for i, c in enumerate(clrs):
+svg_parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
+for c in clrs:
     c_i = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
-    p_d = path_finding(grd, c_i)
-    if p_d: svg.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255}" d="{p_d}"/>')
-svg.append("</svg>")
-"\\n".join(svg)`);
-                } else if (mode === 'lego') {
-                    result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
-                    const d = iData.data;
-                    for(let j=0; j<d.length; j+=4) if(d[j+3]>0) {
-                        const x=(j/4)%img.width, y=Math.floor((j/4)/img.width);
-                        result += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`;
-                    }
-                    result += `</svg>`;
-                } else if (mode === 'webp') {
-                    result = canvas.toDataURL('image/webp');
-                    extension = ".webp";
-                }
-
-                const link = document.createElement('a');
-                link.href = extension === ".svg" ? URL.createObjectURL(new Blob([result], {type:'image/svg+xml'})) : result;
-                link.download = file.name.split('.')[0] + extension;
-                link.click();
+    try:
+        p_d = path_finding(grd, c_i)
+    except Exception:
+        p_d = ""
+    if p_d:
+        svg_parts.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255:.6f}" d="{p_d}"/>')
+svg_parts.append("</svg>")
+"\\n".join(svg_parts)
+`;
+            try{
+              result=await pyodide.runPythonAsync(pythonSnippet);
+            }catch(pyErr){
+              console.error("Py error",pyErr);
+              showToast("Conversion error — fallback to Lego mod for "+file.name,"error",2600);
+              result=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+              const d=iData.data;
+              for(let j=0;j<d.length;j+=4)if(d[j+3]>0){const x=(j/4)%img.width,y=Math.floor((j/4)/img.width);result+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`}
+              result+=`</svg>`;
             }
-            
-            status.innerText = "DONE";
-            selectedFiles = [];
-            setTimeout(() => { status.innerText = ""; updateUI(); }, 2000);
-        };
+          }else if(mode==='lego'){
+            result=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
+            const d=iData.data;
+            for(let j=0;j<d.length;j+=4)if(d[j+3]>0){const x=(j/4)%img.width,y=Math.floor((j/4)/img.width);result+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`}
+            result+=`</svg>`;
+          }else if(mode==='webp'){
+            result=canvas.toDataURL('image/webp',1.0);
+            extension='.webp';
+          }
+          const link=document.createElement('a');
+          if(extension==='.svg'){link.href=URL.createObjectURL(new Blob([result],{type:'image/svg+xml'}))}else{link.href=result}
+          link.download=file.name.split('.')[0]+extension;
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(()=>{if(link.href&&link.href.startsWith('blob:'))URL.revokeObjectURL(link.href);try{link.remove()}catch(e){}},1500);
+          document.getElementById('status-msg').innerText=`CONVERTED: ${file.name}`;
+          showToast(`Converted: ${file.name}`,'success',1200);
+        }catch(err){
+          console.error("Conversion failed for",file.name,err);
+          document.getElementById('status-msg').innerText=`ERROR converting ${file.name} — skipped (see console)`;
+          showToast(`Error converting ${file.name} (skipped)`,'error',2000);
+        }
+      }
+      document.getElementById('status-msg').innerText="CONVERSION COMPLETE";
+      showToast("Conversion complete","success",1800);
+      selectedFiles=[];
+      updateUI();
+      setTimeout(()=>{document.getElementById('status-msg').innerText=''},2000);
+    };
 
-        document.querySelectorAll('.faq-btn').forEach(btn => {
-            btn.onclick = () => {
-                const card = btn.parentElement;
-                const wasOpen = card.classList.contains('open');
-                document.querySelectorAll('.faq-card').forEach(c => c.classList.remove('open'));
-                if (!wasOpen) card.classList.add('open');
-            };
-        });
-    </script>
+    document.querySelectorAll('.faq-btn').forEach(btn=>{btn.onclick=()=>{const card=btn.parentElement;const wasOpen=card.classList.contains('open');document.querySelectorAll('.faq-card').forEach(c=>c.classList.remove('open'));if(!wasOpen)card.classList.add('open')}});
+
+    const sectionObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.intersectionRatio>0.10){e.target.classList.add('revealed')}else{e.target.classList.remove('revealed')}})},{threshold:[0,0.10,0.4]});
+    document.querySelectorAll('section').forEach(s=>sectionObserver.observe(s));
+
+    const paras=document.querySelectorAll('.reveal-para');
+    const paraObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{const el=e.target;if(e.intersectionRatio>0.12){el.classList.add('visible')}else{el.classList.remove('visible')}})},{threshold:[0,0.12,0.5]});
+    paras.forEach(p=>paraObserver.observe(p));
+
+    const bloom=document.getElementById('bloom');
+    function updateBloom(){const max=420;const y=window.scrollY||window.pageYOffset;const progress=Math.min(Math.max(y/max,0),1);const scale=0.95+0.5*progress;const translateY=20-20*progress;const height=80+(180-80)*progress;const opacity=0.85-0.5*progress;bloom.style.transform=`translateX(-50%) translateY(${translateY}px) scaleX(${scale})`;bloom.style.height=`${height}px`;bloom.style.opacity=`${opacity}`}
+    window.addEventListener('scroll',updateBloom,{passive:true});
+    updateBloom();
+
+    const header=document.getElementById('main-header');
+    const appSection=document.getElementById('app');
+    const appObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{appInView=e.intersectionRatio>=0.6;syncHeaderState()})},{threshold:[0,0.25,0.6,0.95]});
+    if(appSection)appObserver.observe(appSection);
+    syncHeaderState();
+
+    document.querySelectorAll('nav a').forEach(a=>{a.addEventListener('click',(ev)=>{ev.preventDefault();const href=a.getAttribute('href');const target=document.querySelector(href);if(!target)return;if(href==='#app'){header.classList.remove('compact')}else{header.classList.add('compact')}target.scrollIntoView({behavior:'smooth',block:'start'})})});
+
+    setTimeout(()=>{document.getElementById('loading-screen').classList.add('loaded')},8000);
+  </script>
 </body>
 </html>
