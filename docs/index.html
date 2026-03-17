@@ -7,7 +7,6 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <style>
-        /* --- CONFIGURATION --- */
         :root {
             --bg: #0a0a0a;
             --light: #161616;
@@ -30,18 +29,26 @@
         #loading-screen {
             position: fixed; inset: 0; background: var(--bg); z-index: 9999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            transition: opacity 1s var(--ease), visibility 1s, filter 1s var(--ease);
+            transition: opacity 1s var(--ease), visibility 1s;
         }
-        #loading-screen.loaded { opacity: 0; visibility: hidden; filter: blur(20px); }
+        #loading-screen.loaded { opacity: 0; visibility: hidden; }
+        
+        .loading-dots {
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 8px;
+        }
+        .dot { width: 6px; height: 6px; background: #333; border-radius: 50%; animation: blink 1.4s infinite both; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
 
-        /* --- COLLAPSIBLE HEADER --- */
+        /* --- HEADER --- */
         header {
             position: fixed; top: 20px; left: 20px; right: 20px; height: 56px;
             background: rgba(22, 22, 22, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius);
             z-index: 1000; display: flex; align-items: center; padding: 0 20px;
-            transition: transform 0.6s var(--ease), opacity 0.5s var(--ease);
-            transform-origin: center;
+            transition: 0.6s var(--ease); transform-origin: center;
         }
         header.collapsed { transform: scaleX(0); opacity: 0; pointer-events: none; }
 
@@ -50,106 +57,119 @@
         .header-title { font-weight: 800; font-size: 16px; letter-spacing: 1px; }
 
         nav { display: flex; gap: 30px; flex: 2; justify-content: center; }
-        nav a { 
-            color: #888; text-decoration: none; font-size: 11px; font-weight: 700; 
-            text-transform: uppercase; transition: 0.3s; letter-spacing: 0.5px; 
-        }
+        nav a { color: #888; text-decoration: none; font-size: 11px; font-weight: 700; text-transform: uppercase; transition: 0.3s; }
         nav a:hover { color: var(--accent); }
 
         .header-right { flex: 1; display: flex; justify-content: flex-end; }
         .btn-support-head {
             background: var(--accent); color: #000; padding: 8px 18px;
-            border-radius: 10px; font-size: 10px; font-weight: 800; text-decoration: none;
-            transition: 0.3s; text-transform: uppercase;
+            border-radius: 10px; font-size: 10px; font-weight: 800; text-decoration: none; text-transform: uppercase;
         }
 
-        /* --- MAIN SECTIONS --- */
-        section { 
-            min-height: 100vh; width: 100%; display: flex; 
-            flex-direction: column; align-items: center; padding: 120px 20px; 
-            position: relative; 
-        }
-
-        /* WORKFLOW BLOCKS */
-        #app { justify-content: center; padding-top: 60px; transition: transform 0.6s var(--ease); }
-        #logo-big { height: 160px; margin-bottom: 40px; pointer-events: none; transition: 0.5s; }
+        /* --- SECTIONS --- */
+        section { min-height: 100vh; width: 100%; display: flex; flex-direction: column; align-items: center; padding: 120px 20px; position: relative; }
+        #logo-big { height: 160px; margin-bottom: 40px; transition: 0.5s; }
         
-        .workflow-container { width: 340px; position: relative; }
-        
-        /* SELECT BLOCK */
-        #select-block {
-            display: flex; flex-direction: column; align-items: center;
-            transition: 0.5s var(--ease);
-        }
+        .workflow-container { width: 340px; display: flex; flex-direction: column; align-items: center; }
         #btn-select, #btn-convert {
             width: 220px; height: 52px; background: var(--light); color: #fff;
             border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s;
             text-transform: uppercase; letter-spacing: 1px;
         }
-        #btn-select:hover, #btn-convert:hover { background: var(--hover); transform: translateY(-2px); }
+        #btn-select:hover { background: var(--hover); }
         #btn-convert { background: var(--accent); color: #000; }
 
-        /* CONVERT BLOCK */
-        #convert-block {
-            display: none; flex-direction: column; align-items: center;
-            opacity: 0; transform: translateY(20px); transition: 0.5s var(--ease);
-        }
-        #convert-block.active { display: flex; opacity: 1; transform: translateY(0); }
-        
-        .drag-hint { font-size: 10px; color: #444; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
+        #convert-block { display: none; opacity: 0; transform: translateY(10px); transition: 0.5s var(--ease); text-align: center; }
+        #convert-block.active { display: block; opacity: 1; transform: translateY(0); }
 
-        /* --- FILE LIST DRAWER --- */
+        .hint { font-size: 10px; color: #444; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
+
+        /* --- DROP OVERLAY --- */
+        #drop-overlay {
+            position: fixed; inset: 0; background: rgba(10,10,10,0.9); z-index: 2000;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: 0.3s; pointer-events: none;
+        }
+        #drop-overlay.visible { opacity: 1; visibility: visible; }
+        #drop-overlay img { width: 300px; height: auto; }
+
+        /* --- FILE DRAWER --- */
         #file-drawer {
             position: fixed; right: -300px; top: 100px; bottom: 100px; width: 280px;
             background: var(--light); border-radius: 20px 0 0 20px;
-            border: 1px solid rgba(255,255,255,0.05); border-right: none;
-            z-index: 1100; transition: 0.6s var(--ease);
+            border: 1px solid rgba(255,255,255,0.05); z-index: 1100; transition: 0.6s var(--ease);
             display: flex; flex-direction: column; padding: 20px;
         }
         #file-drawer.open { right: 0; }
-        .drawer-title { font-size: 10px; font-weight: 900; color: #555; margin-bottom: 15px; letter-spacing: 1px; }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .drawer-title { font-size: 10px; font-weight: 900; color: #555; letter-spacing: 1px; }
+        .btn-clear { background: none; border: none; color: #ff4444; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase; }
+        
         #file-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         #file-list li { 
-            font-size: 11px; padding: 10px; background: #0f0f0f; margin-bottom: 8px; 
-            border-radius: 8px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            font-size: 11px; padding: 10px; background: #0f0f0f; margin-bottom: 8px; border-radius: 8px; 
+            color: #888; display: flex; justify-content: space-between; align-items: center;
         }
+        .remove-file { color: #444; cursor: pointer; font-weight: bold; padding: 0 5px; transition: 0.2s; }
+        .remove-file:hover { color: #fff; }
 
-        /* --- FAQ BLOCK --- */
-        .faq-grid { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 12px; margin-top: 50px; }
-        .faq-card { 
-            background: var(--light); border-radius: 14px; overflow: hidden; 
-            transition: 0.3s var(--ease); border: 1px solid rgba(255,255,255,0.02); 
+        /* --- COMPARISON --- */
+        .comp-row { width: 100%; max-width: 1100px; display: flex; align-items: center; gap: 80px; margin-bottom: 120px; }
+        .gif-container { flex: 1.3; }
+        .gif-container img { 
+            width: 100%; display: block; border-radius: 20px; 
+            image-rendering: pixelated; /* Исправляет "кукурузу" */
+            box-shadow: 0 40px 80px -20px rgba(0,0,0,0.6);
         }
-        .faq-card:hover { background: var(--hover); border-color: #333; }
+        .comp-info { flex: 1; }
+        .comp-info h2 { font-size: 36px; margin-bottom: 20px; font-weight: 800; }
+        .comp-info p { color: #888; line-height: 1.8; font-size: 15px; }
+
+        /* --- ARCHITECTURE --- */
+        #logic h2 { font-size: 42px; margin-bottom: 30px; }
+        #logic p { font-size: 18px; color: #aaa; line-height: 1.8; max-width: 800px; text-align: center; }
+
+        /* --- FAQ --- */
+        .faq-grid { width: 100%; max-width: 550px; display: flex; flex-direction: column; gap: 12px; }
+        .faq-card { background: var(--light); border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.02); }
         .faq-btn {
             width: 100%; padding: 22px 25px; background: none; border: none; color: #fff;
             display: flex; justify-content: space-between; align-items: center; cursor: pointer;
             font-size: 14px; font-weight: 600; text-align: left;
         }
-        .faq-dot { width: 7px; height: 7px; background: #333; border-radius: 50%; transition: 0.4s; }
-        .faq-card.open .faq-dot { background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+        .faq-dot { width: 7px; height: 7px; background: #333; border-radius: 50%; }
+        .faq-card.open .faq-dot { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
         .faq-ans { max-height: 0; padding: 0 25px; color: #888; font-size: 13px; line-height: 1.7; transition: 0.5s var(--ease); overflow: hidden; }
         .faq-card.open .faq-ans { max-height: 200px; padding-bottom: 25px; }
 
-        /* --- SMOOTH PARABOLIC BLUR (10PX) --- */
-        .blur-container {
-            position: fixed; bottom: 0; left: 0; width: 100%; height: 10px;
+        /* --- BLUR STRIP (25PX + SMOOTH) --- */
+        .blur-strip {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 25px;
             pointer-events: none; z-index: 1500;
-            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             mask-image: linear-gradient(to top, black, transparent);
             -webkit-mask-image: linear-gradient(to top, black, transparent);
         }
 
-        #status-msg { margin-top: 25px; font-size: 11px; color: #555; font-weight: bold; letter-spacing: 1px; }
+        /* --- FOOTER --- */
+        footer { width: 100%; padding: 60px 20px; border-top: 1px solid #161616; text-align: center; color: #444; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
 
-        /* --- UTILS --- */
-        .hidden { display: none !important; }
+        #status-msg { margin-top: 25px; font-size: 10px; color: #555; font-weight: 900; letter-spacing: 2px; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="load-label" style="font-weight: 900; font-size: 11px; letter-spacing: 4px; color: #333;">ENGINE COLD START</div>
+        <div style="font-weight: 900; font-size: 10px; letter-spacing: 5px; color: #333;">INITIALIZING GLORP ENGINE</div>
+        <div class="loading-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <div id="drop-overlay">
+        <img src="drop your stuff here.png" alt="Drop Here">
     </div>
 
     <header id="main-header">
@@ -158,7 +178,7 @@
             <span class="header-title">GLORP</span>
         </div>
         <nav>
-            <a href="#app">Application</a>
+            <a href="#app">Engine</a>
             <a href="#compare">Processing</a>
             <a href="#logic">Architecture</a>
             <a href="#faq">FAQ</a>
@@ -169,7 +189,10 @@
     </header>
 
     <div id="file-drawer">
-        <div class="drawer-title">SELECTED ASSETS</div>
+        <div class="drawer-header">
+            <div class="drawer-title">QUEUE</div>
+            <button class="btn-clear" onclick="clearAll()">Clear All</button>
+        </div>
         <ul id="file-list"></ul>
     </div>
 
@@ -179,16 +202,16 @@
         <div class="workflow-container">
             <div id="select-block">
                 <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT IMAGES</button>
-                <span class="drag-hint">DROP FILES ANYWHERE</span>
+                <div class="hint">OR JUST DROP FILES ANYWHERE</div>
             </div>
 
             <div id="convert-block">
-                <button id="btn-convert">START CONVERSION</button>
-                <div id="mode-selector" style="display: flex; gap: 15px; margin-top: 20px;">
-                    <label style="font-size: 10px; cursor: pointer; color:#666;"><input type="radio" name="m" value="monolith" checked> MONOLITH</label>
-                    <label style="font-size: 10px; cursor: pointer; color:#666;"><input type="radio" name="m" value="lego"> LEGO</label>
+                <button id="btn-convert">CONVERT ALL</button>
+                <div style="margin-top: 20px; display: flex; gap: 12px; justify-content: center;">
+                    <label style="font-size: 9px; font-weight: 800; color: #555; cursor: pointer;"><input type="radio" name="m" value="monolith" checked> MONOLITH</label>
+                    <label style="font-size: 9px; font-weight: 800; color: #555; cursor: pointer;"><input type="radio" name="m" value="lego"> LEGO</label>
+                    <label style="font-size: 9px; font-weight: 800; color: #555; cursor: pointer;"><input type="radio" name="m" value="webp"> WEBP</label>
                 </div>
-                <span class="drag-hint">DRAG MORE TO ADD</span>
             </div>
         </div>
 
@@ -197,51 +220,64 @@
     </section>
 
     <section id="compare">
-        <h2 style="font-size: 32px;">Processing Modes</h2>
-        <p style="color: #666; max-width: 600px; text-align: center;">Advanced algorithms for pixel-perfect vectorization.</p>
+        <div class="comp-row">
+            <div class="gif-container"><img src="Monolith.gif" alt="Monolith Preview"></div>
+            <div class="comp-info">
+                <h2>Monolith Mode</h2>
+                <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths. This significantly reduces DOM weight and file size while maintaining pixel-perfect sharp edges for production-ready assets.</p>
+            </div>
+        </div>
+        <div class="comp-row" style="flex-direction: row-reverse;">
+            <div class="gif-container"><img src="lego.gif" alt="Lego Preview"></div>
+            <div class="comp-info">
+                <h2>Lego Mode</h2>
+                <p>Preserves the modular integrity of the pixel grid. Every single pixel is rendered as a discrete &lt;rect&gt; element. Ideal for technical breakdowns, modular CSS animations, or scenarios where per-pixel control is required.</p>
+            </div>
+        </div>
     </section>
 
     <section id="logic">
-        <div style="text-align: center; max-width: 700px;">
-            <h2>The Architecture</h2>
-            <p style="color: #888; line-height: 1.8;">GLORP utilizes a custom <b>Contour Meshing Engine</b> written in Python and compiled to WASM. It performs boundary analysis to minimize vertex counts while maintaining pixel grid integrity.</p>
-        </div>
+        <h2>Technical Architecture</h2>
+        <p>GLORP 3.0.0 leverages a high-performance <b>Contour Meshing Engine</b> written in optimized Python and executed via WebAssembly. The algorithm performs a topological boundary analysis on raster data to convert discrete color islands into optimized vector loops. This process effectively minimizes vertex density while strictly adhering to the original pixel coordinate system.</p>
     </section>
 
     <section id="faq">
-        <h2 style="font-size: 42px; font-weight: 800;">FAQ</h2>
+        <h2 style="font-size: 38px; font-weight: 800; margin-bottom: 40px;">FAQ</h2>
         <div class="faq-grid">
             <div class="faq-card">
-                <button class="faq-btn">WHERE DOES THE PROCESSING HAPPEN? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Everything runs locally in your browser using Pyodide (WebAssembly). No images are ever uploaded to a server.</div>
+                <button class="faq-btn">WHERE ARE MY FILES SAVED? <span class="faq-dot"></span></button>
+                <div class="faq-ans">The engine triggers an automatic download for each converted file directly into your browser's default download folder.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">WHY MONOLITH OVER LEGO? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Monolith creates connected paths which results in much smaller SVG file sizes. Lego is only for specific grid-based editing.</div>
+                <button class="faq-btn">WHY SVG FORMAT? <span class="faq-dot"></span></button>
+                <div class="faq-ans">SVG is a vector format, meaning you can scale your pixel art to any size without losing quality.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">IS THERE A BATCH LIMIT? <span class="faq-dot"></span></button>
-                <div class="faq-ans">The web version handles up to 50 files comfortably. For unlimited batch processing, use our Desktop version on Itch.io.</div>
+                <button class="faq-btn">IS THERE A FILE SIZE LIMIT? <span class="faq-dot"></span></button>
+                <div class="faq-ans">We recommend images up to 256x256. Larger files may increase processing time due to complex geometric calculations.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">WHAT ABOUT TRANSPARENCY? <span class="faq-dot"></span></button>
-                <div class="faq-ans">GLORP fully supports alpha channels. Transparent pixels are ignored, and semi-transparent ones retain their opacity values.</div>
+                <button class="faq-btn">DOES IT WORK OFFLINE? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Yes. Once loaded, GLORP runs entirely on your local machine using Pyodide (WASM) without any server interaction.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">WHO IS HARRY TSANG? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Harry Tsang is the lead engineer behind the high-performance contour algorithms that make GLORP 3.0.0 possible.</div>
+                <button class="faq-btn">WHO CREATED THE MESHING LOGIC? <span class="faq-dot"></span></button>
+                <div class="faq-ans">The core engine was optimized and implemented by <a href="https://www.linkedin.com/in/cheuk-nam-tsang-2997671b3/" style="color:white;text-decoration:underline;" target="_blank">Harry Tsang</a>.</div>
             </div>
         </div>
     </section>
 
-    <div class="blur-container"></div>
+    <footer>
+        GLORP v3.0.0 | DEVELOPED BY ZACKGPHOM | © 2026 ALL RIGHTS RESERVED
+    </footer>
+
+    <div class="blur-strip"></div>
 
     <script>
-        /* --- ENGINE SOURCE --- */
+        /* --- ENGINE CORE --- */
         const PY_CODE = `
 import numpy as np
 CW, ACW = 1, 2
-
 def edge_finding(grid, color):
     mask = np.where(grid == color)
     h_pos = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8); h_pos[mask] = 1
@@ -249,7 +285,6 @@ def edge_finding(grid, color):
     v_pos = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8); v_pos[mask] = 1
     v_edges = (v_pos - np.roll(1 - v_pos, 1, axis=1) == 0) * CW + (v_pos + np.roll(1 - v_pos, 1, axis=1) == 2)
     return v_edges, h_edges
-
 def ex_up(x, y, v, h):
     for dx in range(x, -1, -1):
         if v[dx, y] == ACW: v[dx, y] = 0
@@ -259,7 +294,6 @@ def ex_up(x, y, v, h):
     if h[dx+1, y] == CW: return p + ex_right(dx+1, y, v, h)
     elif y > 0 and h[dx+1, y-1] == ACW: return p + ex_left(dx+1, y-1, v, h)
     return p
-
 def ex_left(x, y, v, h):
     for dy in range(y, -1, -1):
         if h[x, dy] == ACW: h[x, dy] = 0
@@ -269,7 +303,6 @@ def ex_left(x, y, v, h):
     if x > 0 and v[x-1, dy+1] == ACW: return p + ex_up(x-1, dy+1, v, h)
     elif dy < v.shape[1] and v[x, dy+1] == CW: return p + ex_down(x, dy+1, v, h)
     return p
-
 def ex_down(x, y, v, h):
     for dx in range(x, v.shape[0]):
         if v[dx, y] == CW: v[dx, y] = 0
@@ -279,7 +312,6 @@ def ex_down(x, y, v, h):
     if y > 0 and h[dx, y-1] == ACW: return p + ex_left(dx, y-1, v, h)
     elif dx < h.shape[0] and h[dx, y] == CW: return p + ex_right(dx, y, v, h)
     return p
-
 def ex_right(x, y, v, h):
     for dy in range(y, h.shape[1]):
         if h[x, dy] == CW: h[x, dy] = 0
@@ -289,7 +321,6 @@ def ex_right(x, y, v, h):
     if dy < v.shape[1] and v[x, dy] == CW: return p + ex_down(x, dy+1, v, h)
     elif x > 0 and v[x-1, dy] == ACW: return p + ex_up(x-1, dy, v, h)
     return p
-
 def path_finding(grid, color):
     v, h = edge_finding(grid, color); path = ""
     while np.any(h == CW):
@@ -298,7 +329,6 @@ def path_finding(grid, color):
     return path
 `;
 
-        /* --- STATE MANAGEMENT --- */
         let pyodide;
         let selectedFiles = [];
 
@@ -308,54 +338,56 @@ def path_finding(grid, color):
                 await pyodide.loadPackage("numpy");
                 await pyodide.runPython(PY_CODE);
                 document.getElementById('loading-screen').classList.add('loaded');
-            } catch(e) { 
-                document.getElementById('load-label').innerText = "CORS/NETWORK ERROR";
-            }
+            } catch(e) { document.getElementById('status-msg').innerText = "ENGINE ERROR"; }
         }
         init();
 
-        /* --- UI ACTIONS --- */
-        function updateUIState() {
+        function updateUI() {
             const hasFiles = selectedFiles.length > 0;
-            const header = document.getElementById('main-header');
-            const drawer = document.getElementById('file-drawer');
-            const selectBlock = document.getElementById('select-block');
-            const convertBlock = document.getElementById('convert-block');
+            document.getElementById('main-header').classList.toggle('collapsed', hasFiles);
+            document.getElementById('file-drawer').classList.toggle('open', hasFiles);
+            document.getElementById('select-block').style.display = hasFiles ? 'none' : 'block';
+            document.getElementById('convert-block').classList.toggle('active', hasFiles);
 
-            if (hasFiles) {
-                header.classList.add('collapsed');
-                drawer.classList.add('open');
-                selectBlock.style.display = 'none';
-                convertBlock.classList.add('active');
-                document.body.style.overflow = 'hidden'; // Disable scroll
-            } else {
-                header.classList.remove('collapsed');
-                drawer.classList.remove('open');
-                selectBlock.style.display = 'flex';
-                convertBlock.classList.remove('active');
-                document.body.style.overflow = 'auto';
-            }
-
-            // Render List
             const list = document.getElementById('file-list');
-            list.innerHTML = selectedFiles.map(f => `<li>${f.name}</li>`).join('');
+            list.innerHTML = selectedFiles.map((f, i) => `
+                <li>
+                    <span>${f.name}</span>
+                    <span class="remove-file" onclick="removeFile(${i})">×</span>
+                </li>
+            `).join('');
         }
 
-        /* --- FILE HANDLING --- */
         const handleFiles = (files) => {
             selectedFiles = [...selectedFiles, ...Array.from(files)];
-            updateUIState();
+            updateUI();
         };
 
-        window.ondragover = (e) => e.preventDefault();
-        window.ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateUI();
+        }
+
+        function clearAll() {
+            selectedFiles = [];
+            updateUI();
+        }
+
+        const overlay = document.getElementById('drop-overlay');
+        window.ondragover = (e) => { e.preventDefault(); overlay.classList.add('visible'); };
+        window.ondragleave = () => overlay.classList.remove('visible');
+        window.ondrop = (e) => { 
+            e.preventDefault(); 
+            overlay.classList.remove('visible');
+            handleFiles(e.dataTransfer.files); 
+        };
+        
         document.getElementById('file-input').onchange = (e) => handleFiles(e.target.files);
 
-        /* --- CONVERSION --- */
         document.getElementById('btn-convert').onclick = async () => {
             const mode = document.querySelector('input[name="m"]:checked').value;
             const status = document.getElementById('status-msg');
-            status.innerText = "VECTORIZING...";
+            status.innerText = "PROCESSING...";
 
             for (let file of selectedFiles) {
                 const dataUrl = await new Promise(r => {
@@ -375,6 +407,8 @@ def path_finding(grid, color):
                 const iData = ctx.getImageData(0, 0, img.width, img.height);
 
                 let result;
+                let extension = ".svg";
+
                 if (mode === 'monolith') {
                     pyodide.globals.set("raw", iData.data);
                     pyodide.globals.set("w", img.width);
@@ -390,7 +424,7 @@ for i, c in enumerate(clrs):
     if p_d: svg.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255}" d="{p_d}"/>')
 svg.append("</svg>")
 "\\n".join(svg)`);
-                } else {
+                } else if (mode === 'lego') {
                     result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
                     const d = iData.data;
                     for(let j=0; j<d.length; j+=4) if(d[j+3]>0) {
@@ -398,20 +432,22 @@ svg.append("</svg>")
                         result += `<rect x="${x}" y="${y}" width="1" height="1" fill="#${((1<<24)+(d[j]<<16)+(d[j+1]<<8)+d[j+2]).toString(16).slice(1)}" fill-opacity="${d[j+3]/255}"/>`;
                     }
                     result += `</svg>`;
+                } else if (mode === 'webp') {
+                    result = canvas.toDataURL('image/webp');
+                    extension = ".webp";
                 }
 
                 const link = document.createElement('a');
-                link.href = URL.createObjectURL(new Blob([result], {type:'image/svg+xml'}));
-                link.download = file.name.split('.')[0] + ".svg";
+                link.href = extension === ".svg" ? URL.createObjectURL(new Blob([result], {type:'image/svg+xml'})) : result;
+                link.download = file.name.split('.')[0] + extension;
                 link.click();
             }
             
-            status.innerText = "SUCCESS";
+            status.innerText = "DONE";
             selectedFiles = [];
-            setTimeout(() => { status.innerText = ""; updateUIState(); }, 2000);
+            setTimeout(() => { status.innerText = ""; updateUI(); }, 2000);
         };
 
-        /* --- FAQ TOGGLE --- */
         document.querySelectorAll('.faq-btn').forEach(btn => {
             btn.onclick = () => {
                 const card = btn.parentElement;
