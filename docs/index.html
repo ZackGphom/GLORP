@@ -68,7 +68,7 @@
             position: relative; 
         }
 
-        /* HERO BLOCK */
+        /* APPLICATION BLOCK */
         #app { justify-content: center; padding-top: 60px; }
         #logo-big { height: 180px; margin-bottom: 40px; pointer-events: none; }
         .drop-area {
@@ -84,6 +84,7 @@
         #btn-select:hover { background: var(--hover); }
         .drag-hint { font-size: 10px; color: #555; margin-top: 15px; font-weight: 600; text-transform: uppercase; }
 
+        /* MODES */
         #mode-selector { display: flex; gap: 15px; margin-top: 25px; }
         .mode-label { font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; color: #666; transition: 0.3s; }
         .mode-label:hover { color: #aaa; }
@@ -127,7 +128,7 @@
         .faq-ans { max-height: 0; padding: 0 25px; color: #888; font-size: 13px; line-height: 1.7; transition: 0.5s var(--ease); }
         .faq-card.open .faq-ans { max-height: 200px; padding-bottom: 25px; }
 
-        /* FOOTER & LINKS */
+        /* LINKS */
         .footer-links { margin-top: 80px; display: flex; gap: 40px; }
         .footer-links a { color: #444; text-decoration: none; font-size: 11px; font-weight: 800; transition: 0.3s; letter-spacing: 1px; }
         .footer-links a:hover { color: var(--accent); }
@@ -145,16 +146,9 @@
             background: linear-gradient(to top, var(--bg) 20%, transparent);
         }
 
-        /* UI ELEMENTS */
+        /* STATUS INDICATORS */
         #proc-indicator { position: fixed; top: 95px; right: 45px; opacity: 0; transition: 0.3s; z-index: 1100; pointer-events: none; }
         #status-msg { margin-top: 25px; font-size: 11px; color: #555; height: 20px; font-weight: bold; letter-spacing: 1px; }
-
-        #preview-tooltip {
-            position: fixed; width: 200px; background: var(--bg); border: 1px solid #333;
-            border-radius: 14px; padding: 6px; display: none; z-index: 3000; pointer-events: none;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-        }
-        #preview-img { width: 100%; height: 150px; object-fit: contain; image-rendering: pixelated; border-radius: 10px; background: #111; }
 
         @media (max-width: 900px) {
             .comp-row, .comp-row.reverse { flex-direction: column; text-align: center; gap: 30px; }
@@ -165,7 +159,7 @@
 <body>
 
     <div id="loading-screen">
-        <div id="load-label" style="font-weight: 900; font-size: 12px; letter-spacing: 5px; color: #333; text-transform: uppercase;">GLORP ENGINE STARTING</div>
+        <div id="load-label" style="font-weight: 900; font-size: 12px; letter-spacing: 5px; color: #444; text-transform: uppercase;">GLORP ENGINE STARTING</div>
     </div>
 
     <header>
@@ -184,7 +178,7 @@
         </div>
     </header>
 
-    <div id="proc-indicator"><img src="processing.gif" width="28"></div>
+    <div id="proc-indicator">PROCESSING...</div>
 
     <section id="app">
         <img src="logo.png" id="logo-big">
@@ -205,17 +199,17 @@
 
     <section id="compare">
         <div class="comp-row">
-            <div class="gif-wrap"><img src="Monolith.gif" alt="Monolith optimization"></div>
+            <div class="gif-wrap"><img src="Monolith.gif" alt="Monolith mode"></div>
             <div class="comp-info">
                 <h2>Monolith Mode</h2>
-                <p>Sophisticated path-tracing that identifies color clusters and merges them into singular, optimized vector paths. This mode is essential for keeping file sizes small and shapes clean for production.</p>
+                <p>Sophisticated path-tracing that identifies color clusters and merges them into singular, optimized vector paths. Essential for production-ready, lightweight assets.</p>
             </div>
         </div>
         <div class="comp-row reverse">
-            <div class="gif-wrap"><img src="lego.gif" alt="Lego pixel grid"></div>
+            <div class="gif-wrap"><img src="lego.gif" alt="Lego mode"></div>
             <div class="comp-info">
                 <h2>Lego Mode</h2>
-                <p>Every single pixel is translated into a discrete SVG rectangle. While heavy on performance, it provides a perfect 1:1 mapping for technical grid-based designs or voxel-like extrusions.</p>
+                <p>Every pixel is treated as a separate geometric unit. Ideal for technical breakdowns, grid-based modifications, or stylized 1:1 representations.</p>
             </div>
         </div>
     </section>
@@ -224,7 +218,7 @@
         <div class="logic-content">
             <h2>The Architecture</h2>
             <p>
-                GLORP is powered by a custom <b>Contour Meshing Engine</b>. Using <b>NumPy-accelerated</b> processing, the engine performs a high-speed boundary scan to detect pixel transitions. A <b>Greedy Search</b> algorithm then traces these boundaries to build resolution-independent paths with minimal vertex counts. It ensures <b>crisp edges</b> and mathematical precision without using neural networks.
+                GLORP is powered by a custom <b>Contour Meshing Engine</b>. Using <b>NumPy-accelerated</b> processing, the engine performs a high-speed boundary scan to detect pixel transitions. A <b>Greedy Search</b> algorithm then traces these boundaries to build resolution-independent paths. It ensures <b>crisp edges</b> without the overhead of neural networks.
             </p>
         </div>
     </section>
@@ -234,28 +228,20 @@
         <div class="faq-grid">
             <div class="faq-card">
                 <button class="faq-btn">IS MY DATA SECURE? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Absolutely. All processing occurs locally in your browser sandbox via Pyodide. No image data is ever transmitted to a server.</div>
+                <div class="faq-ans">Processing occurs locally in your browser sandbox. No images are ever uploaded to a remote server.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">WEB VS DESKTOP VERSION? <span class="faq-dot"></span></button>
-                <div class="faq-ans">The web version is optimized for single-file tasks. The desktop version (Itch.io) supports multi-folder batch processing and native speeds.</div>
+                <button class="faq-btn">BROWSER VS DESKTOP? <span class="faq-dot"></span></button>
+                <div class="faq-ans">The web version is for quick single tasks. The desktop version supports full folder automation and native performance.</div>
             </div>
             <div class="faq-card">
-                <button class="faq-btn">LEGO MODE LIMITATIONS? <span class="faq-dot"></span></button>
-                <div class="faq-ans">Lego mode generates a separate object for every pixel. Large images can create hundreds of thousands of objects, which might crash your browser.</div>
-            </div>
-            <div class="faq-card">
-                <button class="faq-btn">SUPPORTED FILE FORMATS? <span class="faq-dot"></span></button>
-                <div class="faq-ans">GLORP handles PNG, JPG, and GIF. For the best vectorization results, high-contrast pixel art works best.</div>
-            </div>
-            <div class="faq-card">
-                <button class="faq-btn">COMMERCIAL USAGE? <span class="faq-dot"></span></button>
-                <div class="faq-ans">GLORP is free for non-commercial projects. For commercial licenses or enterprise use, please reach out via email.</div>
+                <button class="faq-btn">LEGO MODE PERFORMANCE? <span class="faq-dot"></span></button>
+                <div class="faq-ans">Lego mode creates one object per pixel. For large images, this may lead to high RAM usage and browser lag.</div>
             </div>
         </div>
 
         <div class="footer-links">
-            <a href="https://github.com/ZackGphom/GLORP" target="_blank">REPOSITRY</a>
+            <a href="https://github.com/ZackGphom/GLORP" target="_blank">GITHUB</a>
             <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank">ITCH.IO</a>
             <a href="mailto:zackgphom@gmail.com">ZACKGPHOM@GMAIL.COM</a>
         </div>
@@ -265,13 +251,9 @@
         <div class="parabolic-overlay"></div>
     </div>
 
-    <div id="preview-tooltip">
-        <img id="preview-img">
-    </div>
-
     <script>
-        /* --- PYTHON CONTOUR ENGINE --- */
-        const ENGINE_CODE = `
+        /* --- CONTOUR ENGINE (PYTHON SOURCE) --- */
+        const ENGINE_SOURCE = `
 import numpy as np
 CW, ACW = 1, 2
 
@@ -333,23 +315,31 @@ def path_finding(grid, color):
     return path
 `;
 
-        /* --- PYODIDE INITIALIZATION --- */
+        /* --- PYODIDE INITIALIZATION WITH ERROR HANDLING --- */
         let pyodide;
         async function startEngine() {
             const label = document.getElementById('load-label');
             let d = 0;
             const t = setInterval(() => { d = (d+1)%4; label.innerText = "GLORP ENGINE STARTING" + ".".repeat(d); }, 400);
             
-            pyodide = await loadPyodide();
-            await pyodide.loadPackage("numpy");
-            await pyodide.runPython(ENGINE_CODE);
-            
-            clearInterval(t);
-            document.getElementById('loading-screen').classList.add('loaded');
+            try {
+                pyodide = await loadPyodide();
+                // Specifically load numpy first
+                await pyodide.loadPackage("numpy");
+                await pyodide.runPython(ENGINE_SOURCE);
+                
+                clearInterval(t);
+                document.getElementById('loading-screen').classList.add('loaded');
+            } catch (err) {
+                console.error("Engine Load Failed:", err);
+                clearInterval(t);
+                label.innerText = "NETWORK ERROR: CHECK CONNECTION OR DISABLE VPN";
+                label.style.color = "red";
+            }
         }
         startEngine();
 
-        /* --- UI LOGIC: FAQ & NAVIGATION --- */
+        /* --- UI INTERACTIONS --- */
         document.querySelectorAll('.faq-btn').forEach(btn => {
             btn.onclick = () => {
                 const card = btn.parentElement;
@@ -366,7 +356,6 @@ def path_finding(grid, color):
             };
         });
 
-        /* --- DRAG N DROP (Hero Block Exclusive) --- */
         const dropArea = document.getElementById('drop-area');
         dropArea.ondragover = (e) => { e.preventDefault(); dropArea.classList.add('active'); };
         dropArea.ondragleave = () => dropArea.classList.remove('active');
@@ -376,7 +365,7 @@ def path_finding(grid, color):
             handleFiles(e.dataTransfer.files);
         };
 
-        /* --- CORE CONVERSION LOGIC --- */
+        /* --- PROCESSING LOGIC --- */
         async function handleFiles(files) {
             if (!files.length) return;
             const mode = document.querySelector('input[name="conv-mode"]:checked').value;
@@ -384,7 +373,7 @@ def path_finding(grid, color):
             const status = document.getElementById('status-msg');
             
             indicator.style.opacity = 1;
-            status.innerText = `PROCESSING ${files.length} ASSETS...`;
+            status.innerText = `PROCESSING ${files.length} FILES...`;
 
             for (let file of files) {
                 if (!file.type.startsWith('image/')) continue;
@@ -405,22 +394,22 @@ def path_finding(grid, color):
                             let result, ext = ".svg";
                             
                             if (mode === 'monolith') {
-                                pyodide.globals.set("raw", iData.data);
-                                pyodide.globals.set("w", img.width);
-                                pyodide.globals.set("h", img.height);
-                                result = await pyodide.runPythonAsync(`
+                                try {
+                                    pyodide.globals.set("raw", iData.data);
+                                    pyodide.globals.set("w", img.width);
+                                    pyodide.globals.set("h", img.height);
+                                    result = await pyodide.runPythonAsync(`
 px = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
 clrs = np.unique(px.reshape(-1, 4), axis=0); clrs = clrs[clrs[:, 3] > 0]
 grd = (px[:,:,0].astype(np.uint32) << 24) | (px[:,:,1].astype(np.uint32) << 16) | (px[:,:,2].astype(np.uint32) << 8) | px[:,:,3]
-svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">', "<style>"]
-for i, c in enumerate(clrs): svg.append(f'.c{i} {{ fill:#{c[0]:02x}{c[1]:02x}{c[2]:02x}; fill-opacity:{c[3]/255}; }}')
-svg.append("</style>")
+svg = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
 for i, c in enumerate(clrs):
     c_i = int((c[0]<<24)|(c[1]<<16)|(c[2]<<8)|c[3])
     p_d = path_finding(grd, c_i)
-    if p_d: svg.append(f'<path class="c{i}" d="{p_d}"/>')
+    if p_d: svg.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255}" d="{p_d}"/>')
 svg.append("</svg>")
 "\\n".join(svg)`);
+                                } catch (e) { console.error(e); }
                             } else if (mode === 'lego') {
                                 result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
                                 const d = iData.data;
@@ -444,7 +433,7 @@ svg.append("</svg>")
             }
             
             indicator.style.opacity = 0;
-            status.innerText = "DONE!";
+            status.innerText = "ALL FILES PROCESSED!";
             setTimeout(() => status.innerText = "", 3000);
         }
 
