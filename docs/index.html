@@ -13,12 +13,12 @@
             --hover: #252525;
             --text: #e6e6e6;
             --warning: #ff4444;
-            --overlay: rgba(21, 21, 21, 0.95);
+            --overlay: rgba(15, 15, 15, 0.9);
             --radius: 10px;
             --ease: cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-drag-none: none; }
+        * { box-sizing: border-box; user-select: none; }
 
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -31,7 +31,6 @@
             display: flex; position: relative;
         }
 
-        /* LEFT MAIN PANEL */
         #main-panel {
             flex: 1; display: flex; flex-direction: column;
             align-items: center; justify-content: center;
@@ -45,7 +44,6 @@
             pointer-events: none; margin-bottom: 40px;
         }
 
-        /* BUTTONS & CONTROLS */
         #central-action {
             display: flex; flex-direction: column; align-items: center;
             transition: all 0.6s var(--ease);
@@ -69,84 +67,53 @@
             font-weight: bold; cursor: pointer; transition: 0.2s;
         }
         .btn-anim:hover { background: var(--hover); }
-        #btn-convert { background: var(--light); border: 1px solid #333; }
 
-        /* MODES */
         #mode-container { display: flex; gap: 15px; align-items: center; }
         .radio-label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
         .radio-label input { appearance: none; width: 14px; height: 14px; border-radius: 7px; border: 2px solid #555; margin: 0; cursor: pointer; }
         .radio-label input:checked { background-color: #e6e6e6; border: 2px solid #2a2a2a; }
 
-        #status {
-            margin-top: 30px; color: #aaa; font-size: 11px;
-            text-align: center; height: 20px; min-width: 200px;
-        }
+        #status { margin-top: 30px; color: #aaa; font-size: 11px; text-align: center; height: 20px; min-width: 200px; }
+        #proc-indicator { position: absolute; left: 20px; top: 20px; width: 32px; height: 32px; opacity: 0; transition: opacity 0.3s; }
 
-        #proc-indicator {
-            position: absolute; left: 20px; top: 20px; width: 32px; height: 32px;
-            opacity: 0; transition: opacity 0.3s;
-        }
-
-        /* RIGHT QUEUE PANEL */
         #right-panel {
             width: 0; background: var(--bg); border-left: 0px solid #1a1a1a;
             transition: all 0.6s var(--ease); display: flex; flex-direction: column;
             overflow: hidden;
         }
 
-        #queue-header {
-            padding: 20px; font-size: 12px; display: flex;
-            justify-content: space-between; align-items: center; white-space: nowrap;
-        }
+        #queue-header { padding: 20px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; }
         #queue-list { flex: 1; overflow-y: auto; padding: 0 15px; }
         #queue-list::-webkit-scrollbar { width: 4px; }
         #queue-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 
-        .q-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 5px; font-size: 12px; border-bottom: 1px solid #151515;
-        }
+        .q-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; font-size: 12px; border-bottom: 1px solid #151515; }
         .q-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; cursor: pointer; }
         .q-remove { background: none; border: none; color: #555; font-size: 18px; cursor: pointer; }
         .q-remove:hover { color: var(--warning); }
 
-        /* STATES */
         body.has-files #main-panel { align-items: flex-start; padding-left: 10%; }
         body.has-files #logo { width: 200px; margin-bottom: 20px; }
         body.has-files #right-panel { width: 300px; border-left: 1px solid #1a1a1a; }
         body.has-files #extra-controls { display: flex; opacity: 1; }
         body.has-files #btn-select { width: 220px; height: 42px; }
 
-        /* OVERLAYS */
         #drag-overlay {
-            position: fixed; inset: 0; background: var(--overlay); z-index: 1000;
-            display: flex; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none; transition: 0.3s;
+            position: fixed; inset: 0; background: var(--overlay); z-index: 9999;
+            display: none; justify-content: center; align-items: center;
+            pointer-events: none;
         }
-        #drag-overlay img { max-width: 40%; height: auto; }
+        #drag-overlay img { max-width: 40%; pointer-events: none; }
 
-        #loading-screen {
-            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-
-        #lego-overlay {
-            position: fixed; inset: 0; background: var(--bg); z-index: 1500;
-            transform: translateY(100%); transition: 0.4s var(--ease);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
-        }
+        #loading-screen { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #lego-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 1500; transform: translateY(100%); transition: 0.4s var(--ease); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #lego-overlay.show { transform: translateY(0); }
-
-        #preview-tooltip {
-            position: fixed; width: 180px; background: var(--bg); border: 1px solid #444;
-            border-radius: var(--radius); padding: 5px; display: none; z-index: 3000; pointer-events: none;
-        }
+        #preview-tooltip { position: fixed; width: 180px; background: var(--bg); border: 1px solid #444; border-radius: var(--radius); padding: 5px; display: none; z-index: 3000; pointer-events: none; }
         #preview-img { width: 100%; border-radius: 5px; image-rendering: pixelated; }
-
         #lego-warn-label { color: var(--warning); font-size: 11px; margin-top: 10px; cursor: pointer; text-decoration: underline; display: none; }
     </style>
 </head>
-<body>
+<body id="drop-zone">
 
     <div id="loading-screen">
         <img src="processing.gif" width="32">
@@ -158,11 +125,9 @@
         
         <div id="main-panel">
             <img src="logo.png" id="logo">
-            
             <div id="central-action">
                 <button id="btn-select" onclick="document.getElementById('file-input').click()">Select Images</button>
                 <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
-                
                 <div id="extra-controls">
                     <button class="btn-anim" style="opacity:0.5; cursor:not-allowed;">Auto Download Mode</button>
                     <div id="mode-container">
@@ -173,7 +138,6 @@
                     <button id="btn-convert" class="btn-anim">Convert</button>
                     <div id="lego-warn-label">⚠️ Performance Warning</div>
                 </div>
-
                 <div id="status"></div>
             </div>
         </div>
@@ -191,7 +155,6 @@
 
     <div id="lego-overlay">
         <h2 style="color:var(--warning)">LEGO MODE PERFORMANCE WARNING</h2>
-        <p style="color:#888; font-size:14px;">Large images may cause browser lag.</p>
         <img src="lego_warning.gif" style="max-width:80%; max-height:60%;">
         <p style="color:#444; margin-top:20px; cursor:pointer;" onclick="toggleLegoOverlay(false)">Click to close</p>
     </div>
@@ -293,17 +256,13 @@ def path_finding(grid, color):
             const list = document.getElementById('queue-list');
             list.innerHTML = "";
             document.getElementById('queue-count').innerText = `(${selectedFiles.length})`;
-            
             if(selectedFiles.length > 0) document.body.classList.add('has-files');
             else document.body.classList.remove('has-files');
-
             const mode = document.querySelector('input[name="mode"]:checked').value;
             document.getElementById('lego-warn-label').style.display = mode === 'lego' ? 'block' : 'none';
-
             selectedFiles.forEach((item, idx) => {
                 const div = document.createElement('div'); div.className = 'q-item';
                 div.innerHTML = `<span class="q-name">${item.file.name}</span><button class="q-remove" onclick="removeFile(${idx})">×</button>`;
-                
                 const name = div.querySelector('.q-name');
                 name.onmouseenter = (e) => showTooltip(item.img.src, e);
                 name.onmouseleave = hideTooltip;
@@ -315,7 +274,7 @@ def path_finding(grid, color):
         function showTooltip(src, e) { 
             const t = document.getElementById('preview-tooltip');
             document.getElementById('preview-img').src = src;
-            t.style.display = 'block'; t.style.left = (e.clientX - 200) + 'px'; t.style.top = e.clientY + 'px';
+            t.style.display = 'block'; t.style.left = (e.clientX - 200) + 'px'; t.style.top = (e.clientY - 100) + 'px';
         }
         function hideTooltip() { document.getElementById('preview-tooltip').style.display = 'none'; }
         function toggleLegoOverlay(show) { document.getElementById('lego-overlay').classList.toggle('show', show); }
@@ -324,15 +283,34 @@ def path_finding(grid, color):
         document.getElementById('btn-clear').onclick = () => { selectedFiles = []; renderQueue(); };
         document.getElementById('lego-warn-label').onclick = () => toggleLegoOverlay(true);
 
-        window.ondragenter = () => document.getElementById('drag-overlay').style.opacity = "1";
-        document.getElementById('drag-overlay').ondragleave = () => document.getElementById('drag-overlay').style.opacity = "0";
-        document.getElementById('drag-overlay').ondragover = e => e.preventDefault();
-        document.getElementById('drag-overlay').ondrop = e => {
-            e.preventDefault(); document.getElementById('drag-overlay').style.opacity = "0";
-            handleFiles(e.dataTransfer.files);
-        };
+        // FIXED DRAG N DROP LOGIC
+        const overlay = document.getElementById('drag-overlay');
+        
+        window.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            overlay.style.display = "flex";
+        });
+
+        window.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+        });
+
+        window.addEventListener('dragleave', (e) => {
+            if (e.relatedTarget === null || e.fromElement === null) {
+                overlay.style.display = "none";
+            }
+        });
+
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            overlay.style.display = "none";
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
 
         document.getElementById('btn-convert').onclick = async () => {
+            if (selectedFiles.length === 0) return;
             const mode = document.querySelector('input[name="mode"]:checked').value;
             document.getElementById('proc-indicator').style.opacity = "1";
             setStatus("Processing...");
@@ -374,6 +352,7 @@ res.append("</svg>")
             }
             document.getElementById('proc-indicator').style.opacity = "0";
             setStatus("All tasks finished.");
+            selectedFiles = []; renderQueue();
         };
     </script>
 </body>
