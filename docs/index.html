@@ -1,9 +1,11 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLORP | pixel-to-svg</title>
+  <title>GLORP - Free Online Pixel Art to SVG Converter</title>
+  <meta name="description" content="High-quality pixel art to SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
+  <link rel="icon" type="image/png" href="favicon.png">
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
   <style>
     :root{
@@ -88,8 +90,10 @@
     .faq-card.open .faq-ans{max-height:200px;padding-bottom:25px}
     #contact{padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
     .links{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap}
-    .icon-link{display:inline-flex;align-items:center;justify-content:center;width:100px;height:100px;border-radius:14px;background:rgba(255,255,255,0.03);transition:.18s;text-decoration:none;color:inherit}
-    .icon-link:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+    .icon-link{display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:14px;background:rgba(255,255,255,0.03);transition:.18s;text-decoration:none;color:inherit}
+    .icon-link svg{width:32px;height:32px;fill:white;opacity:0.75;transition:.18s}
+    .icon-link:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.6);background:rgba(255,255,255,0.08)}
+    .icon-link:hover svg{opacity:1}
     footer{width:100%;padding:40px 20px;border-top:1px solid #161616;color:#444;font-size:11px;font-weight:800;letter-spacing:2px;text-align:center;display:flex;justify-content:center}
     #status-msg{margin-top:30px;font-size:10px;color:#555;font-weight:900;letter-spacing:3px}
     #toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(20,20,20,0.95);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:transform .35s var(--ease),opacity .35s var(--ease);z-index:3000;font-weight:800;letter-spacing:.6px;font-size:13px}
@@ -249,25 +253,24 @@
   <section id="contact">
     <h2 style="font-size:30px;margin-bottom:6px">Contact & Links</h2>
     <div class="links" role="list">
-      <a class="icon-link" href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" title="Itch">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect x="2" y="6" width="20" height="12" rx="2" fill="white" fill-opacity="0.06"></rect>
-          <path d="M6 9h12v6H6z" fill="white" fill-opacity="0.14"></path>
-          <text x="12" y="14" text-anchor="middle" font-size="8" fill="#fff" opacity="0.9" font-family="sans-serif">itch</text>
-        </svg>
+      <a class="icon-link" href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" title="Itch.io">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24" fill="#000000" style="opacity:1;"><path  d="M16 5c-3.252 0-7.688.05-8.588.13c-1.01.607-3.01 2.901-3.03 3.497v1C4.383 10.89 5.567 12 6.638 12C7.92 12 8.99 10.93 8.99 9.668C8.99 10.93 10.03 12 11.312 12c1.293 0 2.293-1.069 2.293-2.332c0 1.262 1.09 2.332 2.383 2.332h.022c1.293 0 2.383-1.069 2.383-2.332c0 1.262 1.01 2.332 2.293 2.332s2.324-1.069 2.324-2.332c0 1.262 1.07 2.332 2.353 2.332c1.071 0 2.252-1.11 2.252-2.373v-1c-.02-.596-2.02-2.89-3.03-3.496C21.445 5.02 19.253 5 16 5m-2.45 6.742c-1.052 1.81-3.698 1.832-4.73.012c-.63 1.092-2.056 1.514-2.666 1.307c-.178 1.899-.3 11.648.992 13.283c3.797.885 14.019.866 17.708 0c1.495-1.524 1.16-11.522.992-13.283c-.61.207-2.037-.215-2.657-1.307c-1.043 1.82-3.688 1.798-4.74-.012c-.325.59-1.082 1.367-2.449 1.367a2.73 2.73 0 0 1-2.45-1.367M11.42 14c.8 0 1.53 0 2.41.98c1.45-.15 2.89-.15 4.34 0c.89-.97 1.61-.97 2.41-.97c2.58 0 3.2 3.81 4.13 7.09c.84 3.05-.28 3.13-1.67 3.13c-2.07-.08-3.22-1.58-3.22-3.09c-1.93.32-5.01.44-7.64 0c0 1.51-1.15 3.01-3.22 3.09c-1.39 0-2.51-.08-1.67-3.13c.93-3.3 1.55-7.09 4.13-7.09zM16 16.877s-1.694 1.562-2 2.107l1.107-.04v.966c0 .058.819.008.893.008c.447.017.893.033.893-.008v-.967l1.107.041c-.306-.546-2-2.107-2-2.107"/></svg>
       </a>
 
-      <a class="icon-link" href="https://github.com/ZackGphom/GLORP" target="_blank" rel="noopener noreferrer" title="GitHub — GLORP">
-        <svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill="#fff" fill-opacity="0.95" d="M12 .5C5.73.5.93 5.3.93 11.6c0 4.8 3.1 8.9 7.4 10.3.54.1.74-.24.74-.52 0-.26-.01-1-.01-1.9-3.02.66-3.66-1.45-3.66-1.45-.5-1.28-1.22-1.62-1.22-1.62-.99-.67.07-.66.07-.66 1.09.08 1.67 1.12 1.67 1.12.97 1.66 2.56 1.18 3.18.9.1-.7.38-1.18.69-1.45-2.41-.27-4.95-1.21-4.95-5.37 0-1.19.43-2.16 1.13-2.93-.11-.28-.49-1.41.11-2.95 0 0 .93-.3 3.05 1.12.88-.24 1.82-.36 2.75-.36.93 0 1.87.12 2.75.36 2.12-1.42 3.05-1.12 3.05-1.12.6 1.54.22 2.67.11 2.95.7.77 1.13 1.74 1.13 2.93 0 4.17-2.55 5.09-4.98 5.36.39.34.73 1.01.73 2.04 0 1.48-.01 2.67-.01 3.03 0 .28.19.62.75.51 4.26-1.4 7.35-5.53 7.35-10.33C23.07 5.3 18.27.5 12 .5z"/>
-        </svg>
+      <a class="icon-link" href="https://github.com/ZackGphom/GLORP" target="_blank" rel="noopener noreferrer" title="GitHub">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5c-6.3 0-11.4 5.1-11.4 11.4 0 5 3.3 9.3 7.8 10.8.6.1.8-.3.8-.6v-2c-3.2.7-3.8-1.5-3.8-1.5-.5-1.3-1.3-1.6-1.3-1.6-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.5-.3-5.2-1.3-5.2-5.6 0-1.2.4-2.2 1.2-3-.1-.3-.5-1.4.1-3 0 0 .9-.3 3 1.1.9-.2 1.8-.3 2.8-.3.9 0 1.9.1 2.8.3 2.1-1.4 3-1.1 3-1.1.6 1.6.2 2.7.1 3 .7.8 1.2 1.8 1.2 3 0 4.3-2.6 5.3-5.2 5.6.4.3.8 1 .8 2.1v3.1c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8 0-6.3-5.1-11.4-11.4-11.4z"/></svg>
+      </a>
+
+      <a class="icon-link" href="https://x.com/ZackGphom" target="_blank" rel="noopener noreferrer" title="Twitter / X">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+
+      <a class="icon-link" href="https://www.behance.net/maaxkeker" target="_blank" rel="noopener noreferrer" title="Behance">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 640 640"><path d="M185.577 119.517c18.862 0 35.847 1.642 51.331 5.008 15.52 3.236 28.63 8.752 39.757 16.24 10.996 7.512 19.476 17.516 25.748 29.989 6 12.354 9 27.862 9 46.229 0 19.878-4.476 36.355-13.512 49.63-9.118 13.24-22.358 24-40.122 32.516 24.236 6.993 42.118 19.24 54.118 36.627 11.989 17.516 17.753 38.504 17.753 63.225 0 19.996-3.886 37.11-11.469 51.615-7.748 14.634-18.248 26.492-31.11 35.634-12.993 9.236-27.993 15.992-44.753 20.363-16.642 4.346-33.756 6.626-51.45 6.626H0V119.553l185.601.012-.023-.048zm232.042 31.76h159.616v38.883l-159.616-.012v-38.883.012zm35.469 293.448c11.764 11.469 28.63 17.233 50.646 17.233 15.745 0 29.516-4.016 40.867-12.012 11.35-7.996 18.248-16.465 20.882-25.229l68.965.012c-11.126 34.347-27.874 58.749-50.859 73.5-22.642 14.753-50.35 22.241-82.5 22.241-22.524 0-42.627-3.65-60.757-10.772-18.119-7.24-33.237-17.35-45.993-30.638-12.366-13.24-22.11-28.984-28.996-47.493-6.756-18.354-10.229-38.752-10.229-60.744 0-21.367 3.52-41.245 10.477-59.623 7.122-18.52 16.878-34.359 29.87-47.753 12.98-13.382 28.229-24 46.24-31.748 17.883-7.76 37.631-11.646 59.505-11.646 24.107 0 45.225 4.642 63.356 14.126 18 9.355 32.87 21.993 44.492 37.749 11.646 15.768 19.878 33.874 25.004 54.107 5.126 20.232 6.875 41.35 5.469 63.508H433.706c0 22.359 7.512 43.76 19.358 55.1l.024.082zm89.871-149.707c-9.236-10.24-25.122-15.874-44.233-15.874-12.52 0-22.866 2.114-31.11 6.366-8.115 4.229-14.752 9.473-19.878 15.745-4.997 6.248-8.516 13.004-10.465 20.102-1.996 6.874-3.236 13.24-3.65 18.756l127.502-.012c-1.878-19.984-8.752-34.736-18.118-45.106l-.047.023zm-368.662-16.524c15.355 0 28.099-3.65 38.091-11.008 9.992-7.24 14.752-19.24 14.752-35.752 0-9.106-1.63-16.76-4.878-22.642-3.354-5.87-7.76-10.512-13.37-13.748-5.516-3.355-11.74-5.646-19.099-6.886-7.122-1.358-14.634-1.984-22.24-1.984H86.576v91.973h87.745l-.024.047zm4.748 167.59c8.528 0 16.642-.757 24.213-2.528 7.748-1.748 14.634-4.359 20.363-8.35 5.752-3.887 10.641-8.989 14.114-15.745 3.52-6.638 5.126-15.118 5.126-25.477 0-20.232-5.764-34.748-17.114-43.512-11.351-8.646-26.47-12.874-45.214-12.874H86.552V445.93l92.493-.012v.165z"/></svg>
       </a>
 
       <a class="icon-link" href="mailto:zackgphom@gmail.com" title="Email">
-        <svg width="48" height="48" viewBox="0 0 24 24" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 6.5v11c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-11c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2z" fill="#fff" fill-opacity="0.06"/>
-          <path d="M4 8.3l7.5 5.2c.4.3 1 .3 1.4 0L20 8.3" stroke="#fff" stroke-opacity="0.9" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
       </a>
     </div>
   </section>
@@ -314,7 +317,7 @@ def explore_up(x, y, ver_edges, hor_edges):
     path = f"v{destX - x}"
     if hor_edges[destX + 1, y] == CLOCKWISE:
         return path + explore_right(destX + 1, y, ver_edges, hor_edges)
-    elif y > 0 and hor_edges[destX + 1, y - 1] == ANTICLOCKWISE:
+    elif y > 0 and hor_edges[destX + 1, y - 1] == ANTICWISE:
         return path + explore_left(destX + 1, y - 1, ver_edges, hor_edges)
     return path
 
@@ -459,12 +462,24 @@ def path_finding(grid, color):
         files=Array.from(e.dataTransfer.files).filter(f=>{if(!f)return false;if(f.size===0&&!/\.(png|jpe?g|gif|webp)$/i.test(f.name)){foldersDetected++;return false}return /\.(png|jpe?g|gif|webp)$/i.test(f.name)});
       }
       if(foldersDetected>0)showToast('Folder upload available only in the desktop app.','error',5000);
+      
       if(files.length){
-        const first=document.getElementById('app');
-        if(first){
-          first.scrollIntoView({behavior:'smooth',block:'start'});
-          setTimeout(()=>handleFiles(files),160);
-        }else{
+        if (window.scrollY > 0) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          let checkTimer = setInterval(() => {
+            if (window.scrollY <= 0) {
+              clearInterval(checkTimer);
+              clearTimeout(fallbackTimer);
+              handleFiles(files);
+            }
+          }, 50);
+          
+          let fallbackTimer = setTimeout(() => {
+            clearInterval(checkTimer);
+            handleFiles(files);
+          }, 800);
+        } else {
           handleFiles(files);
         }
       }
@@ -479,16 +494,13 @@ def path_finding(grid, color):
       const activeTab = document.querySelector('.mode-tab.active');
       const mode = activeTab ? activeTab.dataset.mode : 'monolith';
       const status = document.getElementById('status-msg');
-      
       if (selectedFiles.length === 0) {
         status.innerText = "NO FILES SELECTED";
         showToast("No files selected", "error");
         return;
       }
-      
       status.innerText = `CONVERTING ${selectedFiles.length} ASSETS...`;
       showToast(`Converting ${selectedFiles.length} file(s)...`, "success", 1400);
-
       for (const file of selectedFiles.slice()) {
         try {
           const dataUrl = await new Promise(r => {
@@ -499,20 +511,16 @@ def path_finding(grid, color):
           const img = new Image();
           img.src = dataUrl;
           await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error('Image load error')); });
-          
           const canvas = document.createElement('canvas');
           canvas.width = img.width; canvas.height = img.height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0);
           const iData = ctx.getImageData(0, 0, img.width, img.height);
-          
           let result; let extension = '.svg';
-          
           if (mode === 'monolith') {
             pyodide.globals.set("raw", iData.data);
             pyodide.globals.set("w", img.width);
             pyodide.globals.set("h", img.height);
-            
             const pythonSnippet = `
 import numpy as np
 px = np.frombuffer(raw.to_py(), dtype=np.uint8).reshape((h, w, 4))
@@ -527,12 +535,7 @@ for c in clrs:
     if p_d: svg_parts.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255:.6f}" d="{p_d}"/>')
 svg_parts.append("</svg>")
 "\\n".join(svg_parts)`;
-            try {
-              result = await pyodide.runPythonAsync(pythonSnippet);
-            } catch(pyErr) {
-              console.error("Py error", pyErr);
-              throw pyErr;
-            }
+            try { result = await pyodide.runPythonAsync(pythonSnippet); } catch(pyErr) { throw pyErr; }
           } else if (mode === 'lego') {
             result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
             const d = iData.data;
@@ -547,7 +550,6 @@ svg_parts.append("</svg>")
             result = canvas.toDataURL('image/webp', 1.0);
             extension = '.webp';
           }
-
           const link = document.createElement('a');
           if (extension === '.svg') { link.href = URL.createObjectURL(new Blob([result], {type: 'image/svg+xml'})); } 
           else { link.href = result; }
@@ -555,7 +557,6 @@ svg_parts.append("</svg>")
           document.body.appendChild(link);
           link.click();
           setTimeout(() => { if (link.href && link.href.startsWith('blob:')) URL.revokeObjectURL(link.href); try { link.remove(); } catch(e) {} }, 1500);
-          
           status.innerText = `CONVERTED: ${file.name}`;
           showToast(`Converted: ${file.name}`, 'success', 1200);
         } catch(err) {
@@ -583,16 +584,9 @@ svg_parts.append("</svg>")
           }
         }
       }
-      
       status.innerText = "CONVERSION COMPLETE";
       showToast("Conversion complete", "success", 1800);
-      
-      setTimeout(() => {
-        if (status.innerText === "CONVERSION COMPLETE") {
-          status.innerText = "";
-        }
-      }, 4000);
-
+      setTimeout(() => { if (status.innerText === "CONVERSION COMPLETE") { status.innerText = ""; } }, 4000);
       selectedFiles = [];
       updateUI();
     };
