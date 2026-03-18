@@ -285,94 +285,63 @@
   <script>
     const PY_CODE = `
 import numpy as np
-
 CLOCKWISE = 1
 ANTICLOCKWISE = 2
-
 def edge_finding(grid, color):
     mask = np.where(grid == color)
-
     positive = np.zeros((grid.shape[0] + 1, grid.shape[1]), dtype=np.uint8)
     positive[mask] = 1
     rolled_negative = np.roll(1 - positive, 1, axis=0)
     hor_edges = (positive - rolled_negative == 0)
     hor_edges = hor_edges * ANTICLOCKWISE - (positive + rolled_negative == 2)
-
     positive = np.zeros((grid.shape[0], grid.shape[1] + 1), dtype=np.uint8)
     positive[mask] = 1
     rolled_negative = np.roll(1 - positive, 1, axis=1)
     ver_edges = (positive - rolled_negative == 0)
     ver_edges = ver_edges * CLOCKWISE + (positive + rolled_negative == 2)
-
     return ver_edges, hor_edges
-
 def explore_up(x, y, ver_edges, hor_edges):
     for destX in range(x, -1, -1):
-        if ver_edges[destX, y] == ANTICLOCKWISE:
-            ver_edges[destX, y] = 0
-        else:
-            break
-    else:
-        destX -= 1
+        if ver_edges[destX, y] == ANTICLOCKWISE: ver_edges[destX, y] = 0
+        else: break
+    else: destX -= 1
     path = f"v{destX - x}"
-    if hor_edges[destX + 1, y] == CLOCKWISE:
-        return path + explore_right(destX + 1, y, ver_edges, hor_edges)
-    elif y > 0 and hor_edges[destX + 1, y - 1] == ANTICWISE:
-        return path + explore_left(destX + 1, y - 1, ver_edges, hor_edges)
+    if hor_edges[destX + 1, y] == CLOCKWISE: return path + explore_right(destX + 1, y, ver_edges, hor_edges)
+    elif y > 0 and hor_edges[destX + 1, y - 1] == ANTICLOCKWISE: return path + explore_left(destX + 1, y - 1, ver_edges, hor_edges)
     return path
-
 def explore_left(x, y, ver_edges, hor_edges):
     for destY in range(y, -1, -1):
-        if hor_edges[x, destY] == ANTICLOCKWISE:
-            hor_edges[x, destY] = 0
-        else:
-            break
-    else:
-        destY -= 1
+        if hor_edges[x, destY] == ANTICLOCKWISE: hor_edges[x, destY] = 0
+        else: break
+    else: destY -= 1
     path = f"h{destY - y}"
-    if x > 0 and ver_edges[x - 1, destY + 1] == ANTICLOCKWISE:
-        return path + explore_up(x - 1, destY + 1, ver_edges, hor_edges)
-    elif destY < ver_edges.shape[1] and ver_edges[x, destY + 1] == CLOCKWISE:
-        return path + explore_down(x, destY + 1, ver_edges, hor_edges)
+    if x > 0 and ver_edges[x - 1, destY + 1] == ANTICLOCKWISE: return path + explore_up(x - 1, destY + 1, ver_edges, hor_edges)
+    elif x < ver_edges.shape[0] and ver_edges[x, destY + 1] == CLOCKWISE: return path + explore_down(x, destY + 1, ver_edges, hor_edges)
     return path
-
 def explore_down(x, y, ver_edges, hor_edges):
     for destX in range(x, ver_edges.shape[0]):
-        if ver_edges[destX, y] == CLOCKWISE:
-            ver_edges[destX, y] = 0
-        else:
-            break
-    else:
-        destX += 1
+        if ver_edges[destX, y] == CLOCKWISE: ver_edges[destX, y] = 0
+        else: break
+    else: destX += 1
     path = f"v{destX - x}"
-    if y > 0 and hor_edges[destX, y - 1] == ANTICLOCKWISE:
-        return path + explore_left(destX, y - 1, ver_edges, hor_edges)
-    elif destX < hor_edges.shape[0] and hor_edges[destX, y] == CLOCKWISE:
-        return path + explore_right(destX, y, ver_edges, hor_edges)
+    if y > 0 and hor_edges[destX, y - 1] == ANTICLOCKWISE: return path + explore_left(destX, y - 1, ver_edges, hor_edges)
+    elif destX < hor_edges.shape[0] and hor_edges[destX, y] == CLOCKWISE: return path + explore_right(destX, y, ver_edges, hor_edges)
     return path
-
 def explore_right(x, y, ver_edges, hor_edges):
     for destY in range(y, hor_edges.shape[1]):
-        if hor_edges[x, destY] == CLOCKWISE:
-            hor_edges[x, destY] = 0
-        else:
-            break
-    else:
-        destY += 1
+        if hor_edges[x, destY] == CLOCKWISE: hor_edges[x, destY] = 0
+        else: break
+    else: destY += 1
     path = f"h{destY - y}"
-    if destY < ver_edges.shape[1] and ver_edges[x, destY] == CLOCKWISE:
-        return path + explore_down(x, destY, ver_edges, hor_edges)
-    elif x > 0 and ver_edges[x - 1, destY] == ANTICLOCKWISE:
-        return path + explore_up(x - 1, destY, ver_edges, hor_edges)
+    if destY < ver_edges.shape[1] and ver_edges[x, destY] == CLOCKWISE: return path + explore_down(x, destY, ver_edges, hor_edges)
+    elif x > 0 and ver_edges[x - 1, destY] == ANTICLOCKWISE: return path + explore_up(x - 1, destY, ver_edges, hor_edges)
     return path
-
 def path_finding(grid, color):
     ver_edges, hor_edges = edge_finding(grid, color)
     path_data = ""
     while np.any(hor_edges):
         coords = np.argwhere(hor_edges == CLOCKWISE)
-        if coords.size == 0:
-            break
+        if coords.size == 0: break
         x, y = coords[0]
         path_data += f"M{y},{x}"
         path_data += explore_right(x, y, ver_edges, hor_edges)
@@ -530,11 +499,13 @@ grd = (px[:,:,0].astype(np.uint32) << 24) | (px[:,:,1].astype(np.uint32) << 16) 
 svg_parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" shape-rendering="crispEdges">']
 for c in clrs:
     c_i = (int(c[0])<<24) | (int(c[1])<<16) | (int(c[2])<<8) | int(c[3])
-    try: p_d = path_finding(grd, c_i)
-    except: p_d = ""
-    if p_d: svg_parts.append(f'<path fill="#{c[0]:02x}{c[1]:02x}{c[2]:02x}" fill-opacity="{c[3]/255:.6f}" d="{p_d}"/>')
-svg_parts.append("</svg>")
-"\\n".join(svg_parts)`;
+    try:
+        p_data = path_finding(grd, c_i)
+        if p_data: svg_parts.append(f'<path fill="#{int(c[0]):02x}{int(c[1]):02x}{int(c[2]):02x}" fill-opacity="{c[3]/255:.3f}" d="{p_data}"/>')
+    except: pass
+svg_parts.append('</svg>')
+"".join(svg_parts)
+`;
             try { result = await pyodide.runPythonAsync(pythonSnippet); } catch(pyErr) { throw pyErr; }
           } else if (mode === 'lego') {
             result = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${img.width} ${img.height}" shape-rendering="crispEdges">`;
