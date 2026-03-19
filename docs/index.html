@@ -96,7 +96,8 @@
     .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
     .drawer-title{font-size:10px;font-weight:900;color:#555;letter-spacing:1px}
     .btn-clear{background:none;border:none;color:#ff4444;font-size:9px;font-weight:800;cursor:pointer;text-transform:uppercase}
-    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0}
+    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0;scrollbar-width:none;-ms-overflow-style:none}
+    #file-list::-webkit-scrollbar{display:none}
     #file-list li{font-size:11px;padding:12px;background:#0f0f0f;margin-bottom:8px;border-radius:8px;color:#888;display:flex;justify-content:space-between;align-items:center}
     .remove-file{color:#444;cursor:pointer;font-weight:bold;padding:0 5px;transition:.2s;font-size:14px}
     .remove-file:hover{color:#fff}
@@ -316,7 +317,7 @@
 
       <div class="faq-card">
         <button class="faq-btn">HOW LONG DOES CONVERSION TAKE? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Conversion time depends on image size, mode and device power. Small sprites finish quickly; large images with many colors may take longer.</div>
+        <div class="faq-ans">Conversion time depends on image size, mode and device power. Small sprites finish quickly; large images with many colors may take longer. The UI displays progress notifications and falls back to the safe 'Lego mod' if the mesher detects instability.</div>
       </div>
 
       <div class="faq-card">
