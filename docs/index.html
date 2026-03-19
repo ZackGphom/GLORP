@@ -709,6 +709,8 @@ svg_parts.append('</svg>')
   const getEndpoint = () => "https://script.google.com/macros/s/AKfycbyDgo-V24srcF2nAVzrPKb6iqYp-mTCwzAfN6fWizx1gyA3jxluVG_bQg7ucBRnoeLe/exec";
 
   const getSecret = () => atob("YWZzODk3cjVoIV9hOXM4Zmg5MzVoXyY/Zzk4MzVoOW5mOThuM2g0XyEy");
+  const FEEDBACK_COOLDOWN_MS = 60 * 60 * 1000;
+  const FEEDBACK_COOLDOWN_KEY = "glorp_feedback_last_submit_at";
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const hashString = (str) => {
@@ -769,6 +771,8 @@ svg_parts.append('</svg>')
     const [inView, setInView] = useState(false);
     const sectionRef = useRef(null);
     const fetchLockRef = useRef(false);
+    const [cooldownLeft, setCooldownLeft] = useState(0);
+    const cooldownTimerRef = useRef(null);
 
     const fetchFeedback = async () => {
       if (fetchLockRef.current) return;
@@ -805,9 +809,40 @@ svg_parts.append('</svg>')
       };
     }, []);
 
+    useEffect(() => {
+      const updateCooldown = () => {
+        const lastSubmitted = Number(localStorage.getItem(FEEDBACK_COOLDOWN_KEY) || 0);
+        const remaining = Math.max(0, (lastSubmitted + FEEDBACK_COOLDOWN_MS) - Date.now());
+        setCooldownLeft(remaining);
+      };
+
+      updateCooldown();
+      cooldownTimerRef.current = setInterval(updateCooldown, 1000);
+
+      return () => {
+        if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+      };
+    }, []);
+
+    const formatCooldown = (ms) => {
+      const totalSeconds = Math.ceil(ms / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
+    };
+
     const handleSubmit = async (e) => {
       e.preventDefault();
       if (isSubmitting || !text.trim()) return;
+
+      const lastSubmitted = Number(localStorage.getItem(FEEDBACK_COOLDOWN_KEY) || 0);
+      const cooldownRemaining = Math.max(0, (lastSubmitted + FEEDBACK_COOLDOWN_MS) - Date.now());
+      if (cooldownRemaining > 0) {
+        setSubmitStatus(`Wait ${formatCooldown(cooldownRemaining)}`);
+        return;
+      }
+
       setIsSubmitting(true);
       setSubmitStatus('Sending...');
 
@@ -832,6 +867,8 @@ svg_parts.append('</svg>')
           body: JSON.stringify(payload)
         });
 
+        localStorage.setItem(FEEDBACK_COOLDOWN_KEY, String(Date.now()));
+        setCooldownLeft(FEEDBACK_COOLDOWN_MS);
         setSubmitStatus('Sent');
         setText('');
         setRating(5);
@@ -906,10 +943,10 @@ svg_parts.append('</svg>')
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !text.trim()}
+                  disabled={isSubmitting || !text.trim() || cooldownLeft > 0}
                   className="feedback-send"
                 >
-                  {submitStatus || 'Send feedback'}
+                  {submitStatus || (cooldownLeft > 0 ? `Wait ${formatCooldown(cooldownLeft)}` : 'Send feedback')}
                 </button>
               </form>
             </div>
