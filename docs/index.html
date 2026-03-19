@@ -6,6 +6,19 @@
   <title>GLORP - Free Online Pixel Art to SVG Converter</title>
   <meta name="description" content="High-quality pixel art to Perfect and Clean SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
   <link rel="icon" type="image/png" href="favicon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GLORP",
+    "operatingSystem": "Windows, macOS, Linux, Android, iOS",
+    "applicationCategory": "DesignApplication",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "description": "High-performance pixel art to SVG converter using Greedy Meshing optimization. Process images locally and securely in your browser.",
+    "author": { "@type": "Person", "name": "ZackGphom" }
+  }
+  </script>
+
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -34,6 +47,73 @@
     html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
     *{box-sizing:border-box;-webkit-user-select:none;user-select:none;outline:none}
     body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
+    .seo-section {
+      border-top: 1px solid #1f1f1f;
+      margin-top: 0;
+      min-height: auto;
+      padding: 34px 20px 28px;
+      opacity: 0.72;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .seo-section .seo-inner {
+      width: 100%;
+      max-width: 720px;
+      color: #8b8b8b;
+      line-height: 1.6;
+      font-size: 13px;
+      text-align: center;
+    }
+    .seo-section h1, .seo-section h2, .seo-section h3 {
+      color: #f3f3f3;
+      line-height: 1.15;
+      margin: 0 0 18px;
+    }
+    .seo-section h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .seo-section h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 0;
+    }
+    .seo-section p {
+      margin: 0 0 14px;
+    }
+    .seo-section ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    .seo-section li {
+      margin-bottom: 8px;
+    }
+    .seo-section .seo-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px 14px;
+      margin-top: 6px;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+    }
+    .seo-section .seo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 32px;
+      margin: 28px 0 0;
+    }
+    .seo-section .seo-strong {
+      color: #f3f3f3;
+    }
+    .seo-section .seo-quiet {
+      color: rgba(255,255,255,0.82);
+    }
     #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 1s var(--ease),visibility 1s}
     #loading-screen.loaded{opacity:0;visibility:hidden}
     .loading-dots{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
@@ -96,8 +176,7 @@
     .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
     .drawer-title{font-size:10px;font-weight:900;color:#555;letter-spacing:1px}
     .btn-clear{background:none;border:none;color:#ff4444;font-size:9px;font-weight:800;cursor:pointer;text-transform:uppercase}
-    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0;scrollbar-width:none;-ms-overflow-style:none}
-    #file-list::-webkit-scrollbar{display:none}
+    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0}
     #file-list li{font-size:11px;padding:12px;background:#0f0f0f;margin-bottom:8px;border-radius:8px;color:#888;display:flex;justify-content:space-between;align-items:center}
     .remove-file{color:#444;cursor:pointer;font-weight:bold;padding:0 5px;transition:.2s;font-size:14px}
     .remove-file:hover{color:#fff}
@@ -1012,5 +1091,24 @@ svg_parts.append('</svg>')
   const root = ReactDOM.createRoot(document.getElementById('feedback-root'));
   root.render(<FeedbackSection />);
 </script>
+  <section id="seo" class="seo-section revealed">
+    <div class="seo-inner">
+      <div class="seo-meta" style="justify-content:center;">
+        <span>#PixelArtToPerfectSVG</span>
+        <span>#PixelArtToSVG</span>
+        <span>#PixelArt</span>
+        <span>#PixelArtConverter</span>
+        <span>#SVGConverter</span>
+        <span>#Vectorize</span>
+        <span>#CleanSVG</span>
+        <span>#GreedyMeshing</span>
+        <span>#RasterToVector</span>
+        <span>#PNGtoSVG</span>
+        <span>#JPGtoSVG</span>
+        <span>#LocalProcessing</span>
+        <span>#BrowserTool</span>
+      </div>
+    </div>
+  </section>
 </body>
 </html>
