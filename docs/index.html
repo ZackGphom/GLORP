@@ -3,9 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLORP - Free Online Pixel Art to SVG Converter</title>
+  <title>GLORP – Free Pixel Art to SVG Converter (PNG to Vector Online)</title>
   <meta name="description" content="High-quality pixel art to Perfect and Clean SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
+  <meta name="keywords" content="pixel art to svg, png to svg converter, pixel to vector, svg generator">
   <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="canonical" href="https://glorp.art/" />
+  <meta property="og:title" content="GLORP">
+  <meta property="og:description" content="Free Online Pixel Art to SVG Converter">
+  <meta property="og:image" content="https://glorp.art/preview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://glorp.art/">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GLORP">
+  <meta name="twitter:description" content="Free Online Pixel Art to SVG Converter">
+  <meta name="twitter:image" content="https://glorp.art/preview.png">
+  
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -18,17 +31,6 @@
     "author": { "@type": "Person", "name": "ZackGphom" }
   }
   </script>
-
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { corePlugins: { preflight: false } }
-  </script>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
     :root{
@@ -47,73 +49,11 @@
     html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
     *{box-sizing:border-box;-webkit-user-select:none;user-select:none;outline:none}
     body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
-    .seo-section {
-      border-top: 1px solid #1f1f1f;
-      margin-top: 0;
-      min-height: auto;
-      padding: 34px 20px 28px;
-      opacity: 0.72;
-      text-align: center;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .seo-section .seo-inner {
-      width: 100%;
-      max-width: 720px;
-      color: #8b8b8b;
-      line-height: 1.6;
-      font-size: 13px;
-      text-align: center;
-    }
-    .seo-section h1, .seo-section h2, .seo-section h3 {
-      color: #f3f3f3;
-      line-height: 1.15;
-      margin: 0 0 18px;
-    }
-    .seo-section h1 {
-      font-size: clamp(28px, 4vw, 42px);
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-    .seo-section h2 {
-      font-size: 18px;
-      font-weight: 700;
-      margin-top: 0;
-    }
-    .seo-section p {
-      margin: 0 0 14px;
-    }
-    .seo-section ul {
-      margin: 0;
-      padding-left: 18px;
-    }
-    .seo-section li {
-      margin-bottom: 8px;
-    }
-    .seo-section .seo-meta {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px 14px;
-      margin-top: 6px;
-      font-size: 10px;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.24);
-    }
-    .seo-section .seo-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 32px;
-      margin: 28px 0 0;
-    }
-    .seo-section .seo-strong {
-      color: #f3f3f3;
-    }
-    .seo-section .seo-quiet {
-      color: rgba(255,255,255,0.82);
-    }
+    
+    /* Utility class for visually hiding SEO headings */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+    .hero-subtitle { max-width: 720px; margin: 18px auto 0; color: #9a9a9a; font-size: 14px; line-height: 1.7; font-weight: 500; letter-spacing: 0.2px; }
+    
     #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 1s var(--ease),visibility 1s}
     #loading-screen.loaded{opacity:0;visibility:hidden}
     .loading-dots{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
@@ -256,17 +196,111 @@
 #feedback-root .feedback-more{pointer-events:auto;background:rgba(22,22,22,0.9);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.24);color:rgba(255,255,255,.92);border-radius:999px;padding:14px 28px;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 #feedback-root .feedback-more:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff}
 
-@media (max-width:900px){
+@media (max-width: 900px){
       .tech-grid{grid-template-columns:1fr}
       .comp-row{flex-direction:column;gap:30px}
       #file-drawer{display:none}
       #bloom{height:50px;width:200%}
-      header.collapsed{width:220px}
+
+      #main-header{
+        top: 10px;
+        left: 50%;
+        width: calc(100vw - 16px);
+        height: auto;
+        min-height: 52px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto auto;
+        column-gap: 10px;
+        row-gap: 8px;
+        align-items: center;
+      }
+
+      #main-header.compact{
+        width: calc(100vw - 16px);
+        padding: 8px 10px;
+      }
+
+      .header-left{
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+      }
+
+      .header-title{
+        font-size: 14px;
+        letter-spacing: 1.6px;
+      }
+
+      nav{
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+        justify-content: flex-start;
+        gap: 12px;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 0 0 2px 0;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      nav::-webkit-scrollbar{
+        display: none;
+      }
+
+      nav a{
+        font-size: 10px;
+        padding: 4px 0;
+      }
+
+      .header-right{
+        grid-column: 3;
+        grid-row: 1;
+        justify-content: flex-end;
+      }
+
+      .btn-support-head{
+        padding: 6px 9px;
+        font-size: 8px;
+        border-radius: 8px;
+        white-space: nowrap;
+      }
+
       .icon-link{width:74px;height:74px}
+    }
+
+    @media (max-width: 480px){
+      #main-header{
+        width: calc(100vw - 12px);
+        padding: 7px 8px;
+        border-radius: 11px;
+      }
+
+      nav{
+        gap: 10px;
+      }
+
+      nav a{
+        font-size: 9px;
+      }
+
+      .btn-support-head{
+        padding: 6px 8px;
+        font-size: 7px;
+      }
     }
   </style>
 </head>
 <body>
+  <h1 class="sr-only">Free Online Pixel Art to SVG Converter</h1>
+  <p class="hero-subtitle">GLORP is a free online tool to convert pixel art images into clean SVG vectors directly in your browser. No upload required.</p>
+  <noscript>
+  <h1>GLORP - Pixel Art to SVG Converter</h1>
+  <p>Convert pixel art images to clean SVG online. Works directly in your browser.</p>
+</noscript>
+
   <div id="loading-screen">
     <div style="font-weight:900;font-size:10px;letter-spacing:5px;color:#333;text-transform:uppercase">STARTING ENGINE</div>
     <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
@@ -359,7 +393,7 @@
       </div>
       <div class="tech-item">
         <h3>Greedy contour meshing</h3>
-        <p class="reveal-para">The engine performs greedy scans that consolidate adjacent runs of matching edges into compact path commands (hN / vN). This minimizes SVG node count by merging collinear runs and eliminating one-pixel noise through simple heuristics.</p>
+        <p class="reveal-para">The engine performs greedy scans that consolidate adjacent runs of matching edges into compact path commands (hN / vN). This minimizes SVG node count by merging collinear runs and eliminating one-pixel noise through simple heuristics to output a <strong>clean SVG</strong>.</p>
       </div>
       <div class="tech-item">
         <h3>Path extraction & safety guards</h3>
@@ -381,7 +415,7 @@
     <div class="faq-grid">
       <div class="faq-card">
         <button class="faq-btn">CAN I UPLOAD MULTIPLE FILES AT ONCE? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Yes — select several files via the file picker or drag multiple images into the page. They will be queued and processed one by one.</div>
+        <div class="faq-ans">Yes — select several files via the file picker or drag multiple images into the page. They will be queued and processed one by one, allowing you to easily <strong>batch convert PNG to SVG</strong>.</div>
       </div>
 
       <div class="faq-card">
@@ -401,7 +435,7 @@
 
       <div class="faq-card">
         <button class="faq-btn">IS EVERYTHING PROCESSED LOCALLY? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Yes. All processing runs in your browser using WebAssembly (Pyodide). No image data is sent to any server.</div>
+        <div class="faq-ans">Yes. We utilize <strong>local browser processing</strong> through WebAssembly (Pyodide). No image data is sent to any server.</div>
       </div>
     </div>
   </section>
@@ -441,6 +475,16 @@
 
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="bloom" aria-hidden="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { corePlugins: { preflight: false } }
+  </script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <script>
     const PY_CODE = `
@@ -1091,24 +1135,5 @@ svg_parts.append('</svg>')
   const root = ReactDOM.createRoot(document.getElementById('feedback-root'));
   root.render(<FeedbackSection />);
 </script>
-  <section id="seo" class="seo-section revealed">
-    <div class="seo-inner">
-      <div class="seo-meta" style="justify-content:center;">
-        <span>#PixelArtToPerfectSVG</span>
-        <span>#PixelArtToSVG</span>
-        <span>#PixelArt</span>
-        <span>#PixelArtConverter</span>
-        <span>#SVGConverter</span>
-        <span>#Vectorize</span>
-        <span>#CleanSVG</span>
-        <span>#GreedyMeshing</span>
-        <span>#RasterToVector</span>
-        <span>#PNGtoSVG</span>
-        <span>#JPGtoSVG</span>
-        <span>#LocalProcessing</span>
-        <span>#BrowserTool</span>
-      </div>
-    </div>
-  </section>
 </body>
 </html>
