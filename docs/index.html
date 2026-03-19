@@ -4,9 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>GLORP - Free Online Pixel Art to SVG Converter</title>
-  <meta name="description" content="High-quality pixel art to SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
+  <meta name="description" content="High-quality pixel art to Petfect and Clean SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
   <link rel="icon" type="image/png" href="favicon.png">
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { corePlugins: { preflight: false } }
+  </script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
   <style>
     :root{
       --bg:#0a0a0a;
@@ -31,26 +41,46 @@
     .dot:nth-child(2){animation-delay:.2s}
     .dot:nth-child(3){animation-delay:.4s}
     @keyframes blink{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
+    @keyframes headerGradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    
     header{position:fixed;top:20px;left:50%;width:calc(100vw - 40px);height:56px;transform:translateX(-50%);background:rgba(22,22,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);z-index:1000;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;overflow:hidden;box-sizing:border-box;transition:transform 1.45s var(--ease),opacity 1.45s var(--ease),background 1.45s var(--ease),padding 1.45s var(--ease),width 1.45s var(--ease),border-color 1.45s var(--ease),box-shadow 1.45s var(--ease);transform-origin:center center;will-change:width,transform,opacity,padding}
-    header.compact{width:min(620px,calc(100vw - 40px));padding:0 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.06)}
+    header.compact{width:min(700px,calc(100vw - 40px));padding:0 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.06)}
     header.compact .header-left,header.compact .header-right{opacity:1;transform:none;pointer-events:auto}
     header.compact nav{width:auto;max-width:none;min-width:0;margin:0;padding:0;opacity:1;overflow:hidden;pointer-events:auto;transform:none;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
     header.files-hidden{width:0;padding:0;opacity:0;border-color:transparent;background:rgba(22,22,22,0);pointer-events:none}
     header.files-hidden nav,header.files-hidden .header-right,header.files-hidden .header-left{opacity:0;transform:scaleX(0.2);pointer-events:none}
     .header-left{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
-    .header-title{font-weight:800;font-size:16px;letter-spacing:1px;color:var(--text);transition:transform 1.45s var(--ease),font-size 1.45s var(--ease),opacity 1.45s var(--ease)}
+    .header-title{
+      font-weight:900;
+      font-size:16px;
+      letter-spacing:2px;
+      text-transform:uppercase;
+      background:linear-gradient(90deg,#ffffff 0%,#b8b8b8 18%,#f7f7f7 36%,#7f7f7f 54%,#ffffff 72%,#d7d7d7 100%);
+      background-size:300% 100%;
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      -webkit-text-fill-color:transparent;
+      animation:headerGradientShift 12s ease-in-out infinite;
+      transition:transform 1.45s var(--ease),font-size 1.45s var(--ease),opacity 1.45s var(--ease),filter 1.45s var(--ease);
+      filter:drop-shadow(0 0 8px rgba(255,255,255,0.06));
+    }
     nav{display:flex;gap:18px;justify-content:center;align-items:center;min-width:0;overflow:hidden;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
     nav a{color:#888;text-decoration:none;font-size:12px;font-weight:700;text-transform:uppercase;padding:6px 8px}
     nav a:hover{color:var(--accent)}
     .header-right{display:flex;justify-content:flex-end;align-items:center;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
-    .btn-support-head{background:var(--accent);color:#000;padding:8px 18px;border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;text-decoration:none;transition:transform 1.45s var(--ease),background 1.45s var(--ease),opacity 1.45s var(--ease)}
+    .btn-support-head{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);color:var(--text);padding:8px 18px;border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;text-decoration:none;border:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(0,0,0,0.14);transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform} .btn-support-head:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.1);box-shadow:0 14px 34px rgba(0,0,0,0.24);transform:translateY(-1px) scale(1.035);color:#fff} .btn-support-head:active{transform:translateY(1px) scale(0.98);box-shadow:0 8px 18px rgba(0,0,0,0.18)}
     section{min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 20px;text-align:center;opacity:0;transform:translateY(var(--reveal-translate)) scale(var(--reveal-scale));transition:opacity .9s var(--ease),transform .9s var(--ease);will-change:transform,opacity}
     section.revealed{opacity:1;transform:translateY(0) scale(1)}
-    #logo-big{height:160px;margin-bottom:40px}
+    #logo-big{height:160px;margin-bottom:40px;transform-origin:center center;will-change:transform;transition:transform .78s cubic-bezier(.16,1,.3,1),filter .22s var(--ease)}
+    #logo-big.logo-hovered{transform:translateY(-5px) rotate(-1deg) scale(1.03)}
     .workflow-container{width:100%;display:flex;flex-direction:column;align-items:center}
-    #btn-select,#btn-convert{width:240px;height:56px;background:var(--light);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:.25s;text-transform:uppercase;letter-spacing:1px}
-    #btn-select:hover{background:var(--hover)}
+    #btn-select,#btn-convert{width:240px;height:56px;background:var(--light);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);text-transform:uppercase;letter-spacing:1px;will-change:transform,box-shadow,background,filter}
+    #btn-select:hover{background:var(--hover);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.06)}
+    #btn-select:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
     #btn-convert{background:var(--accent);color:#000}
+    #btn-convert:hover{background:#f3f3f3;transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.03)}
+    #btn-convert:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
     .hint{font-size:10px;color:#444;margin-top:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
     #convert-block{display:none;opacity:0;transform:translateY(10px);transition:.5s var(--ease)}
     #convert-block.active{display:block;opacity:1;transform:translateY(0)}
@@ -83,11 +113,13 @@
     .tech-item p.visible{opacity:1;transform:translateY(0) scale(1)}
     .faq-grid{width:100%;max-width:550px;display:flex;flex-direction:column;gap:12px;text-align:left}
     .faq-card{background:var(--light);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
-    .faq-btn{width:100%;padding:22px 25px;background:none;border:none;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left}
+    .faq-btn{width:100%;padding:22px 25px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform,box-shadow,background,filter}
     .faq-dot{width:7px;height:7px;background:#333;border-radius:50%}
     .faq-card.open .faq-dot{background:var(--accent);box-shadow:0 0 10px var(--accent)}
-    .faq-ans{max-height:0;padding:0 25px;color:#888;font-size:13px;line-height:1.7;transition:0.5s var(--ease);overflow:hidden}
-    .faq-card.open .faq-ans{max-height:200px;padding-bottom:25px}
+    .faq-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.05)}
+    .faq-btn:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
+    .faq-ans{max-height:0;padding:0 25px;color:#888;font-size:13px;line-height:1.7;transition:max-height 0.5s var(--ease), padding 0.5s var(--ease), opacity 0.5s var(--ease);overflow:hidden;opacity:0}
+    .faq-card.open .faq-ans{max-height:200px;padding:14px 25px 25px;opacity:1}
     #contact{padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
     .links{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap}
     .icon-link{display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:14px;background:rgba(255,255,255,0.03);transition:.18s;text-decoration:none;color:inherit}
@@ -101,7 +133,50 @@
     #toast.success{border:1px solid rgba(100,255,180,0.12)}
     #toast.error{border:1px solid rgba(255,100,100,0.12)}
     #bloom{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(20px) scaleX(0.95);width:140%;height:80px;pointer-events:none;z-index:1200;background:radial-gradient(ellipse at center bottom,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 22%,rgba(0,0,0,0) 60%);filter:blur(18px) saturate(110%);opacity:.85;border-radius:50% 50% 0 0 / 100% 100% 0 0;transition:transform .35s var(--ease),height .35s var(--ease),opacity .35s var(--ease);will-change:transform,height,opacity}
-    @media (max-width:900px){
+    
+#feedback-root{position:relative;width:100%;min-height:100vh;overflow:visible}
+#feedback-root .feedback-stage{position:relative;width:100%;padding:clamp(36px,6vw,80px) 0 56px;display:flex;justify-content:center;align-items:center}
+#feedback-root .feedback-inner{width:100%;max-width:1400px;display:flex;flex-direction:column;align-items:center;gap:30px;padding:0 20px}
+#feedback-root .feedback-form-wrap{width:100%;display:flex;justify-content:center;pointer-events:auto}
+#feedback-root .feedback-form{width:min(460px, calc(100vw - 32px));min-height:560px;border-radius:28px;background:rgba(22,22,22,0.7);border:1px solid rgba(255,255,255,0.05);box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:40px 32px 38px;display:flex;flex-direction:column;justify-content:flex-start;transition:all .8s var(--ease);box-sizing:border-box}
+#feedback-root .feedback-title{font-size:15px;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,.94);margin:0 0 8px;text-align:center}
+#feedback-root .feedback-subtitle{font-size:9px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.48);text-align:center;margin-bottom:18px}
+#feedback-root .feedback-field,#feedback-root .feedback-textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;color:rgba(255,255,255,.94);padding:14px 16px;font-size:13px;outline:none;transition:transform .28s var(--ease),background .28s var(--ease),border-color .28s var(--ease),box-shadow .28s var(--ease),filter .28s var(--ease)}
+#feedback-root .feedback-field::placeholder,#feedback-root .feedback-textarea::placeholder{color:rgba(255,255,255,.34)}
+#feedback-root .feedback-field:focus,#feedback-root .feedback-textarea:focus{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+#feedback-root .feedback-textarea{min-height:160px;resize:none}
+#feedback-root .feedback-stars-picker{display:flex;justify-content:center;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+#feedback-root .feedback-star-btn{width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.24);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .22s var(--ease)}
+#feedback-root .feedback-star-btn:hover{transform:translateY(-2px) scale(1.04);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);box-shadow:0 10px 24px rgba(0,0,0,.12);color:rgba(255,255,255,.9)}
+#feedback-root .feedback-star-btn.active{color:rgba(255,255,255,.96);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
+#feedback-root .feedback-charline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.5)}
+#feedback-root .feedback-send{width:100%;margin-top:14px;background:rgba(255,255,255,.92);color:#111;border:none;border-radius:16px;padding:14px 16px;font-size:10px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease)}
+#feedback-root .feedback-send:hover{transform:translateY(-3px) scale(1.015);background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.14);filter:brightness(1.02)}
+#feedback-root .feedback-send:active{transform:translateY(1px) scale(.985);box-shadow:0 6px 16px rgba(0,0,0,.1)}
+#feedback-root .feedback-send:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+
+#feedback-root .feedback-list-wrapper{position:relative;width:100%;max-width:1400px;margin-top:30px;overflow:visible;transition:max-height 1.2s cubic-bezier(0.19,1,0.22,1)}
+#feedback-root .feedback-list{display:flex;gap:20px;width:100%;align-items:flex-start;margin:0;padding:0}
+#feedback-root .feedback-list-column{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px}
+@media (max-width: 1024px){#feedback-root .feedback-list{gap:16px}}
+@media (max-width: 600px){#feedback-root .feedback-list{display:block}}
+@media (max-width: 600px){#feedback-root .feedback-list-column{display:block}}
+
+#feedback-root .feedback-comment{width:100%;background:rgba(22,22,22,0.7);border:1px solid rgba(255,255,255,0.05);border-radius:18px;padding:18px 18px 16px;box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin:0;display:block;transition:all .34s var(--ease);transform-origin:center center;will-change:transform,opacity,filter}
+#feedback-root .feedback-comment:hover{transform:translateY(-2px) scale(1.01);background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);filter:brightness(1.05);box-shadow:0 14px 34px rgba(0,0,0,0.24)}
+#feedback-root .feedback-name{font-size:10px;line-height:1.1;letter-spacing:.22em;font-weight:900;text-transform:uppercase;color:rgba(255,255,255,.76);margin-bottom:10px}
+#feedback-root .feedback-text{color:rgba(255,255,255,.9);font-size:14px;line-height:1.52;white-space:pre-wrap;word-break:break-word}
+#feedback-root .feedback-stars{display:flex;gap:4px;align-items:center;flex:0 0 auto;margin-top:12px}
+#feedback-root .feedback-stars span{font-size:12px;line-height:1;color:rgba(255,255,255,.22)}
+#feedback-root .feedback-stars span.filled{color:rgba(255,255,255,.9)}
+
+#feedback-root .feedback-mask{position:absolute;bottom:0;left:0;right:0;height:350px;background:linear-gradient(to top, var(--bg) 0%, rgba(10,10,10,0) 100%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:30px;pointer-events:none;transition:opacity 0.6s var(--ease), visibility 0.6s;z-index:10}
+#feedback-root .feedback-mask.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#feedback-root .feedback-mask.expanded{background:linear-gradient(to top, rgba(10,10,10,0) 0%, rgba(10,10,10,0) 100%)}
+#feedback-root .feedback-more{pointer-events:auto;background:rgba(22,22,22,0.9);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.24);color:rgba(255,255,255,.92);border-radius:999px;padding:14px 28px;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#feedback-root .feedback-more:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff}
+
+@media (max-width:900px){
       .tech-grid{grid-template-columns:1fr}
       .comp-row{flex-direction:column;gap:30px}
       #file-drawer{display:none}
@@ -120,13 +195,14 @@
   <div id="drop-overlay"><img src="DropUrStuffHere.png" alt="Drop Here"></div>
 
   <header id="main-header">
-    <div class="header-left"><span class="header-title">GLORP</span></div>
+    <div class="header-left"><span class="header-title">glorp</span></div>
     <nav>
       <a href="#app">Engine</a>
       <a href="#compare">Modes</a>
       <a href="#logic">Core</a>
       <a href="#faq">FAQ</a>
       <a href="#contact">Links</a>
+      <a href="#feedback">Feedback</a>
     </nav>
     <div class="header-right">
       <a class="btn-support-head" href="https://www.donationalerts.com/r/zackgphom" target="_blank" rel="noopener noreferrer">Support</a>
@@ -275,6 +351,10 @@
     </div>
   </section>
 
+  <section id="feedback" style="min-height: 100vh; padding: 0; position: relative; overflow: hidden;">
+  <div id="feedback-root" class="w-full max-w-none mx-0"></div>
+</section>
+
   <footer>
     GLORP v4.0.0 | DEVELOPED BY ZACKGPHOM | © 2026
   </footer>
@@ -350,6 +430,8 @@ def path_finding(grid, color):
 `;
     let pyodide;
     let selectedFiles = [];
+    let headerLock = false; 
+
     async function init(){
       try{
         pyodide = await loadPyodide();
@@ -365,6 +447,16 @@ def path_finding(grid, color):
     }
     init();
 
+    const logoBig = document.getElementById('logo-big');
+    if (logoBig) {
+      const hoverIn = () => logoBig.classList.add('logo-hovered');
+      const hoverOut = () => logoBig.classList.remove('logo-hovered');
+      logoBig.addEventListener('mouseenter', hoverIn);
+      logoBig.addEventListener('mouseleave', hoverOut);
+      logoBig.addEventListener('focus', hoverIn);
+      logoBig.addEventListener('blur', hoverOut);
+    }
+
     function showToast(msg,type="success",ms=2200){
       const t=document.getElementById('toast');
       t.className="";
@@ -379,6 +471,7 @@ def path_finding(grid, color):
     let appInView=true;
 
     function syncHeaderState(){
+      if(headerLock) return;
       const header=document.getElementById('main-header');
       const hasFiles=selectedFiles.length>0;
       header.classList.toggle('files-hidden',hasFiles);
@@ -435,7 +528,6 @@ def path_finding(grid, color):
       if(files.length){
         if (window.scrollY > 0) {
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          
           let checkTimer = setInterval(() => {
             if (window.scrollY <= 0) {
               clearInterval(checkTimer);
@@ -443,7 +535,6 @@ def path_finding(grid, color):
               handleFiles(files);
             }
           }, 50);
-          
           let fallbackTimer = setTimeout(() => {
             clearInterval(checkTimer);
             handleFiles(files);
@@ -562,7 +653,8 @@ svg_parts.append('</svg>')
       updateUI();
     };
 
-    document.querySelectorAll('.faq-btn').forEach(btn=>{btn.onclick=()=>{const card=btn.parentElement;const wasOpen=card.classList.contains('open');document.querySelectorAll('.faq-card').forEach(c=>c.classList.remove('open'));if(!wasOpen)card.classList.add('open')}});
+    let faqSwitchTimer = null;
+    document.querySelectorAll('.faq-btn').forEach(btn=>{btn.onclick=()=>{const card=btn.parentElement;const wasOpen=card.classList.contains('open');const prev=document.querySelector('.faq-card.open');if(faqSwitchTimer){clearTimeout(faqSwitchTimer);faqSwitchTimer=null;}if(wasOpen){card.classList.remove('open');return;}if(prev&&prev!==card){prev.classList.remove('open');faqSwitchTimer=setTimeout(()=>{card.classList.add('open');faqSwitchTimer=null;},520);}else{card.classList.add('open')}}});
     const sectionObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.intersectionRatio>0.10){e.target.classList.add('revealed')}else{e.target.classList.remove('revealed')}})},{threshold:[0,0.10,0.4]});
     document.querySelectorAll('section').forEach(s=>sectionObserver.observe(s));
     const paras=document.querySelectorAll('.reveal-para');
@@ -572,12 +664,315 @@ svg_parts.append('</svg>')
     function updateBloom(){const max=420;const y=window.scrollY||window.pageYOffset;const progress=Math.min(Math.max(y/max,0),1);const scale=0.95+0.5*progress;const translateY=20-20*progress;const height=80+(180-80)*progress;const opacity=0.85-0.5*progress;bloom.style.transform=`translateX(-50%) translateY(${translateY}px) scaleX(${scale})`;bloom.style.height=`${height}px`;bloom.style.opacity=`${opacity}`}
     window.addEventListener('scroll',updateBloom,{passive:true});
     updateBloom();
-    const header=document.getElementById('main-header');
+    const mainHeader=document.getElementById('main-header');
     const appSection=document.getElementById('app');
     const appObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{appInView=e.intersectionRatio>=0.6;syncHeaderState()})},{threshold:[0,0.25,0.6,0.95]});
     if(appSection)appObserver.observe(appSection);
     syncHeaderState();
-    document.querySelectorAll('nav a').forEach(a=>{a.addEventListener('click',(ev)=>{ev.preventDefault();const href=a.getAttribute('href');const target=document.querySelector(href);if(!target)return;if(href==='#app'){header.classList.remove('compact')}else{header.classList.add('compact')}target.scrollIntoView({behavior:'smooth',block:'start'})})});
+    const scrollToSection = (target, offset = 0) => {
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const top = (window.pageYOffset || window.scrollY || 0) + rect.top + offset;
+      window.scrollTo({ behavior: 'smooth', top: Math.max(0, top) });
+    };
+
+    document.querySelectorAll('nav a').forEach(a=>{a.addEventListener('click',(ev)=>{ev.preventDefault();const href=a.getAttribute('href');const target=document.querySelector(href);if(!target)return;
+
+      if(href==='#app'){
+        headerLock = true;
+        mainHeader.classList.remove('compact');
+        setTimeout(() => { headerLock = false; }, 1200); 
+        scrollToSection(target, -120);
+      } else if(href==='#compare') {
+        mainHeader.classList.add('compact');
+        scrollToSection(target, -120);
+      } else {
+        mainHeader.classList.add('compact');
+      }
+
+      if(href==='#feedback'){
+        const form = document.querySelector('#feedback-root .feedback-form') || target;
+        const rect = form.getBoundingClientRect();
+        const top = (window.pageYOffset || window.scrollY || 0) + rect.top - 300;
+        window.scrollTo({behavior:'smooth', top: Math.max(0, top)});
+      } else if(href!=='#app' && href!=='#compare') {
+        target.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    })});
   </script>
+
+  
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+  const { motion } = window.Motion;
+
+  const getEndpoint = () => "https://script.google.com/macros/s/AKfycbyDgo-V24srcF2nAVzrPKb6iqYp-mTCwzAfN6fWizx1gyA3jxluVG_bQg7ucBRnoeLe/exec";
+
+  const getSecret = () => atob("YWZzODk3cjVoIV9hOXM4Zmg5MzVoXyY/Zzk4MzVoOW5mOThuM2g0XyEy");
+
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  const hashString = (str) => {
+    let h = 2166136261 >>> 0;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  };
+  const mulberry32 = (a) => () => {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+
+  const normalizeFeedback = (item, index = 0) => {
+    const name = String(item?.name || 'Anonymous').trim().slice(0, 24) || 'Anonymous';
+    const text = String(item?.text || '').trim().slice(0, 1200);
+    if (!text) return null;
+
+    const ratingRaw = item?.rating ?? item?.stars ?? item?.score;
+    let rating = parseInt(ratingRaw, 10);
+    if (isNaN(rating)) rating = 5;
+    rating = clamp(rating, 1, 5);
+
+    const status = String(item?.status || 'approved').trim().toLowerCase();
+    const rawId = item?.id || item?.date || `${name}-${text.slice(0, 48)}-${index}`;
+    const seed = hashString(String(rawId));
+    const rand = mulberry32(seed);
+
+    return {
+      id: String(rawId),
+      seed,
+      name,
+      text,
+      rating,
+      status,
+      createdAt: new Date(item?.date || Date.now()).getTime() || Date.now(),
+      revealDelay: 0.04 + rand() * 0.5,
+      startScale: 0.72 + rand() * 0.1,
+      hoverScale: 1.01 + rand() * 0.03,
+      hoverLift: 2 + rand() * 4,
+    };
+  };
+
+  const FeedbackSection = () => {
+    const MotionDiv = window.Motion && window.Motion.motion && window.Motion.motion.div ? window.Motion.motion.div : ({ initial, animate, whileHover, transition, children, style, className, ...props }) => <div className={className} style={style} {...props}>{children}</div>;
+
+    const [items, setItems] = useState([]);
+    const [name, setName] = useState('');
+    const [text, setText] = useState('');
+    const [rating, setRating] = useState(5);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitStatus, setSubmitStatus] = useState('');
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [inView, setInView] = useState(false);
+    const sectionRef = useRef(null);
+    const fetchLockRef = useRef(false);
+
+    const fetchFeedback = async () => {
+      if (fetchLockRef.current) return;
+      fetchLockRef.current = true;
+      try {
+        const res = await fetch(getEndpoint() + "?t=" + new Date().getTime(), { cache: 'no-store' });
+        const data = await res.json();
+        const raw = Array.isArray(data) ? data : Array.isArray(data?.comments) ? data.comments : [];
+
+        const normalized = raw
+          .map(normalizeFeedback)
+          .filter((item) => item && item.status === 'approved');
+
+        const sorted = normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0) || String(a.id).localeCompare(String(b.id)));
+        setItems(sorted);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        fetchLockRef.current = false;
+      }
+    };
+
+    useEffect(() => {
+      fetchFeedback();
+      const timer = setInterval(fetchFeedback, 30000);
+      const el = sectionRef.current;
+      const observer = new IntersectionObserver(([entry]) => {
+        setInView(Boolean(entry && entry.isIntersecting));
+      }, { threshold: 0.16 });
+      if (el) observer.observe(el);
+      return () => {
+        clearInterval(timer);
+        observer.disconnect();
+      };
+    }, []);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (isSubmitting || !text.trim()) return;
+      setIsSubmitting(true);
+      setSubmitStatus('Sending...');
+
+      try {
+        const payload = {
+          name: name.trim() || 'Anonymous',
+          text: text.trim().slice(0, 1200),
+          rating: String(clamp(Number(rating) || 5, 1, 5)),
+          status: 'pending',
+          secret: getSecret(),
+          elapsed: '4000',
+          extra_field: ''
+        };
+
+        await fetch(getEndpoint(), {
+          method: 'POST',
+          mode: 'no-cors',
+          credentials: 'omit',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        setSubmitStatus('Sent');
+        setText('');
+        setRating(5);
+
+        setTimeout(async () => {
+          await fetchFeedback();
+          setSubmitStatus('');
+        }, 1800);
+      } catch (err) {
+        console.error(err);
+        setSubmitStatus('Error');
+        setTimeout(() => setSubmitStatus(''), 2400);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    const ratingsRow = [1, 2, 3, 4, 5];
+    const shouldMask = items.length > 6;
+    const contentMaxHeight = 'auto';
+
+    return (
+      <div ref={sectionRef} className="feedback-stage">
+        <div className="feedback-inner">
+          <MotionDiv
+            className="feedback-form-wrap"
+            initial={false}
+            animate={{ opacity: inView ? 1 : 0, y: inView ? 0 : 18, scale: inView ? 1 : 0.98 }}
+            transition={{ duration: 0.72, ease: [0.16, 1, 0.22, 1] }}
+          >
+            <div className="feedback-form">
+              <div className="feedback-title">Feedback</div>
+              <div className="feedback-subtitle">Leave your review</div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value.slice(0, 24))}
+                  placeholder="NAME"
+                  className="feedback-field uppercase tracking-[2px] text-[10px] font-black placeholder:normal-case"
+                />
+
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value.slice(0, 1200))}
+                  placeholder="TYPE YOUR REVIEW..."
+                  required
+                  rows="6"
+                  maxLength={1200}
+                  className="feedback-textarea"
+                ></textarea>
+
+                <div className="feedback-charline">
+                  <span>Type message</span>
+                  <span>{text.length}/1200</span>
+                </div>
+
+                <div className="feedback-stars-picker" aria-label="Rating selector">
+                  {ratingsRow.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRating(value)}
+                      className={`feedback-star-btn ${value <= rating ? 'active' : ''}`}
+                      aria-label={`${value} stars`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !text.trim()}
+                  className="feedback-send"
+                >
+                  {submitStatus || 'Send feedback'}
+                </button>
+              </form>
+            </div>
+          </MotionDiv>
+
+          {items.length > 0 && (() => {
+            const columnsCount = window.innerWidth <= 600 ? 1 : window.innerWidth <= 1024 ? 2 : 3;
+            const columns = Array.from({ length: columnsCount }, () => []);
+            const heights = Array.from({ length: columnsCount }, () => 0);
+
+            items.forEach((comment, index) => {
+              const approxHeight = 120 + Math.min(220, (comment.text?.length || 0) * 0.42) + Math.min(24, (comment.name?.length || 0) * 1.2);
+              let targetColumn = 0;
+              for (let i = 1; i < heights.length; i++) {
+                if (heights[i] < heights[targetColumn]) targetColumn = i;
+              }
+              heights[targetColumn] += approxHeight;
+              columns[targetColumn].push({ comment, index });
+            });
+
+            return (
+            <div className="feedback-list-wrapper" style={{ maxHeight: contentMaxHeight }}>
+              <div className="feedback-list">
+                {columns.map((col, colIndex) => (
+                  <div className="feedback-list-column" key={colIndex}>
+                    {col.map(({ comment, index }) => (
+                      <MotionDiv
+                        key={comment.id}
+                        className="feedback-comment"
+                        initial={false}
+                        animate={{
+                          opacity: clamp((inView ? 1 : 0) - comment.revealDelay * 0.2, 0, 1),
+                          scale: comment.startScale + (1 - comment.startScale) * clamp((inView ? 1 : 0) - comment.revealDelay * 0.15, 0, 1)
+                        }}
+                        whileHover={{
+                          y: -comment.hoverLift,
+                          scale: comment.hoverScale
+                        }}
+                        transition={{ duration: 0.56, ease: [0.16, 1, 0.22, 1] }}
+                        style={{ zIndex: index + 1 }}
+                      >
+                        <div className="feedback-name">{comment.name}</div>
+                        <div className="feedback-text">{comment.text}</div>
+                        <div className="feedback-stars" aria-label={`Rating ${comment.rating} of 5`}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <span key={i} className={i < comment.rating ? 'filled' : ''}>★</span>
+                          ))}
+                        </div>
+                      </MotionDiv>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+            );
+          })()}
+        </div>
+      </div>
+    );
+  };
+
+  const root = ReactDOM.createRoot(document.getElementById('feedback-root'));
+  root.render(<FeedbackSection />);
+</script>
 </body>
 </html>
