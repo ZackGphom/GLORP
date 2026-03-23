@@ -155,26 +155,47 @@ function pathFinding(grid, W, H) {
 
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
-  const uniqueColors = new Set();
+
+  const uniqueColors = [];
+  const colorMap = new Uint32Array(W * H);
 
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
-    if (a === 0) continue; 
-    const key = (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | a) >>> 0);
-    uniqueColors.add(key);
+    if (a === 0) {
+      colorMap[i / 4] = 0;
+      continue;
+    }
+
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    let matchedKey = 0;
+
+    for (const p of uniqueColors) {
+      if (Math.abs(p.r - r) + Math.abs(p.g - g) + Math.abs(p.b - b) + Math.abs(p.a - a) <= 12) {
+        matchedKey = p.key;
+        break;
+      }
+    }
+
+    if (matchedKey === 0) {
+      matchedKey = (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
+      if (matchedKey === 0) matchedKey = 1;
+      uniqueColors.push({ r, g, b, a, key: matchedKey });
+    }
+
+    colorMap[i / 4] = matchedKey;
   }
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
   const grid = new Uint8Array(W * H);
 
-  for (const key of uniqueColors) {
+  for (const p of uniqueColors) {
     grid.fill(0);
     let hasPixels = false;
-    
+
     for (let i = 0; i < W * H; i++) {
-      const idx = i * 4;
-      const pKey = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | data[idx + 3]) >>> 0);
-      if (pKey === key) {
+      if (colorMap[i] === p.key) {
         grid[i] = 1;
         hasPixels = true;
       }
@@ -183,11 +204,7 @@ function buildMonolithSvgFromImageData(imageData) {
     if (hasPixels) {
       const pathData = pathFinding(grid, W, H);
       if (pathData) {
-        const r = (key >>> 24) & 255;
-        const g = (key >>> 16) & 255;
-        const b = (key >>> 8) & 255;
-        const a = key & 255;
-        svg += `<path d="${pathData}" fill="${rgbaToHex(r, g, b)}" fill-opacity="${(a / 255).toFixed(3)}" fill-rule="evenodd"/>`;
+        svg += `<path d="${pathData}" fill="${rgbaToHex(p.r, p.g, p.b)}" fill-opacity="${(p.a / 255).toFixed(3)}" fill-rule="evenodd"/>`;
       }
     }
   }
