@@ -144,12 +144,19 @@ function loadImageFromSource(src) {
 
 async function decodeFileToCanvas(file) {
   if (typeof createImageBitmap === 'function') {
-    const bitmap = await createImageBitmap(file);
+    const bitmap = await createImageBitmap(file, {
+      premultiplyAlpha: 'none',
+      colorSpaceConversion: 'none'
+    });
+    
     const canvas = document.createElement('canvas');
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    
+    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(bitmap, 0, 0);
+    
     if (bitmap.close) bitmap.close();
     return { canvas, ctx, width: canvas.width, height: canvas.height };
   }
@@ -160,7 +167,10 @@ async function decodeFileToCanvas(file) {
   canvas.width = img.width;
   canvas.height = img.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0);
+  
   return { canvas, ctx, width: canvas.width, height: canvas.height };
 }
 
@@ -341,12 +351,10 @@ async function downloadBlob(blob, filename) {
     try {
       URL.revokeObjectURL(url);
     } catch (error) {
-      // ignore
     }
     try {
       link.remove();
     } catch (error) {
-      // ignore
     }
   }, 1500);
 }
@@ -380,7 +388,6 @@ function getConversionWorker() {
     try {
       worker.terminate();
     } catch (terminateError) {
-      // ignore
     }
     state.worker = null;
   };
