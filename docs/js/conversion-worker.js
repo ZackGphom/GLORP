@@ -5,7 +5,7 @@
 //  If you use this code, you MUST credit ZackGphom.
 // ---------------------------------------------------------
 //  SPECIAL THANKS TO:
-//  Harry Tsang (https://www.linkedin.com/in/cheuk-nam-tsang-2997671b3/)
+//  Harry Tsang
 //  For the implementation of the high-performance Contour Meshing Engine.
 // ---------------------------------------------------------
 
@@ -42,6 +42,8 @@ function buildLegoSvgFromImageData(imageData) {
   return svg;
 }
 
+// --- CORE MESHING ENGINE ---
+
 function edgeFinding(grid, W, H) {
   const ver_edges = new Uint8Array(H * (W + 1));
   const hor_edges = new Uint8Array((H + 1) * W);
@@ -52,11 +54,8 @@ function edgeFinding(grid, W, H) {
       const prev_p = (r > 0) ? grid[(r - 1) * W + c] : 0;
       const n = 1 - prev_p;
 
-      if (p === 1 && n === 1) {
-        hor_edges[r * W + c] = CLOCKWISE;
-      } else if (p === 0 && n === 0) {
-        hor_edges[r * W + c] = ANTICLOCKWISE;
-      }
+      if (p === 1 && n === 1) hor_edges[r * W + c] = CLOCKWISE;
+      else if (p === 0 && n === 0) hor_edges[r * W + c] = ANTICLOCKWISE;
     }
   }
 
@@ -66,11 +65,8 @@ function edgeFinding(grid, W, H) {
       const prev_p = (c > 0) ? grid[r * W + (c - 1)] : 0;
       const n = 1 - prev_p;
 
-      if (p === 1 && n === 1) {
-        ver_edges[r * (W + 1) + c] = ANTICLOCKWISE;
-      } else if (p === 0 && n === 0) {
-        ver_edges[r * (W + 1) + c] = CLOCKWISE;
-      }
+      if (p === 1 && n === 1) ver_edges[r * (W + 1) + c] = ANTICLOCKWISE;
+      else if (p === 0 && n === 0) ver_edges[r * (W + 1) + c] = CLOCKWISE;
     }
   }
 
@@ -87,9 +83,8 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
     if (dir === 'R') {
       let destC;
       for (destC = c; destC < W; destC++) {
-        if (hor_edges[r * W + destC] === CLOCKWISE) {
-          hor_edges[r * W + destC] = 0;
-        } else break;
+        if (hor_edges[r * W + destC] === CLOCKWISE) hor_edges[r * W + destC] = 0;
+        else break;
       }
       path += `h${destC - c}`;
       if (destC < (W + 1) && ver_edges[r * (W + 1) + destC] === CLOCKWISE) {
@@ -101,9 +96,8 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
     } else if (dir === 'D') {
       let destR;
       for (destR = r; destR < H; destR++) {
-        if (ver_edges[destR * (W + 1) + c] === CLOCKWISE) {
-          ver_edges[destR * (W + 1) + c] = 0;
-        } else break;
+        if (ver_edges[destR * (W + 1) + c] === CLOCKWISE) ver_edges[destR * (W + 1) + c] = 0;
+        else break;
       }
       path += `v${destR - r}`;
       if (c > 0 && hor_edges[destR * W + (c - 1)] === ANTICLOCKWISE) {
@@ -115,9 +109,8 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
     } else if (dir === 'L') {
       let destC;
       for (destC = c; destC >= 0; destC--) {
-        if (hor_edges[r * W + destC] === ANTICLOCKWISE) {
-          hor_edges[r * W + destC] = 0;
-        } else break;
+        if (hor_edges[r * W + destC] === ANTICLOCKWISE) hor_edges[r * W + destC] = 0;
+        else break;
       }
       path += `h${destC - c}`;
       if (r > 0 && ver_edges[(r - 1) * (W + 1) + (destC + 1)] === ANTICLOCKWISE) {
@@ -129,9 +122,8 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
     } else if (dir === 'U') {
       let destR;
       for (destR = r; destR >= 0; destR--) {
-        if (ver_edges[destR * (W + 1) + c] === ANTICLOCKWISE) {
-          ver_edges[destR * (W + 1) + c] = 0;
-        } else break;
+        if (ver_edges[destR * (W + 1) + c] === ANTICLOCKWISE) ver_edges[destR * (W + 1) + c] = 0;
+        else break;
       }
       path += `v${destR - r}`;
       if (hor_edges[(destR + 1) * W + c] === CLOCKWISE) {
@@ -163,36 +155,40 @@ function pathFinding(grid, W, H) {
 
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
-  const colorMap = new Map();
+  const uniqueColors = new Set();
 
-  // Группируем пиксели по цветам
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const i = (y * W + x) * 4;
-      const a = data[i + 3];
-      if (a === 0) continue; 
-      
-      const key = rgbaToKey(data[i], data[i + 1], data[i + 2], a);
-
-      if (!colorMap.has(key)) {
-        colorMap.set(key, new Uint8Array(W * H));
-      }
-      colorMap.get(key)[y * W + x] = 1;
-    }
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0) continue; 
+    const key = (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | a) >>> 0);
+    uniqueColors.add(key);
   }
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
+  const grid = new Uint8Array(W * H);
 
-  // Строим контуры для каждого цвета
-  for (const [key, grid] of colorMap.entries()) {
-    const pathData = pathFinding(grid, W, H);
-    if (pathData) {
-      const r = (key >>> 24) & 255;
-      const g = (key >>> 16) & 255;
-      const b = (key >>> 8) & 255;
-      const a = key & 255;
-      
-      svg += `<path d="${pathData}" fill="${rgbaToHex(r, g, b)}" fill-opacity="${(a / 255).toFixed(3)}" fill-rule="evenodd"/>`;
+  for (const key of uniqueColors) {
+    grid.fill(0);
+    let hasPixels = false;
+    
+    for (let i = 0; i < W * H; i++) {
+      const idx = i * 4;
+      const pKey = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | data[idx + 3]) >>> 0);
+      if (pKey === key) {
+        grid[i] = 1;
+        hasPixels = true;
+      }
+    }
+
+    if (hasPixels) {
+      const pathData = pathFinding(grid, W, H);
+      if (pathData) {
+        const r = (key >>> 24) & 255;
+        const g = (key >>> 16) & 255;
+        const b = (key >>> 8) & 255;
+        const a = key & 255;
+        svg += `<path d="${pathData}" fill="${rgbaToHex(r, g, b)}" fill-opacity="${(a / 255).toFixed(3)}" fill-rule="evenodd"/>`;
+      }
     }
   }
 
