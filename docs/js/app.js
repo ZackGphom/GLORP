@@ -9,10 +9,11 @@ const state = {
   appInView: true,
   headerLock: false,
   worker: null,
-  workerReady: false,
   workerReqId: 0,
   workerRequests: new Map(),
   feedbackLoaded: false,
+  feedbackScriptPromise: null,
+  feedbackReadyPromise: null,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -163,10 +164,6 @@ async function decodeFileToCanvas(file) {
   return { canvas, ctx, width: canvas.width, height: canvas.height };
 }
 
-function rgbaToKey(r, g, b, a) {
-  return (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
-}
-
 function rgbaToHex(r, g, b) {
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
@@ -193,14 +190,9 @@ function buildMonolithSvgFromImageData(imageData) {
   const visited = new Uint8Array(width * height);
   const rects = [];
 
-  const rgbaAt = (index) => {
-    const i = index * 4;
-    return [data[i], data[i + 1], data[i + 2], data[i + 3]];
-  };
-
   const sameColor = (index, key) => {
     const i = index * 4;
-    return rgbaToKey(data[i], data[i + 1], data[i + 2], data[i + 3]) === key;
+    return (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3]) >>> 0) === key;
   };
 
   for (let y = 0; y < height; y++) {
@@ -214,7 +206,7 @@ function buildMonolithSvgFromImageData(imageData) {
         continue;
       }
 
-      const key = rgbaToKey(data[offset], data[offset + 1], data[offset + 2], alpha);
+      const key = (((data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | alpha) >>> 0);
 
       let rectWidth = 1;
       while (x + rectWidth < width) {
@@ -292,7 +284,7 @@ function getBaseName(fileName) {
 function getConversionWorker() {
   if (state.worker) return state.worker;
 
-  const worker = new Worker(new URL('./conversion-worker.js', import.meta.url));
+  const worker = new Worker('./js/conversion-worker.js');
   worker.onmessage = (event) => {
     const { id, ok, blob, filename, error } = event.data || {};
     const pending = state.workerRequests.get(id);
@@ -316,11 +308,9 @@ function getConversionWorker() {
       // ignore
     }
     state.worker = null;
-    state.workerReady = false;
   };
 
   state.worker = worker;
-  state.workerReady = true;
   return worker;
 }
 
@@ -366,20 +356,14 @@ async function convertFileInMainThread(file, mode) {
 
 async function convertSingleFile(file, mode) {
   try {
-    if (mode === 'webp') {
-      const result = await convertFileInWorker(file, mode);
-      await downloadBlob(result.blob, result.filename);
-      return;
-    }
-
     const result = await convertFileInWorker(file, mode);
     await downloadBlob(result.blob, result.filename);
   } catch (error) {
     console.error('Worker conversion failed, falling back to main thread:', error);
 
     if (mode === 'monolith') {
-      showToast('Engine error — falling back to Lego mod', 'error', 3000);
-      const fallback = await convertFileInMainThread(file, 'lego');
+      showToast('Engine error — falling back to monolith fallback', 'error', 3000);
+      const fallback = await convertFileInMainThread(file, 'monolith');
       await downloadBlob(fallback.blob, fallback.filename);
       return;
     }
@@ -525,15 +509,83 @@ function initDragAndDrop() {
   });
 }
 
+function scrollToSection(target, offset = 0) {
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const top = (window.pageYOffset || window.scrollY || 0) + rect.top + offset;
+  window.scrollTo({ behavior: 'smooth', top: Math.max(0, top) });
+}
+
+function ensureFeedbackModuleLoaded() {
+  if (window.GlorpFeedback && typeof window.GlorpFeedback.mount === 'function') {
+    return Promise.resolve(window.GlorpFeedback);
+  }
+
+  if (state.feedbackReadyPromise) return state.feedbackReadyPromise;
+
+  if (!state.feedbackScriptPromise) {
+    state.feedbackScriptPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-feedback-module="1"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve());
+        existing.addEventListener('error', () => reject(new Error('Failed to load feedback module')));
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = './js/feedback.js';
+      script.defer = true;
+      script.async = true;
+      script.dataset.feedbackModule = '1';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load feedback module'));
+      document.head.appendChild(script);
+    });
+  }
+
+  state.feedbackReadyPromise = state.feedbackScriptPromise.then(() => {
+    if (!window.GlorpFeedback || typeof window.GlorpFeedback.mount !== 'function') {
+      throw new Error('Feedback module did not register correctly');
+    }
+    return window.GlorpFeedback;
+  });
+
+  return state.feedbackReadyPromise;
+}
+
+window.loadFeedbackModule = ensureFeedbackModuleLoaded;
+
+function mountFeedbackIfNeeded() {
+  const root = $('#feedback-root');
+  if (!root) return;
+  if (state.feedbackLoaded) return;
+  state.feedbackLoaded = true;
+
+  ensureFeedbackModuleLoaded()
+    .then((api) => {
+      if (api && typeof api.mount === 'function') {
+        api.mount(root, {
+          endpoint: ENDPOINT,
+          secret: FEEDBACK_SECRET,
+          cooldownMs: FEEDBACK_COOLDOWN_MS,
+          cooldownKey: FEEDBACK_COOLDOWN_KEY,
+        });
+      }
+    })
+    .catch((error) => {
+      console.error('Feedback module failed to load:', error);
+      state.feedbackLoaded = false;
+      const target = $('#feedback-root');
+      if (target) {
+        target.innerHTML = '<div style="padding:40px 20px;color:#888;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Feedback is unavailable right now.</div>';
+      }
+    });
+}
+
 function initNavigation() {
   const mainHeader = $('#main-header');
   const appSection = $('#app');
-  const scrollToSection = (target, offset = 0) => {
-    if (!target) return;
-    const rect = target.getBoundingClientRect();
-    const top = (window.pageYOffset || window.scrollY || 0) + rect.top + offset;
-    window.scrollTo({ behavior: 'smooth', top: Math.max(0, top) });
-  };
+  const feedbackSection = $('#feedback');
 
   if (appSection) {
     const appObserver = new IntersectionObserver((entries) => {
@@ -543,6 +595,24 @@ function initNavigation() {
       });
     }, { threshold: [0, 0.25, 0.6, 0.95] });
     appObserver.observe(appSection);
+  }
+
+  if (feedbackSection) {
+    const preloadObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          mountFeedbackIfNeeded();
+          preloadObserver.disconnect();
+        }
+      });
+    }, { threshold: 0.15 });
+    preloadObserver.observe(feedbackSection);
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => mountFeedbackIfNeeded(), { timeout: 2500 });
+    } else {
+      setTimeout(() => mountFeedbackIfNeeded(), 1200);
+    }
   }
 
   $$('nav a').forEach((link) => {
@@ -559,22 +629,24 @@ function initNavigation() {
           state.headerLock = false;
         }, 1200);
         scrollToSection(target, -120);
-      } else if (href === '#compare') {
+        return;
+      }
+
+      if (href === '#compare') {
         mainHeader && mainHeader.classList.add('compact');
         scrollToSection(target, -120);
-      } else {
-        mainHeader && mainHeader.classList.add('compact');
+        return;
       }
 
       if (href === '#feedback') {
-        loadFeedbackModule();
-        const form = document.querySelector('#feedback-root .feedback-form') || target;
-        const rect = form.getBoundingClientRect();
-        const top = (window.pageYOffset || window.scrollY || 0) + rect.top - 300;
-        window.scrollTo({ behavior: 'smooth', top: Math.max(0, top) });
-      } else if (href !== '#app' && href !== '#compare') {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        mainHeader && mainHeader.classList.add('compact');
+        mountFeedbackIfNeeded();
+        scrollToSection(target, -120);
+        return;
       }
+
+      mainHeader && mainHeader.classList.add('compact');
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 }
@@ -693,51 +765,6 @@ function initLogoAndAppButton() {
   }
 }
 
-function initFeedbackLazyLoader() {
-  const feedbackRoot = $('#feedback-root');
-  if (!feedbackRoot) return;
-
-  const load = () => {
-    if (state.feedbackLoaded) return;
-    state.feedbackLoaded = true;
-    import('./feedback.js')
-      .then((module) => {
-        if (module && typeof module.initFeedback === 'function') {
-          module.initFeedback(feedbackRoot, {
-            endpoint: ENDPOINT,
-            secret: FEEDBACK_SECRET,
-            cooldownMs: FEEDBACK_COOLDOWN_MS,
-            cooldownKey: FEEDBACK_COOLDOWN_KEY,
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Feedback module failed to load:', error);
-        state.feedbackLoaded = false;
-      });
-  };
-
-  const feedbackSection = $('#feedback');
-  if (!feedbackSection) {
-    load();
-    return;
-  }
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        load();
-        observer.disconnect();
-      }
-    });
-  }, { threshold: 0.2 });
-  observer.observe(feedbackSection);
-
-  if (location.hash === '#feedback') {
-    load();
-  }
-}
-
 function bootstrap() {
   initLoadingScreen();
   initLogoAndAppButton();
@@ -749,7 +776,6 @@ function bootstrap() {
   initFileInput();
   initModeTabs();
   initConvertButton();
-  initFeedbackLazyLoader();
   updateUI();
 }
 
