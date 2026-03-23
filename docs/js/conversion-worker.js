@@ -201,7 +201,11 @@ async function decodeFile(file) {
     throw new Error('createImageBitmap is not available in this worker');
   }
 
-  const bitmap = await createImageBitmap(file);
+  const bitmap = await createImageBitmap(file, {
+    premultiplyAlpha: 'none',
+    colorSpaceConversion: 'none'
+  });
+
   if (typeof OffscreenCanvas !== 'function') {
     if (bitmap.close) bitmap.close();
     throw new Error('OffscreenCanvas is not available in this worker');
@@ -209,8 +213,12 @@ async function decodeFile(file) {
 
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  
+  ctx.imageSmoothingEnabled = false;
+  
   ctx.drawImage(bitmap, 0, 0);
   if (bitmap.close) bitmap.close();
+  
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return { canvas, imageData, width: canvas.width, height: canvas.height };
 }
