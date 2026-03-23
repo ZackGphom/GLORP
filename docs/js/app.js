@@ -185,72 +185,147 @@ function buildLegoSvgFromImageData(imageData) {
   return svg;
 }
 
+const CLOCKWISE = 1;
+const ANTICLOCKWISE = 2;
+
+function edgeFinding(grid, W, H) {
+  const ver_edges = new Uint8Array(H * (W + 1));
+  const hor_edges = new Uint8Array((H + 1) * W);
+  for (let r = 0; r <= H; r++) {
+    for (let c = 0; c < W; c++) {
+      const p = (r < H) ? grid[r * W + c] : 0;
+      const prev_p = (r > 0) ? grid[(r - 1) * W + c] : 0;
+      const n = 1 - prev_p;
+      if (p === 1 && n === 1) hor_edges[r * W + c] = CLOCKWISE;
+      else if (p === 0 && n === 0) hor_edges[r * W + c] = ANTICLOCKWISE;
+    }
+  }
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c <= W; c++) {
+      const p = (c < W) ? grid[r * W + c] : 0;
+      const prev_p = (c > 0) ? grid[r * W + (c - 1)] : 0;
+      const n = 1 - prev_p;
+      if (p === 1 && n === 1) ver_edges[r * (W + 1) + c] = ANTICLOCKWISE;
+      else if (p === 0 && n === 0) ver_edges[r * (W + 1) + c] = CLOCKWISE;
+    }
+  }
+  return { ver_edges, hor_edges };
+}
+
+function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
+  let path = "";
+  let r = startR;
+  let c = startC;
+  let dir = 'R';
+  while (true) {
+    if (dir === 'R') {
+      let destC;
+      for (destC = c; destC < W; destC++) {
+        if (hor_edges[r * W + destC] === CLOCKWISE) hor_edges[r * W + destC] = 0;
+        else break;
+      }
+      path += `h${destC - c}`;
+      if (destC < (W + 1) && ver_edges[r * (W + 1) + destC] === CLOCKWISE) {
+        c = destC; dir = 'D';
+      } else if (r > 0 && ver_edges[(r - 1) * (W + 1) + destC] === ANTICLOCKWISE) {
+        r = r - 1; c = destC; dir = 'U';
+      } else break;
+    } else if (dir === 'D') {
+      let destR;
+      for (destR = r; destR < H; destR++) {
+        if (ver_edges[destR * (W + 1) + c] === CLOCKWISE) ver_edges[destR * (W + 1) + c] = 0;
+        else break;
+      }
+      path += `v${destR - r}`;
+      if (c > 0 && hor_edges[destR * W + (c - 1)] === ANTICLOCKWISE) {
+        r = destR; c = c - 1; dir = 'L';
+      } else if (destR < (H + 1) && hor_edges[destR * W + c] === CLOCKWISE) {
+        r = destR; dir = 'R';
+      } else break;
+    } else if (dir === 'L') {
+      let destC;
+      for (destC = c; destC >= 0; destC--) {
+        if (hor_edges[r * W + destC] === ANTICLOCKWISE) hor_edges[r * W + destC] = 0;
+        else break;
+      }
+      path += `h${destC - c}`;
+      if (r > 0 && ver_edges[(r - 1) * (W + 1) + (destC + 1)] === ANTICLOCKWISE) {
+        r = r - 1; c = destC + 1; dir = 'U';
+      } else if ((destC + 1) < (W + 1) && ver_edges[r * (W + 1) + (destC + 1)] === CLOCKWISE) {
+        c = destC + 1; dir = 'D';
+      } else break;
+    } else if (dir === 'U') {
+      let destR;
+      for (destR = r; destR >= 0; destR--) {
+        if (ver_edges[destR * (W + 1) + c] === ANTICLOCKWISE) ver_edges[destR * (W + 1) + c] = 0;
+        else break;
+      }
+      path += `v${destR - r}`;
+      if (hor_edges[(destR + 1) * W + c] === CLOCKWISE) {
+        r = destR + 1; dir = 'R';
+      } else if (c > 0 && hor_edges[(destR + 1) * W + (c - 1)] === ANTICLOCKWISE) {
+        r = destR + 1; c = c - 1; dir = 'L';
+      } else break;
+    }
+  }
+  return path;
+}
+
+function pathFinding(grid, W, H) {
+  const { ver_edges, hor_edges } = edgeFinding(grid, W, H);
+  let path_data = "";
+  const hor_len = (H + 1) * W;
+  for (let i = 0; i < hor_len; i++) {
+    if (hor_edges[i] === CLOCKWISE) {
+      let r = Math.floor(i / W);
+      let c = i % W;
+      path_data += `M${c},${r}`;
+      path_data += tracePath(r, c, ver_edges, hor_edges, W, H);
+      path_data += "z";
+    }
+  }
+  return path_data;
+}
+
 function buildMonolithSvgFromImageData(imageData) {
-  const { data, width, height } = imageData;
-  const visited = new Uint8Array(width * height);
-  const rects = [];
+  const { data, width: W, height: H } = imageData;
+  const uniqueColors = new Set();
+  
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0) continue;
+    const key = (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | a) >>> 0);
+    uniqueColors.add(key);
+  }
 
-  const sameColor = (index, key) => {
-    const i = index * 4;
-    return (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3]) >>> 0) === key;
-  };
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
+  const grid = new Uint8Array(W * H);
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      if (visited[idx]) continue;
-      const offset = idx * 4;
-      const alpha = data[offset + 3];
-      if (alpha === 0) {
-        visited[idx] = 1;
-        continue;
+  for (const key of uniqueColors) {
+    grid.fill(0);
+    let hasPixels = false;
+    
+    for (let i = 0; i < W * H; i++) {
+      const idx = i * 4;
+      const pKey = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | data[idx + 3]) >>> 0);
+      if (pKey === key) {
+        grid[i] = 1;
+        hasPixels = true;
       }
+    }
 
-      const key = (((data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | alpha) >>> 0);
-
-      let rectWidth = 1;
-      while (x + rectWidth < width) {
-        const nextIndex = idx + rectWidth;
-        if (visited[nextIndex] || !sameColor(nextIndex, key)) break;
-        rectWidth += 1;
+    if (hasPixels) {
+      const pathData = pathFinding(grid, W, H);
+      if (pathData) {
+        const r = (key >>> 24) & 255;
+        const g = (key >>> 16) & 255;
+        const b = (key >>> 8) & 255;
+        const a = key & 255;
+        svg += `<path d="${pathData}" fill="${rgbaToHex(r, g, b)}" fill-opacity="${(a / 255).toFixed(3)}" fill-rule="evenodd"/>`;
       }
-
-      let rectHeight = 1;
-      outer: while (y + rectHeight < height) {
-        const rowIndex = (y + rectHeight) * width + x;
-        for (let dx = 0; dx < rectWidth; dx++) {
-          const probe = rowIndex + dx;
-          if (visited[probe] || !sameColor(probe, key)) {
-            break outer;
-          }
-        }
-        rectHeight += 1;
-      }
-
-      for (let dy = 0; dy < rectHeight; dy++) {
-        const rowBase = (y + dy) * width + x;
-        for (let dx = 0; dx < rectWidth; dx++) {
-          visited[rowBase + dx] = 1;
-        }
-      }
-
-      rects.push({
-        x,
-        y,
-        w: rectWidth,
-        h: rectHeight,
-        r: data[offset],
-        g: data[offset + 1],
-        b: data[offset + 2],
-        a: alpha,
-      });
     }
   }
 
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">`;
-  for (const rect of rects) {
-    svg += `<rect x="${rect.x}" y="${rect.y}" width="${rect.w}" height="${rect.h}" fill="${rgbaToHex(rect.r, rect.g, rect.b)}" fill-opacity="${(rect.a / 255).toFixed(3)}"/>`;
-  }
   svg += '</svg>';
   return svg;
 }
