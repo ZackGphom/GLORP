@@ -163,12 +163,14 @@ function buildMonolithSvgFromImageData(imageData) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
-    const a = data[i + 3];
+    let a = data[i + 3];
 
-    if (a === 0) {
+    if (a < 5) {
       colorMap[i / 4] = 0;
       continue;
     }
+
+    if (a > 250) a = 255;
 
     const key = ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
 
@@ -204,7 +206,7 @@ function buildMonolithSvgFromImageData(imageData) {
   return svg;
 }
 
-async function decodeFile(file) {
+async async function decodeFile(file) {
   if (typeof createImageBitmap !== 'function') {
     throw new Error('createImageBitmap is not available in this worker');
   }
