@@ -1,6 +1,6 @@
 // ---------------------------------------------------------
 //  GLORP: The Pixel-to-Vector Beast v4.0.0 (Web Edition)
-//  (c) 2026 ZackGphom. All rights reserved.
+//  (c) 2026 ZackGphom. All rights reserved. 
 //  This code is for NON-COMMERCIAL use only. 
 //  If you use this code, you MUST credit ZackGphom.
 // ---------------------------------------------------------
@@ -156,44 +156,41 @@ function pathFinding(grid, W, H) {
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
 
-  const uniqueColors = new Set();
+  const uniqueColors = new Map();
   const colorMap = new Uint32Array(W * H);
-  const colorInfo = new Map();
 
   for (let i = 0; i < data.length; i += 4) {
+    let r = data[i];
+    let g = data[i + 1];
+    let b = data[i + 2];
     const a = data[i + 3];
-    if (a === 0) {
+
+    if (a < 128) {
       colorMap[i / 4] = 0;
       continue;
     }
 
-    const key = (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | a) >>> 0);
+    r = (r >> 3) << 3;
+    g = (g >> 3) << 3;
+    b = (b >> 3) << 3;
 
-    uniqueColors.add(key);
-    colorMap[i / 4] = key;
+    const key = (((r << 24) | (g << 16) | (b << 8) | 255) >>> 0);
 
-    if (!colorInfo.has(key)) {
-      colorInfo.set(key, {
-        r: data[i],
-        g: data[i + 1],
-        b: data[i + 2],
-        a
-      });
+    if (!uniqueColors.has(key)) {
+      uniqueColors.set(key, { r, g, b, a: 255, key });
     }
+    colorMap[i / 4] = key;
   }
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
   const grid = new Uint8Array(W * H);
 
-  for (const key of uniqueColors) {
-    const p = colorInfo.get(key);
-    if (!p) continue;
-
+  for (const p of uniqueColors.values()) {
     grid.fill(0);
     let hasPixels = false;
 
     for (let i = 0; i < W * H; i++) {
-      if (colorMap[i] === key) {
+      if (colorMap[i] === p.key) {
         grid[i] = 1;
         hasPixels = true;
       }
