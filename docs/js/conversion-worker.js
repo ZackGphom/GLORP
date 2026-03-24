@@ -160,24 +160,20 @@ function buildMonolithSvgFromImageData(imageData) {
   const colorMap = new Uint32Array(W * H);
 
   for (let i = 0; i < data.length; i += 4) {
-    let r = data[i];
-    let g = data[i + 1];
-    let b = data[i + 2];
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
     const a = data[i + 3];
 
-    if (a < 128) {
+    if (a === 0) {
       colorMap[i / 4] = 0;
       continue;
     }
 
-    r = (r >> 3) << 3;
-    g = (g >> 3) << 3;
-    b = (b >> 3) << 3;
-
-    const key = (((r << 24) | (g << 16) | (b << 8) | 255) >>> 0);
+    const key = ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
 
     if (!uniqueColors.has(key)) {
-      uniqueColors.set(key, { r, g, b, a: 255, key });
+      uniqueColors.set(key, { r, g, b, a });
     }
     colorMap[i / 4] = key;
   }
@@ -185,12 +181,12 @@ function buildMonolithSvgFromImageData(imageData) {
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
   const grid = new Uint8Array(W * H);
 
-  for (const p of uniqueColors.values()) {
+  for (const [key, p] of uniqueColors) {
     grid.fill(0);
     let hasPixels = false;
 
     for (let i = 0; i < W * H; i++) {
-      if (colorMap[i] === p.key) {
+      if (colorMap[i] === key) {
         grid[i] = 1;
         hasPixels = true;
       }
@@ -224,14 +220,16 @@ async function decodeFile(file) {
   }
 
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const ctx = canvas.getContext('2d', { 
+    willReadFrequently: true,
+    colorSpace: 'srgb'
+  });
   
   ctx.imageSmoothingEnabled = false;
-  
   ctx.drawImage(bitmap, 0, 0);
   if (bitmap.close) bitmap.close();
   
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height, { colorSpace: 'srgb' });
   return { canvas, imageData, width: canvas.width, height: canvas.height };
 }
 
