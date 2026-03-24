@@ -34,6 +34,21 @@
   }
   </script>
 
+  <!-- Temporary Yandex Metrika Webvisor setup for collecting interface usability, interaction, and behavior data. It will be removed in one week, on April 1, 2026. -->
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){
+          m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+          m[i].l=1*new Date();
+          for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+          k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=108224671', 'ym');
+
+      ym(108224671, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/108224671" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <!-- /Yandex.Metrika counter -->
+
   <style>
     :root{
       --bg:#0a0a0a;
@@ -134,7 +149,7 @@
     .tech-item p.visible{opacity:1;transform:translateY(0) scale(1)}
     .faq-grid{width:100%;max-width:550px;display:flex;flex-direction:column;gap:12px;text-align:left}
     .faq-card{background:var(--light);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
-    .faq-btn{width:100%;padding:22px 25px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform,box-shadow,background,filter}
+    .faq-btn{width:100%;padding:22px 25px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform}
     .faq-dot{width:7px;height:7px;background:#333;border-radius:50%}
     .faq-card.open .faq-dot{background:var(--accent);box-shadow:0 0 10px var(--accent)}
     .faq-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.05)}
