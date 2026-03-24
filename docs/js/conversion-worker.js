@@ -156,8 +156,9 @@ function pathFinding(grid, W, H) {
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
 
-  const uniqueColors = [];
+  const uniqueColors = new Set();
   const colorMap = new Uint32Array(W * H);
+  const colorInfo = new Map();
 
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
@@ -166,36 +167,33 @@ function buildMonolithSvgFromImageData(imageData) {
       continue;
     }
 
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
-    let matchedKey = 0;
+    const key = (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | a) >>> 0);
 
-    for (const p of uniqueColors) {
-      if (Math.abs(p.r - r) + Math.abs(p.g - g) + Math.abs(p.b - b) + Math.abs(p.a - a) <= 12) {
-        matchedKey = p.key;
-        break;
-      }
+    uniqueColors.add(key);
+    colorMap[i / 4] = key;
+
+    if (!colorInfo.has(key)) {
+      colorInfo.set(key, {
+        r: data[i],
+        g: data[i + 1],
+        b: data[i + 2],
+        a
+      });
     }
-
-    if (matchedKey === 0) {
-      matchedKey = (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
-      if (matchedKey === 0) matchedKey = 1;
-      uniqueColors.push({ r, g, b, a, key: matchedKey });
-    }
-
-    colorMap[i / 4] = matchedKey;
   }
 
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
   const grid = new Uint8Array(W * H);
 
-  for (const p of uniqueColors) {
+  for (const key of uniqueColors) {
+    const p = colorInfo.get(key);
+    if (!p) continue;
+
     grid.fill(0);
     let hasPixels = false;
 
     for (let i = 0; i < W * H; i++) {
-      if (colorMap[i] === p.key) {
+      if (colorMap[i] === key) {
         grid[i] = 1;
         hasPixels = true;
       }
