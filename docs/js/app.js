@@ -128,7 +128,6 @@ window.clearAll = clearAll;
 
 function injectRulesStyles() {
   if (document.getElementById('rules-inline-styles')) return;
-
   const style = document.createElement('style');
   style.id = 'rules-inline-styles';
   style.textContent = `
@@ -136,7 +135,10 @@ function injectRulesStyles() {
       position:fixed;
       inset:0;
       z-index:20050;
-      display:block;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
       opacity:1;
       visibility:visible;
       pointer-events:auto;
@@ -146,7 +148,7 @@ function injectRulesStyles() {
     }
 
     #rules-backdrop{
-      position:fixed;
+      position:absolute;
       inset:0;
       z-index:1;
       background:rgba(5,5,5,0.78);
@@ -164,23 +166,20 @@ function injectRulesStyles() {
     }
 
     #rules-card{
-      position:fixed;
-      left:50%;
-      top:50%;
+      position:relative;
       z-index:2;
       width:min(560px,calc(100vw - 28px));
       max-height:min(82vh,760px);
       overflow:auto;
       padding:30px 26px 22px;
       border-radius:24px;
-      background:rgba(22,22,22,0.95);
+      background:rgba(22,22,22,0.96);
       border:1px solid rgba(255,255,255,0.10);
       box-shadow:0 24px 80px rgba(0,0,0,0.55),0 0 0 1px rgba(255,255,255,0.03) inset;
       text-align:center;
-      transform:translate(-50%, -50%) translateZ(0);
-      -webkit-transform:translate(-50%, -50%) translateZ(0);
       transition:transform .75s var(--ease),opacity .75s var(--ease);
       will-change:transform,opacity;
+      transform:translateZ(0);
       filter:none !important;
       backdrop-filter:none !important;
       -webkit-backdrop-filter:none !important;
@@ -190,7 +189,7 @@ function injectRulesStyles() {
     }
 
     #rules-overlay.dismissed #rules-card{
-      transform:translate(-50%, calc(-50% + 48px)) scale(.98);
+      transform:translateY(44px) scale(.98);
       opacity:0;
     }
 
