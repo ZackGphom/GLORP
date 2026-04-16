@@ -124,31 +124,116 @@ function clearAll() {
 window.removeFile = removeFile;
 window.clearAll = clearAll;
 
+function injectRulesStyles() {
+  if (document.getElementById('rules-inline-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'rules-inline-styles';
+  style.textContent = `
+    #rules-overlay{position:fixed;inset:0;z-index:20050;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform}
+    #rules-overlay::before{content:"";position:absolute;inset:0;background:rgba(5,5,5,0.72);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:none;z-index:0}
+    #rules-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
+    #rules-card{position:relative;z-index:2;width:min(560px,calc(100vw - 28px));max-height:min(82vh,760px);overflow:auto;padding:30px 26px 22px;border-radius:24px;background:rgba(22,22,22,0.82);border:1px solid rgba(255,255,255,0.08);box-shadow:0 24px 80px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
+    #rules-overlay.dismissed #rules-card{transform:translateY(44px) scale(.98);opacity:0}
+    .rules-title{margin:0 0 22px;font-size:clamp(28px,4vw,42px);line-height:1.02;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-align:center;text-shadow:0 0 18px rgba(255,255,255,.04)}
+    .rules-list{display:flex;flex-direction:column;gap:14px;text-align:left;margin:0 0 24px}
+    .rules-item{font-size:14px;line-height:1.7;color:#d1d1d1;letter-spacing:.1px}
+    .rules-item strong{color:#fff}
+    .rules-note{display:inline-block;margin-top:4px;color:#9a9a9a;font-size:12px;line-height:1.6}
+    .rules-golden{padding:14px 14px 15px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)}
+    .rules-dismiss{display:block;min-width:180px;height:50px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
+    .rules-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+    .rules-dismiss:active{transform:translateY(1px) scale(.985)}
+    body.rules-active{overflow:hidden}
+    body.rules-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
+    body.rules-active #bloom{opacity:0}
+    #rules-toggle{position:fixed;right:18px;bottom:18px;z-index:20060;width:54px;height:54px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(22,22,22,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;line-height:1;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.24);transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease),filter .28s var(--ease)}
+    #rules-toggle:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,.08);box-shadow:0 14px 34px rgba(0,0,0,.34);filter:brightness(1.05)}
+    #rules-toggle:active{transform:translateY(1px) scale(.97)}
+    #rules-toggle.hidden{opacity:0;pointer-events:none;transform:translateY(16px) scale(.9)}
+    @media (max-width: 480px){#rules-toggle{right:12px;bottom:12px;width:50px;height:50px;font-size:22px}}
+  `;
+  document.head.appendChild(style);
+}
+
+function ensureRulesOverlay() {
+  let overlay = $('#rules-overlay');
+  if (overlay) return overlay;
+
+  overlay = document.createElement('div');
+  overlay.id = 'rules-overlay';
+  overlay.innerHTML = `
+    <div id="rules-card" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+      <h2 class="rules-title" id="rules-title">GLORP: THE RULES</h2>
+      <div class="rules-list">
+        <div class="rules-item"><strong>1:1 Pixel Ratio.</strong> Upload the file exactly as you saved it from your editor (Aseprite, Photoshop, etc.). Do not resize it!</div>
+        <div class="rules-item"><strong>PNG Only.</strong> JPEG compression creates "invisible" color noise. Noise = Broken SVG.</div>
+        <div class="rules-item"><strong>No Post-FX.</strong> No blurs, soft shadows, or gradients. Only solid colors.<br><span class="rules-note">(Note: Gradients work, but the result will be heavy and laggy).</span></div>
+        <div class="rules-item rules-golden"><strong>THE GOLDEN RULE:</strong> If the image looks blurry or "too big" for its resolution, GLORP will see it as trash data and crash. Keep it original.</div>
+      </div>
+      <button class="rules-dismiss" id="rules-dismiss" type="button">Got it</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function ensureRulesToggle() {
+  let button = $('#rules-toggle');
+  if (button) return button;
+
+  button = document.createElement('button');
+  button.id = 'rules-toggle';
+  button.type = 'button';
+  button.setAttribute('aria-label', 'Open rules');
+  button.textContent = '?';
+  document.body.appendChild(button);
+  return button;
+}
+
 function initRulesOverlay() {
-  const overlay = $('#rules-overlay');
-  const button = $('#rules-dismiss');
-  if (!overlay || !button) return;
+  injectRulesStyles();
+  const overlay = ensureRulesOverlay();
+  const button = ensureRulesToggle();
+  const dismissButton = $('#rules-dismiss', overlay);
+  if (!overlay || !button || !dismissButton) return;
 
   let dismissed = false;
+  let canOpen = true;
+
+  const openRules = () => {
+    overlay.classList.remove('dismissed');
+    document.body.classList.add('rules-active');
+    button.classList.add('hidden');
+    dismissed = false;
+    canOpen = false;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        canOpen = true;
+      });
+    });
+  };
+
   const closeRules = () => {
     if (dismissed) return;
     dismissed = true;
-    overlay.classList.add('dismissed');
     document.body.classList.remove('rules-active');
-    setTimeout(() => {
-      try {
-        overlay.remove();
-      } catch (error) {
-      }
-    }, 850);
+    overlay.classList.add('dismissed');
+    button.classList.remove('hidden');
   };
 
-  button.addEventListener('click', closeRules);
+  button.addEventListener('click', () => {
+    if (!canOpen && !overlay.classList.contains('dismissed')) return;
+    openRules();
+  });
+
+  dismissButton.addEventListener('click', closeRules);
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeRules();
   });
-}
 
+  openRules();
+}
 
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => {
@@ -174,15 +259,15 @@ async function decodeFileToCanvas(file) {
       premultiplyAlpha: 'none',
       colorSpaceConversion: 'none'
     });
-    
+
     const canvas = document.createElement('canvas');
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    
+
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(bitmap, 0, 0);
-    
+
     if (bitmap.close) bitmap.close();
     return { canvas, ctx, width: canvas.width, height: canvas.height };
   }
@@ -193,10 +278,10 @@ async function decodeFileToCanvas(file) {
   canvas.width = img.width;
   canvas.height = img.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  
+
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0);
-  
+
   return { canvas, ctx, width: canvas.width, height: canvas.height };
 }
 
@@ -326,7 +411,7 @@ function pathFinding(grid, W, H) {
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
   const uniqueColors = new Set();
-  
+
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
     if (a === 0) continue;
@@ -340,7 +425,7 @@ function buildMonolithSvgFromImageData(imageData) {
   for (const key of uniqueColors) {
     grid.fill(0);
     let hasPixels = false;
-    
+
     for (let i = 0; i < W * H; i++) {
       const idx = i * 4;
       const pKey = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | data[idx + 3]) >>> 0);
