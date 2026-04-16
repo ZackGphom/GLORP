@@ -14,6 +14,8 @@ const state = {
   feedbackLoaded: false,
   feedbackScriptPromise: null,
   feedbackReadyPromise: null,
+  rulesOpen: true,
+  scrollLockY: 0,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -48,7 +50,7 @@ function setLoadingDone() {
 }
 
 function syncHeaderState() {
-  if (state.headerLock) return;
+  if (state.headerLock || state.rulesOpen) return;
   const header = $('#main-header');
   if (!header) return;
   const hasFiles = state.selectedFiles.length > 0;
@@ -68,8 +70,8 @@ function updateUI() {
   if (selectBlock) selectBlock.style.display = hasFiles ? 'none' : 'block';
   if (convertBlock) convertBlock.classList.toggle('active', hasFiles);
 
-  document.body.style.overflow = hasFiles ? 'hidden' : 'auto';
-  document.documentElement.style.overflow = hasFiles ? 'hidden' : 'auto';
+  document.body.style.overflow = hasFiles || state.rulesOpen ? 'hidden' : '';
+  document.documentElement.style.overflow = hasFiles || state.rulesOpen ? 'hidden' : '';
 
   const list = $('#file-list');
   if (list) {
@@ -134,55 +136,64 @@ function injectRulesStyles() {
       position:fixed;
       inset:0;
       z-index:20050;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
+      display:block;
       opacity:1;
       visibility:visible;
       pointer-events:auto;
-      transform:translateY(0);
       transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;
       will-change:opacity,transform;
       isolation:isolate;
     }
+
     #rules-backdrop{
-      position:absolute;
+      position:fixed;
       inset:0;
-      background:rgba(5,5,5,0.72);
-      backdrop-filter:blur(14px) saturate(90%);
-      -webkit-backdrop-filter:blur(14px) saturate(90%);
-      pointer-events:none;
       z-index:1;
+      background:rgba(5,5,5,0.78);
+      backdrop-filter:blur(42px) saturate(80%);
+      -webkit-backdrop-filter:blur(42px) saturate(80%);
+      pointer-events:none;
+      transform:translateZ(0);
     }
+
     #rules-overlay.dismissed{
       opacity:0;
       visibility:hidden;
       pointer-events:none;
       transform:translateY(48px);
     }
+
     #rules-card{
-      position:relative;
+      position:fixed;
+      left:50%;
+      top:50%;
       z-index:2;
       width:min(560px,calc(100vw - 28px));
       max-height:min(82vh,760px);
       overflow:auto;
       padding:30px 26px 22px;
       border-radius:24px;
-      background:rgba(22,22,22,0.92);
+      background:rgba(22,22,22,0.95);
       border:1px solid rgba(255,255,255,0.10);
-      box-shadow:0 24px 80px rgba(0,0,0,0.50),0 0 0 1px rgba(255,255,255,0.03) inset;
-      backdrop-filter:none;
-      -webkit-backdrop-filter:none;
+      box-shadow:0 24px 80px rgba(0,0,0,0.55),0 0 0 1px rgba(255,255,255,0.03) inset;
       text-align:center;
+      transform:translate(-50%, -50%) translateZ(0);
+      -webkit-transform:translate(-50%, -50%) translateZ(0);
       transition:transform .75s var(--ease),opacity .75s var(--ease);
       will-change:transform,opacity;
-      transform:translateZ(0);
+      filter:none !important;
+      backdrop-filter:none !important;
+      -webkit-backdrop-filter:none !important;
+      backface-visibility:hidden;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
     }
+
     #rules-overlay.dismissed #rules-card{
-      transform:translateY(44px) scale(.98);
+      transform:translate(-50%, calc(-50% + 48px)) scale(.98);
       opacity:0;
     }
+
     .rules-title{
       margin:0 0 22px;
       font-size:clamp(28px,4vw,42px);
@@ -194,6 +205,7 @@ function injectRulesStyles() {
       text-align:center;
       text-shadow:0 0 18px rgba(255,255,255,.04);
     }
+
     .rules-list{
       display:flex;
       flex-direction:column;
@@ -201,15 +213,18 @@ function injectRulesStyles() {
       text-align:left;
       margin:0 0 24px;
     }
+
     .rules-item{
       font-size:14px;
       line-height:1.7;
       color:#d1d1d1;
       letter-spacing:.1px;
     }
+
     .rules-item strong{
       color:#fff;
     }
+
     .rules-note{
       display:inline-block;
       margin-top:4px;
@@ -217,12 +232,14 @@ function injectRulesStyles() {
       font-size:12px;
       line-height:1.6;
     }
+
     .rules-golden{
       padding:14px 14px 15px;
       border-radius:16px;
       background:rgba(255,255,255,0.03);
       border:1px solid rgba(255,255,255,0.05);
     }
+
     .rules-dismiss{
       display:block;
       min-width:180px;
@@ -241,26 +258,35 @@ function injectRulesStyles() {
       position:relative;
       z-index:3;
     }
+
     .rules-dismiss:hover{
       background:#fff;
       transform:translateY(-2px) scale(1.02);
       box-shadow:0 12px 30px rgba(0,0,0,.18);
     }
+
     .rules-dismiss:active{
       transform:translateY(1px) scale(.985);
     }
+
     body.rules-active{
-      overflow:hidden;
+      overflow:hidden !important;
+      overscroll-behavior:none;
+      touch-action:none;
+      width:100%;
     }
+
     body.rules-active header{
       opacity:0;
       transform:translateX(-50%) translateY(-18px) scale(.98);
       pointer-events:none;
       filter:blur(10px);
     }
+
     body.rules-active #bloom{
       opacity:0;
     }
+
     #rules-toggle{
       position:fixed;
       right:18px;
@@ -284,20 +310,24 @@ function injectRulesStyles() {
       box-shadow:0 10px 30px rgba(0,0,0,.24);
       transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease),filter .28s var(--ease);
     }
+
     #rules-toggle:hover{
       transform:translateY(-3px) scale(1.03);
       background:rgba(255,255,255,.08);
       box-shadow:0 14px 34px rgba(0,0,0,.34);
       filter:brightness(1.05);
     }
+
     #rules-toggle:active{
       transform:translateY(1px) scale(.97);
     }
+
     #rules-toggle.hidden{
       opacity:0;
       pointer-events:none;
       transform:translateY(16px) scale(.9);
     }
+
     @media (max-width: 480px){
       #rules-toggle{
         right:12px;
@@ -347,6 +377,47 @@ function ensureRulesToggle() {
   return button;
 }
 
+function lockScroll() {
+  state.scrollLockY = window.scrollY || window.pageYOffset || 0;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${state.scrollLockY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+}
+
+function unlockScroll() {
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+  window.scrollTo(0, state.scrollLockY || 0);
+}
+
+function openRules(overlay, button) {
+  state.rulesOpen = true;
+  overlay.classList.remove('dismissed');
+  document.body.classList.add('rules-active');
+  button.classList.add('hidden');
+  lockScroll();
+  updateUI();
+}
+
+function closeRules(overlay, button) {
+  if (!state.rulesOpen) return;
+  state.rulesOpen = false;
+  document.body.classList.remove('rules-active');
+  overlay.classList.add('dismissed');
+  button.classList.remove('hidden');
+  unlockScroll();
+  updateUI();
+}
+
 function initRulesOverlay() {
   injectRulesStyles();
   const overlay = ensureRulesOverlay();
@@ -356,43 +427,32 @@ function initRulesOverlay() {
 
   if (!overlay || !button || !dismissButton || !backdrop) return;
 
-  let dismissed = false;
   let canOpen = true;
 
-  const openRules = () => {
-    overlay.classList.remove('dismissed');
-    document.body.classList.add('rules-active');
-    button.classList.add('hidden');
-    dismissed = false;
-    canOpen = false;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        canOpen = true;
-      });
-    });
-  };
-
-  const closeRules = () => {
-    if (dismissed) return;
-    dismissed = true;
-    document.body.classList.remove('rules-active');
-    overlay.classList.add('dismissed');
-    button.classList.remove('hidden');
-  };
-
   button.addEventListener('click', () => {
-    if (!canOpen && !overlay.classList.contains('dismissed')) return;
-    openRules();
+    if (!canOpen && state.rulesOpen) return;
+    openRules(overlay, button);
   });
 
-  dismissButton.addEventListener('click', closeRules);
-  backdrop.addEventListener('click', closeRules);
+  dismissButton.addEventListener('click', () => {
+    closeRules(overlay, button);
+  });
+
+  backdrop.addEventListener('click', () => {
+    closeRules(overlay, button);
+  });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeRules();
+    if (event.key === 'Escape') closeRules(overlay, button);
   });
 
-  openRules();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      canOpen = true;
+    });
+  });
+
+  openRules(overlay, button);
 }
 
 function fileToDataURL(file) {
