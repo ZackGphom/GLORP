@@ -15,7 +15,6 @@ const state = {
   feedbackScriptPromise: null,
   feedbackReadyPromise: null,
   rulesOpen: true,
-  scrollLockY: 0,
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -128,215 +127,201 @@ window.clearAll = clearAll;
 
 function injectRulesStyles() {
   if (document.getElementById('rules-inline-styles')) return;
-
   const style = document.createElement('style');
   style.id = 'rules-inline-styles';
   style.textContent = `
-    #rules-overlay{
-      position:fixed;
-      inset:0;
-      z-index:20050;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-      opacity:1;
-      visibility:visible;
-      pointer-events:auto;
-      transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;
-      will-change:opacity,transform;
+    #rules-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      isolation: isolate;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity .6s var(--ease), visibility .6s;
     }
 
-    #rules-backdrop{
-      position:absolute;
-      inset:0;
-      z-index:0;
-      background:rgba(5,5,5,0.78);
-      backdrop-filter:blur(126px) saturate(80%);
-      -webkit-backdrop-filter:blur(126px) saturate(80%);
-      pointer-events:auto;
-      transform:translateZ(0);
+    #rules-backdrop {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: rgba(5, 5, 5, 0.4);
+      backdrop-filter: blur(126px) saturate(150%);
+      -webkit-backdrop-filter: blur(126px) saturate(150%);
+      pointer-events: auto;
     }
 
-    #rules-overlay.dismissed{
-      opacity:0;
-      visibility:hidden;
-      pointer-events:none;
-      transform:translateY(48px);
+    #rules-card {
+      position: relative;
+      z-index: 10;
+      width: min(560px, 90vw);
+      max-height: 80vh;
+      padding: 40px;
+      background: #161616;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      text-align: center;
+      overflow-y: auto;
+      transform: translateZ(0);
+      transition: transform .6s var(--ease), opacity .6s var(--ease);
+      backface-visibility: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      pointer-events: auto;
     }
 
-    #rules-card{
-      position:relative;
-      z-index:1;
-      width:min(560px,calc(100vw - 28px));
-      max-height:min(82vh,760px);
-      overflow:auto;
-      padding:30px 26px 22px;
-      border-radius:24px;
-      background:rgba(22,22,22,0.96);
-      border:1px solid rgba(255,255,255,0.10);
-      box-shadow:0 24px 80px rgba(0,0,0,0.55),0 0 0 1px rgba(255,255,255,0.03) inset;
-      text-align:center;
-      transition:transform .75s var(--ease),opacity .75s var(--ease);
-      will-change:transform,opacity;
-      transform:translateZ(0);
-      filter:none !important;
-      backdrop-filter:none !important;
-      -webkit-backdrop-filter:none !important;
-      backface-visibility:hidden;
-      -webkit-font-smoothing:antialiased;
-      text-rendering:optimizeLegibility;
+    #rules-overlay.dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
-    #rules-overlay.dismissed #rules-card{
-      transform:translateY(44px) scale(.98);
-      opacity:0;
+    #rules-overlay.dismissed #rules-card {
+      transform: scale(0.95) translateY(20px);
+      opacity: 0;
     }
 
-    .rules-title{
-      margin:0 0 22px;
-      font-size:clamp(28px,4vw,42px);
-      line-height:1.02;
-      font-weight:900;
-      letter-spacing:2px;
-      text-transform:uppercase;
-      color:#fff;
-      text-align:center;
-      text-shadow:0 0 18px rgba(255,255,255,.04);
+    .rules-title {
+      margin: 0 0 22px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.02;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #fff;
+      text-align: center;
     }
 
-    .rules-list{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-      text-align:left;
-      margin:0 0 24px;
+    .rules-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: left;
+      margin: 0 0 28px;
     }
 
-    .rules-item{
-      font-size:14px;
-      line-height:1.7;
-      color:#d1d1d1;
-      letter-spacing:.1px;
+    .rules-item {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #d1d1d1;
+      letter-spacing: .1px;
     }
 
-    .rules-item strong{
-      color:#fff;
+    .rules-item strong {
+      color: #fff;
     }
 
-    .rules-note{
-      display:inline-block;
-      margin-top:4px;
-      color:#9a9a9a;
-      font-size:12px;
-      line-height:1.6;
+    .rules-note {
+      display: inline-block;
+      margin-top: 4px;
+      color: #9a9a9a;
+      font-size: 12px;
+      line-height: 1.6;
     }
 
-    .rules-golden{
-      padding:14px 14px 15px;
-      border-radius:16px;
-      background:rgba(255,255,255,0.03);
-      border:1px solid rgba(255,255,255,0.05);
+    .rules-golden {
+      padding: 14px 14px 15px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .rules-dismiss{
-      display:block;
-      min-width:180px;
-      height:50px;
-      margin:0 auto;
-      border:none;
-      border-radius:14px;
-      background:rgba(255,255,255,0.94);
-      color:#111;
-      font-size:11px;
-      font-weight:900;
-      letter-spacing:4px;
-      text-transform:uppercase;
-      cursor:pointer;
-      transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease);
-      position:relative;
-      z-index:2;
-      pointer-events:auto;
+    .rules-dismiss {
+      display: block;
+      min-width: 180px;
+      height: 50px;
+      margin: 0 auto;
+      border: none;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #111;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .28s var(--ease), background .28s var(--ease), box-shadow .28s var(--ease), opacity .28s var(--ease);
+      position: relative;
+      z-index: 11;
+      pointer-events: auto;
     }
 
-    .rules-dismiss:hover{
-      background:#fff;
-      transform:translateY(-2px) scale(1.02);
-      box-shadow:0 12px 30px rgba(0,0,0,.18);
+    .rules-dismiss:hover {
+      background: #fff;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
     }
 
-    .rules-dismiss:active{
-      transform:translateY(1px) scale(.985);
+    .rules-dismiss:active {
+      transform: translateY(1px) scale(.985);
     }
 
-    body.rules-active{
-      overflow:hidden !important;
-      overscroll-behavior:none;
-      touch-action:none;
-      width:100%;
-      position:fixed;
+    body.rules-active {
+      overflow: hidden !important;
+      overscroll-behavior: none;
+      touch-action: none;
+      width: 100%;
     }
 
-    body.rules-active header{
-      opacity:0;
-      transform:translateX(-50%) translateY(-18px) scale(.98);
-      pointer-events:none;
-      filter:blur(10px);
+    body.rules-active header {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-18px) scale(.98);
+      pointer-events: none;
+      filter: blur(10px);
     }
 
-    body.rules-active #bloom{
-      opacity:0;
+    body.rules-active #bloom {
+      opacity: 0;
     }
 
-    #rules-toggle{
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      z-index:20060;
-      width:54px;
-      height:54px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(22,22,22,.78);
-      backdrop-filter:blur(12px);
-      -webkit-backdrop-filter:blur(12px);
-      color:#fff;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:24px;
-      font-weight:900;
-      line-height:1;
-      cursor:pointer;
-      box-shadow:0 10px 30px rgba(0,0,0,.24);
-      transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease),filter .28s var(--ease);
+    #rules-toggle {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20000;
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(22,22,22,.78);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0,0,0,.24);
+      transition: transform .28s var(--ease), background .28s var(--ease), box-shadow .28s var(--ease), opacity .28s var(--ease), filter .28s var(--ease);
     }
 
-    #rules-toggle:hover{
-      transform:translateY(-3px) scale(1.03);
-      background:rgba(255,255,255,.08);
-      box-shadow:0 14px 34px rgba(0,0,0,.34);
-      filter:brightness(1.05);
+    #rules-toggle:hover {
+      transform: translateY(-3px) scale(1.03);
+      background: rgba(255,255,255,.08);
+      box-shadow: 0 14px 34px rgba(0,0,0,.34);
+      filter: brightness(1.05);
     }
 
-    #rules-toggle:active{
-      transform:translateY(1px) scale(.97);
+    #rules-toggle:active {
+      transform: translateY(1px) scale(.97);
     }
 
-    #rules-toggle.hidden{
-      display:none !important;
-      opacity:0;
-      pointer-events:none;
-      transform:translateY(16px) scale(.9);
+    #rules-toggle.hidden {
+      display: none !important;
     }
 
-    @media (max-width: 480px){
-      #rules-toggle{
-        right:12px;
-        bottom:12px;
-        width:50px;
-        height:50px;
-        font-size:22px;
+    @media (max-width: 480px) {
+      #rules-toggle {
+        right: 12px;
+        bottom: 12px;
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
       }
     }
   `;
@@ -380,44 +365,39 @@ function ensureRulesToggle() {
 }
 
 function lockScroll() {
-  state.scrollLockY = window.scrollY || window.pageYOffset || 0;
-  document.body.style.position = 'fixed';
-  document.body.style.top = `-${state.scrollLockY}px`;
-  document.body.style.left = '0';
-  document.body.style.right = '0';
-  document.body.style.width = '100%';
-  document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 }
 
 function unlockScroll() {
-  document.body.style.position = '';
-  document.body.style.top = '';
-  document.body.style.left = '';
-  document.body.style.right = '';
-  document.body.style.width = '';
-  document.documentElement.style.overflow = '';
   document.body.style.overflow = '';
-  window.scrollTo(0, state.scrollLockY || 0);
+  document.documentElement.style.overflow = '';
 }
 
-function openRules(overlay, button) {
+function openRules(overlay, toggleBtn) {
   state.rulesOpen = true;
   overlay.classList.remove('dismissed');
+
+  const toggle = toggleBtn || document.getElementById('rules-toggle');
+  if (toggle) {
+    toggle.classList.add('hidden');
+  }
+
   document.body.classList.add('rules-active');
-  button.classList.add('hidden');
-  button.style.display = 'none';
   lockScroll();
   updateUI();
 }
 
-function closeRules(overlay, button) {
-  if (!state.rulesOpen) return;
+function closeRules(overlay) {
   state.rulesOpen = false;
-  document.body.classList.remove('rules-active');
   overlay.classList.add('dismissed');
-  button.classList.remove('hidden');
-  button.style.display = 'inline-flex';
+
+  const toggle = document.getElementById('rules-toggle');
+  if (toggle) {
+    toggle.classList.remove('hidden');
+  }
+
+  document.body.classList.remove('rules-active');
   unlockScroll();
   updateUI();
 }
@@ -425,38 +405,21 @@ function closeRules(overlay, button) {
 function initRulesOverlay() {
   injectRulesStyles();
   const overlay = ensureRulesOverlay();
-  const button = ensureRulesToggle();
+  const toggle = ensureRulesToggle();
   const dismissButton = $('#rules-dismiss', overlay);
   const backdrop = $('#rules-backdrop', overlay);
 
-  if (!overlay || !button || !dismissButton || !backdrop) return;
+  if (!overlay || !toggle || !dismissButton || !backdrop) return;
 
-  let canOpen = true;
-
-  button.addEventListener('click', () => {
-    if (!canOpen && state.rulesOpen) return;
-    openRules(overlay, button);
-  });
-
-  dismissButton.addEventListener('click', () => {
-    closeRules(overlay, button);
-  });
-
-  backdrop.addEventListener('click', () => {
-    closeRules(overlay, button);
-  });
+  toggle.addEventListener('click', () => openRules(overlay, toggle));
+  dismissButton.addEventListener('click', () => closeRules(overlay));
+  backdrop.addEventListener('click', () => closeRules(overlay));
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeRules(overlay, button);
+    if (event.key === 'Escape') closeRules(overlay);
   });
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      canOpen = true;
-    });
-  });
-
-  openRules(overlay, button);
+  setTimeout(() => openRules(overlay, toggle), 100);
 }
 
 function fileToDataURL(file) {
@@ -558,7 +521,7 @@ function edgeFinding(grid, W, H) {
 }
 
 function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
-  let path = "";
+  let path = '';
   let r = startR;
   let c = startC;
   let dir = 'R';
@@ -618,7 +581,7 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
 
 function pathFinding(grid, W, H) {
   const { ver_edges, hor_edges } = edgeFinding(grid, W, H);
-  let path_data = "";
+  let path_data = '';
   const hor_len = (H + 1) * W;
   for (let i = 0; i < hor_len; i++) {
     if (hor_edges[i] === CLOCKWISE) {
@@ -626,7 +589,7 @@ function pathFinding(grid, W, H) {
       let c = i % W;
       path_data += `M${c},${r}`;
       path_data += tracePath(r, c, ver_edges, hor_edges, W, H);
-      path_data += "z";
+      path_data += 'z';
     }
   }
   return path_data;
