@@ -212,6 +212,25 @@
 #feedback-root .feedback-more{pointer-events:auto;background:rgba(22,22,22,0.9);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.24);color:rgba(255,255,255,.92);border-radius:999px;padding:14px 28px;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 #feedback-root .feedback-more:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff}
 
+    #rules-overlay{position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform}
+    #rules-overlay::before{content:"";position:absolute;inset:0;background:rgba(5,5,5,0.72);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:none}
+    #rules-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
+    #rules-card{position:relative;z-index:1;width:min(560px,calc(100vw - 28px));max-height:min(82vh,760px);overflow:auto;padding:30px 26px 22px;border-radius:24px;background:rgba(22,22,22,0.74);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
+    #rules-overlay.dismissed #rules-card{transform:translateY(44px) scale(.98);opacity:0}
+    .rules-title{margin:0 0 22px;font-size:clamp(28px,4vw,42px);line-height:1.02;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-align:center;text-shadow:0 0 18px rgba(255,255,255,.04)}
+    .rules-list{display:flex;flex-direction:column;gap:14px;text-align:left;margin:0 0 24px}
+    .rules-item{font-size:14px;line-height:1.7;color:#d1d1d1;letter-spacing:.1px}
+    .rules-item strong{color:#fff}
+    .rules-note{display:inline-block;margin-top:4px;color:#9a9a9a;font-size:12px;line-height:1.6}
+    .rules-golden{padding:14px 14px 15px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)}
+    .rules-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:50px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
+    .rules-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+    .rules-dismiss:active{transform:translateY(1px) scale(.985)}
+    body.rules-active{overflow:hidden}
+    body.rules-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
+    body.rules-active #bloom{opacity:0}
+
+
 @media (max-width: 900px){
       .tech-grid{grid-template-columns:1fr}
       .comp-row{flex-direction:column;gap:30px}
@@ -309,7 +328,7 @@
     }
   </style>
 </head>
-<body>
+<body class="rules-active">
   <h1 class="sr-only">Free Online Pixel Art to SVG Converter</h1>
   <noscript>
   <h1>GLORP - Pixel Art to SVG Converter</h1>
@@ -319,6 +338,21 @@
   <div id="loading-screen">
     <div style="font-weight:900;font-size:10px;letter-spacing:5px;color:#333;text-transform:uppercase">STARTING ENGINE</div>
     <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+  </div>
+
+  <div id="rules-overlay" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+    <div class="rules-card">
+      <h2 id="rules-title" class="rules-title">GLORP: THE RULES</h2>
+
+      <div class="rules-list">
+        <div class="rules-item"><strong>1:1 Pixel Ratio.</strong> Upload the file exactly as you saved it from your editor (Aseprite, Photoshop, etc.). Do not resize it!</div>
+        <div class="rules-item"><strong>PNG Only.</strong> JPEG compression creates "invisible" color noise. Noise = Broken SVG.</div>
+        <div class="rules-item"><strong>No Post-FX.</strong> No blurs, soft shadows, or gradients. Only solid colors.<br><span class="rules-note">(Note: Gradients work, but the result will be heavy and laggy).</span></div>
+        <div class="rules-item rules-golden"><strong>THE GOLDEN RULE:</strong> If the image looks blurry or "too big" for its resolution, GLORP will see it as trash data and crash. Keep it original.</div>
+      </div>
+
+      <button id="rules-dismiss" class="rules-dismiss" type="button">GOT IT</button>
+    </div>
   </div>
 
   <div id="drop-overlay"><img src="DropUrStuffHere.png" alt="Drop Here" decoding="async"></div>
