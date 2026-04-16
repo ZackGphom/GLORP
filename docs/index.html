@@ -1,24 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="glorp-preinit">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLORP – Free Pixel Art to SVG Converter (PNG to Vector Online)</title>
-  <meta name="description" content="High-quality pixel art to Perfect and Clean SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
+  <title>Pixel Art to SVG Converter — GLORP</title>
+  <meta name="description" content="Convert pixel art to SVG locally in your browser with GLORP. Batch PNG to SVG, pixel to vector, and raster export in one dark minimal tool.">
   <meta name="keywords" content="pixel art to svg, png to svg converter, pixel to vector, svg generator">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="shortcut icon" href="/favicon.png">
   <link rel="canonical" href="https://glorp.art/" />
-  <meta property="og:title" content="GLORP">
-  <meta property="og:description" content="Free Online Pixel Art to SVG Converter">
+  <meta property="og:title" content="Pixel Art to SVG Converter — GLORP">
+  <meta property="og:description" content="Convert pixel art to SVG locally in your browser. Batch PNG to SVG, pixel to vector, and raster export.">
   <meta property="og:image" content="https://glorp.art/preview.png">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://glorp.art/">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="GLORP">
-  <meta name="twitter:description" content="Free Online Pixel Art to SVG Converter">
+  <meta name="twitter:title" content="Pixel Art to SVG Converter — GLORP">
+  <meta name="twitter:description" content="Convert pixel art to SVG locally in your browser. Batch PNG to SVG, pixel to vector, and raster export.">
   <meta name="twitter:image" content="https://glorp.art/preview.png">
   
   <script type="application/ld+json">
@@ -64,6 +64,8 @@
       --para-scale:0.94;
     }
     html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
+    html.glorp-preinit body{visibility:hidden}
+    html.glorp-ready body{visibility:visible}
     *{box-sizing:border-box;-webkit-user-select:none;user-select:none;outline:none}
     body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
     
