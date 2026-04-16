@@ -1,4 +1,3 @@
-```js
 // ---------------------------------------------------------
 //  GLORP: The Pixel-to-Vector Beast v4.0.0 (Web Edition)
 //  (c) 2026 ZackGphom. All rights reserved.
@@ -322,4 +321,3 @@ self.onmessage = async (event) => {
     });
   }
 };
-```
