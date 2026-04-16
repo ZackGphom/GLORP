@@ -1,7 +1,7 @@
 // ---------------------------------------------------------
 //  GLORP: The Pixel-to-Vector Beast v4.0.0 (Web Edition)
-//  (c) 2026 ZackGphom. All rights reserved.
-//  This code is for NON-COMMERCIAL use only.
+//  (c) 2026 ZackGphom. All rights reserved. 
+//  This code is for NON-COMMERCIAL use only. 
 //  If you use this code, you MUST credit ZackGphom.
 // ---------------------------------------------------------
 //  SPECIAL THANKS TO:
@@ -11,6 +11,10 @@
 
 const CLOCKWISE = 1;
 const ANTICLOCKWISE = 2;
+
+function rgbaToKey(r, g, b, a) {
+  return (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
+}
 
 function rgbaToHex(r, g, b) {
   return `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
@@ -37,6 +41,8 @@ function buildLegoSvgFromImageData(imageData) {
   svg += '</svg>';
   return svg;
 }
+
+// --- CORE MESHING ENGINE ---
 
 function edgeFinding(grid, W, H) {
   const ver_edges = new Uint8Array(H * (W + 1));
@@ -68,7 +74,7 @@ function edgeFinding(grid, W, H) {
 }
 
 function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
-  let path = '';
+  let path = "";
   let r = startR;
   let c = startC;
   let dir = 'R';
@@ -127,30 +133,29 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
       } else break;
     }
   }
-
   return path;
 }
 
 function pathFinding(grid, W, H) {
   const { ver_edges, hor_edges } = edgeFinding(grid, W, H);
-  let path_data = '';
+  let path_data = "";
   const hor_len = (H + 1) * W;
 
   for (let i = 0; i < hor_len; i++) {
     if (hor_edges[i] === CLOCKWISE) {
-      const r = Math.floor(i / W);
-      const c = i % W;
+      let r = Math.floor(i / W);
+      let c = i % W;
       path_data += `M${c},${r}`;
       path_data += tracePath(r, c, ver_edges, hor_edges, W, H);
-      path_data += 'z';
+      path_data += "z";
     }
   }
-
   return path_data;
 }
 
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
+
   const uniqueColors = new Map();
   const colorMap = new Uint32Array(W * H);
 
@@ -169,7 +174,9 @@ function buildMonolithSvgFromImageData(imageData) {
 
     const key = ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
 
-    if (!uniqueColors.has(key)) uniqueColors.set(key, { r, g, b, a });
+    if (!uniqueColors.has(key)) {
+      uniqueColors.set(key, { r, g, b, a });
+    }
     colorMap[i / 4] = key;
   }
 
@@ -199,7 +206,7 @@ function buildMonolithSvgFromImageData(imageData) {
   return svg;
 }
 
-async function decodeFile(file) {
+async async function decodeFile(file) {
   if (typeof createImageBitmap !== 'function') {
     throw new Error('createImageBitmap is not available in this worker');
   }
@@ -215,76 +222,17 @@ async function decodeFile(file) {
   }
 
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true, colorSpace: 'srgb' });
-
+  const ctx = canvas.getContext('2d', { 
+    willReadFrequently: true,
+    colorSpace: 'srgb'
+  });
+  
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(bitmap, 0, 0);
   if (bitmap.close) bitmap.close();
-
+  
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height, { colorSpace: 'srgb' });
   return { canvas, imageData, width: canvas.width, height: canvas.height };
-}
-
-function detectGridScale(imageData) {
-  const { data, width, height } = imageData;
-
-  const blockMatches = (scale) => {
-    if (scale <= 1 || width % scale !== 0 || height % scale !== 0) return false;
-
-    for (let by = 0; by < height; by += scale) {
-      for (let bx = 0; bx < width; bx += scale) {
-        const baseIndex = (by * width + bx) * 4;
-        const br = data[baseIndex];
-        const bg = data[baseIndex + 1];
-        const bb = data[baseIndex + 2];
-        const ba = data[baseIndex + 3];
-
-        for (let y = 0; y < scale; y++) {
-          for (let x = 0; x < scale; x++) {
-            const idx = ((by + y) * width + (bx + x)) * 4;
-            if (
-              data[idx] !== br ||
-              data[idx + 1] !== bg ||
-              data[idx + 2] !== bb ||
-              data[idx + 3] !== ba
-            ) {
-              return false;
-            }
-          }
-        }
-      }
-    }
-
-    return true;
-  };
-
-  for (let scale = 2; scale <= Math.min(width, height); scale++) {
-    if (blockMatches(scale)) return scale;
-  }
-
-  return 1;
-}
-
-function downsampleImageData(imageData, scale) {
-  if (scale <= 1) return imageData;
-
-  const { data, width, height } = imageData;
-  const nextWidth = Math.floor(width / scale);
-  const nextHeight = Math.floor(height / scale);
-  const nextData = new Uint8ClampedArray(nextWidth * nextHeight * 4);
-
-  for (let y = 0; y < nextHeight; y++) {
-    for (let x = 0; x < nextWidth; x++) {
-      const srcIndex = ((y * scale) * width + (x * scale)) * 4;
-      const destIndex = (y * nextWidth + x) * 4;
-      nextData[destIndex] = data[srcIndex];
-      nextData[destIndex + 1] = data[srcIndex + 1];
-      nextData[destIndex + 2] = data[srcIndex + 2];
-      nextData[destIndex + 3] = data[srcIndex + 3];
-    }
-  }
-
-  return { data: nextData, width: nextWidth, height: nextHeight };
 }
 
 self.onmessage = async (event) => {
@@ -292,13 +240,6 @@ self.onmessage = async (event) => {
 
   try {
     const { canvas, imageData } = await decodeFile(file);
-    let finalImageData = imageData;
-
-    if (mode !== 'webp') {
-      const scale = detectGridScale(imageData);
-      if (scale > 1) finalImageData = downsampleImageData(imageData, scale);
-    }
-
     const filename = `${baseName(file.name)}.${mode === 'webp' ? 'webp' : 'svg'}`;
 
     if (mode === 'webp') {
@@ -308,8 +249,8 @@ self.onmessage = async (event) => {
     }
 
     const svg = mode === 'lego'
-      ? buildLegoSvgFromImageData(finalImageData)
-      : buildMonolithSvgFromImageData(finalImageData);
+      ? buildLegoSvgFromImageData(imageData)
+      : buildMonolithSvgFromImageData(imageData);
 
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     self.postMessage({ id, ok: true, blob, filename });
