@@ -128,6 +128,7 @@ window.clearAll = clearAll;
 
 function injectRulesStyles() {
   if (document.getElementById('rules-inline-styles')) return;
+
   const style = document.createElement('style');
   style.id = 'rules-inline-styles';
   style.textContent = `
@@ -144,17 +145,16 @@ function injectRulesStyles() {
       pointer-events:auto;
       transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;
       will-change:opacity,transform;
-      isolation:isolate;
     }
 
     #rules-backdrop{
       position:absolute;
       inset:0;
-      z-index:1;
+      z-index:0;
       background:rgba(5,5,5,0.78);
-      backdrop-filter:blur(42px) saturate(80%);
-      -webkit-backdrop-filter:blur(42px) saturate(80%);
-      pointer-events:none;
+      backdrop-filter:blur(126px) saturate(80%);
+      -webkit-backdrop-filter:blur(126px) saturate(80%);
+      pointer-events:auto;
       transform:translateZ(0);
     }
 
@@ -167,7 +167,7 @@ function injectRulesStyles() {
 
     #rules-card{
       position:relative;
-      z-index:2;
+      z-index:1;
       width:min(560px,calc(100vw - 28px));
       max-height:min(82vh,760px);
       overflow:auto;
@@ -255,7 +255,8 @@ function injectRulesStyles() {
       cursor:pointer;
       transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease);
       position:relative;
-      z-index:3;
+      z-index:2;
+      pointer-events:auto;
     }
 
     .rules-dismiss:hover{
@@ -273,6 +274,7 @@ function injectRulesStyles() {
       overscroll-behavior:none;
       touch-action:none;
       width:100%;
+      position:fixed;
     }
 
     body.rules-active header{
@@ -322,6 +324,7 @@ function injectRulesStyles() {
     }
 
     #rules-toggle.hidden{
+      display:none !important;
       opacity:0;
       pointer-events:none;
       transform:translateY(16px) scale(.9);
@@ -403,6 +406,7 @@ function openRules(overlay, button) {
   overlay.classList.remove('dismissed');
   document.body.classList.add('rules-active');
   button.classList.add('hidden');
+  button.style.display = 'none';
   lockScroll();
   updateUI();
 }
@@ -413,6 +417,7 @@ function closeRules(overlay, button) {
   document.body.classList.remove('rules-active');
   overlay.classList.add('dismissed');
   button.classList.remove('hidden');
+  button.style.display = 'inline-flex';
   unlockScroll();
   updateUI();
 }
