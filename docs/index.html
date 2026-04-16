@@ -34,8 +34,6 @@
   }
   </script>
 
-  <!-- Temporary Yandex Metrika Webvisor setup for collecting interface usability, interaction, and behavior data. -->
-  <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
       (function(m,e,t,r,i,k,a){
           m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -47,7 +45,6 @@
       ym(108224671, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
   </script>
   <noscript><div><img src="https://mc.yandex.ru/watch/108224671" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-  <!-- /Yandex.Metrika counter -->
 
   <style>
     :root{
@@ -142,7 +139,29 @@
     .comp-info{flex:1;text-align:left}
     .comp-info h2{font-size:36px;margin-bottom:20px;font-weight:800}
     .comp-info p{color:#888;line-height:1.8;font-size:15px}
-    #logic h2{font-size:42px;margin-bottom:30px;font-weight:800}
+
+    #logic{padding-top:150px;padding-bottom:150px}
+    #logic .about-wrap{width:min(1120px,100%);display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+    #logic h2{font-size:clamp(34px,5vw,54px);margin:0 0 26px;font-weight:900;line-height:1.05;letter-spacing:-0.02em;text-align:left}
+    #logic .about-copy{
+      width:100%;
+      max-width:none;
+      font-size:clamp(18px,2.15vw,24px);
+      line-height:1.95;
+      color:#d7d7d7;
+      margin:0;
+      padding:0;
+      background:none;
+      border:none;
+      box-shadow:none;
+      backdrop-filter:none;
+      -webkit-backdrop-filter:none;
+      text-align:left;
+      letter-spacing:0;
+    }
+    #logic .about-copy strong{color:#fff}
+    #logic .about-copy span{color:#9a9a9a}
+    
     .tech-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:1000px;text-align:left;margin-top:40px}
     .tech-item h3{font-size:14px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
     .tech-item p{font-size:15px;color:#888;line-height:1.6;opacity:0;transform:translateY(var(--para-translate)) scale(var(--para-scale));transition:opacity .75s var(--ease),transform .75s var(--ease);will-change:transform,opacity}
@@ -230,8 +249,7 @@
     body.rules-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
     body.rules-active #bloom{opacity:0}
 
-
-@media (max-width: 900px){
+    @media (max-width: 900px){
       .tech-grid{grid-template-columns:1fr}
       .comp-row{flex-direction:column;gap:30px}
       #file-drawer{display:none}
@@ -304,6 +322,8 @@
       }
 
       .icon-link{width:74px;height:74px}
+      #logic{padding-top:120px;padding-bottom:120px}
+      #logic .about-copy{font-size:18px;line-height:1.85}
     }
 
     @media (max-width: 480px){
@@ -325,6 +345,7 @@
         padding: 6px 8px;
         font-size: 7px;
       }
+      #logic h2{font-size:32px}
     }
   </style>
 </head>
@@ -404,13 +425,11 @@
   </section>
 
   <section id="logic">
-    <h2 style="font-size:42px;font-weight:800;margin-bottom:30px">What is GLORP?</h2>
-    <div class="tech-grid" style="grid-template-columns:1fr;max-width:860px;">
-      <div class="tech-item" style="padding:28px 28px 24px;background:rgba(22,22,22,0.72);border:1px solid rgba(255,255,255,0.05);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-        <p class="reveal-para visible" style="opacity:1;transform:none;color:#e0e0e0;font-size:18px;line-height:1.85;margin:0;text-align:left;max-width:100%;">
-          GLORP is an online tool for converting pixel art to SVG. It works locally in your browser, so your images stay on your device and are not sent to a server. It is useful for artists, game asset creators, NFT and collectible makers, poster and print work, and developers.
-        </p>
-      </div>
+    <div class="about-wrap">
+      <h2>What is GLORP?</h2>
+      <p class="about-copy">
+        <strong>GLORP</strong> is an online tool for converting pixel art to SVG. It works locally in your browser, so your images stay on your device and are not sent to a server. It is useful for <strong>artists</strong>, <strong>game asset creators</strong>, <strong>NFT / collectible makers</strong>, <strong>poster / print work</strong>, and <strong>developers</strong>.
+      </p>
     </div>
   </section>
 
@@ -497,8 +516,8 @@
   </section>
 
   <section id="feedback" style="min-height: 100vh; padding: 0; position: relative; overflow: hidden;">
-  <div id="feedback-root" class="w-full max-w-none mx-0"></div>
-</section>
+    <div id="feedback-root" class="w-full max-w-none mx-0"></div>
+  </section>
 
   <footer>
     GLORP v4.0.0 | DEVELOPED BY ZACKGPHOM | © 2026
@@ -508,5 +527,275 @@
   <div id="bloom" aria-hidden="true"></div>
 
   <script src="./js/app.js" defer></script>
+
+  <script>
+    window.GlorpFeedback = (() => {
+      const STORAGE_KEY = 'glorp_feedback_local_comments_v1';
+
+      const safeParse = (text) => {
+        if (typeof text !== 'string') return null;
+        const trimmed = text.trim();
+        if (!trimmed) return null;
+        if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return null;
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          return null;
+        }
+      };
+
+      const normalizeItems = (payload) => {
+        const source = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.comments)
+            ? payload.comments
+            : Array.isArray(payload?.data)
+              ? payload.data
+              : Array.isArray(payload?.items)
+                ? payload.items
+                : [];
+
+        return source
+          .map((item, index) => ({
+            id: item?.id ?? `${index}`,
+            name: item?.name || item?.author || item?.username || 'Anonymous',
+            text: item?.text || item?.message || item?.comment || '',
+            stars: Number(item?.stars ?? item?.rating ?? 0) || 0,
+            createdAt: item?.createdAt || item?.date || item?.time || '',
+          }))
+          .filter((item) => item.text);
+      };
+
+      const readLocal = () => {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        } catch {
+          return [];
+        }
+      };
+
+      const writeLocal = (items) => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 50)));
+        } catch {}
+      };
+
+      const starMarkup = (n) => '★★★★★'.split('').map((s, i) => `<span class="${i < n ? 'filled' : ''}">★</span>`).join('');
+
+      const itemMarkup = (item) => `
+        <article class="feedback-comment">
+          <div class="feedback-name">${String(item.name).replace(/[<>&"]/g, '')}</div>
+          <div class="feedback-text">${String(item.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+          <div class="feedback-stars">${starMarkup(item.stars || 0)}</div>
+        </article>
+      `;
+
+      async function fetchRemoteComments(endpoint) {
+        if (!endpoint) return [];
+        try {
+          const response = await fetch(endpoint, { method: 'GET', cache: 'no-store', credentials: 'omit' });
+          const text = await response.text();
+          const parsed = safeParse(text);
+          if (!parsed) throw new Error('Non-JSON response');
+          return normalizeItems(parsed);
+        } catch (error) {
+          console.warn('Feedback load fallback:', error);
+          return [];
+        }
+      }
+
+      function mount(root, options = {}) {
+        if (!root) return;
+
+        const endpoint = options.endpoint || '';
+        const secret = options.secret || '';
+        const cooldownMs = Number(options.cooldownMs || 0);
+        const cooldownKey = options.cooldownKey || 'glorp_feedback_last_submit_at';
+
+        root.innerHTML = `
+          <div class="feedback-stage">
+            <div class="feedback-inner">
+              <div class="feedback-form-wrap">
+                <form class="feedback-form" data-feedback-form>
+                  <div class="feedback-title">Feedback</div>
+                  <div class="feedback-subtitle">Share your thoughts</div>
+
+                  <input class="feedback-field" data-name type="text" maxlength="36" placeholder="Your name" autocomplete="name" />
+                  <div style="height:12px"></div>
+                  <textarea class="feedback-textarea" data-text placeholder="Write something..." maxlength="800"></textarea>
+
+                  <div class="feedback-stars-picker" data-stars-picker>
+                    ${Array.from({ length: 5 }, (_, i) => `<button class="feedback-star-btn" type="button" data-star="${i + 1}">★</button>`).join('')}
+                  </div>
+
+                  <div class="feedback-charline">
+                    <span data-count>0 / 800</span>
+                    <span data-status>READY</span>
+                  </div>
+
+                  <button class="feedback-send" type="submit" data-send>Send</button>
+                </form>
+              </div>
+
+              <div class="feedback-list-wrapper">
+                <div class="feedback-list" data-list>
+                  <div class="feedback-list-column" data-col-a></div>
+                  <div class="feedback-list-column" data-col-b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const form = root.querySelector('[data-feedback-form]');
+        const nameInput = root.querySelector('[data-name]');
+        const textInput = root.querySelector('[data-text]');
+        const countEl = root.querySelector('[data-count]');
+        const statusEl = root.querySelector('[data-status]');
+        const sendBtn = root.querySelector('[data-send]');
+        const starsButtons = Array.from(root.querySelectorAll('[data-star]'));
+        const colA = root.querySelector('[data-col-a]');
+        const colB = root.querySelector('[data-col-b]');
+        const picker = root.querySelector('[data-stars-picker]');
+
+        let selectedStars = 0;
+        let comments = [];
+        let isLoading = false;
+
+        const getCooldownUntil = () => {
+          try {
+            return Number(localStorage.getItem(cooldownKey) || 0);
+          } catch {
+            return 0;
+          }
+        };
+
+        const setCooldown = () => {
+          try {
+            localStorage.setItem(cooldownKey, String(Date.now() + cooldownMs));
+          } catch {}
+        };
+
+        const renderStars = () => {
+          starsButtons.forEach((btn) => {
+            const value = Number(btn.dataset.star || 0);
+            btn.classList.toggle('active', value <= selectedStars);
+          });
+        };
+
+        const renderComments = () => {
+          const combined = [...comments];
+          if (!combined.length) {
+            colA.innerHTML = '<div style="padding:30px 6px;color:#666;font-size:11px;letter-spacing:2px;text-transform:uppercase;">No comments yet</div>';
+            colB.innerHTML = '';
+            return;
+          }
+
+          const left = [];
+          const right = [];
+          combined.forEach((item, index) => {
+            (index % 2 === 0 ? left : right).push(itemMarkup(item));
+          });
+          colA.innerHTML = left.join('');
+          colB.innerHTML = right.join('');
+        };
+
+        const syncCount = () => {
+          countEl.textContent = `${textInput.value.length} / 800`;
+        };
+
+        starsButtons.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            selectedStars = Number(btn.dataset.star || 0);
+            renderStars();
+          });
+        });
+
+        textInput.addEventListener('input', syncCount);
+        syncCount();
+        renderStars();
+
+        picker.addEventListener('click', (event) => event.preventDefault());
+
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          const now = Date.now();
+          const cooldownUntil = getCooldownUntil();
+          if (cooldownUntil && now < cooldownUntil) {
+            const remaining = Math.ceil((cooldownUntil - now) / 1000);
+            statusEl.textContent = `WAIT ${remaining}S`;
+            return;
+          }
+
+          const name = nameInput.value.trim().slice(0, 36) || 'Anonymous';
+          const text = textInput.value.trim().slice(0, 800);
+          if (!text) {
+            statusEl.textContent = 'WRITE SOMETHING';
+            return;
+          }
+
+          const payload = {
+            name,
+            text,
+            stars: selectedStars,
+            secret,
+          };
+
+          sendBtn.disabled = true;
+          statusEl.textContent = 'SENDING...';
+
+          try {
+            if (endpoint) {
+              await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+            }
+          } catch (error) {
+            console.warn('Feedback submit fallback:', error);
+          }
+
+          const local = readLocal();
+          local.unshift({
+            id: `local-${Date.now()}`,
+            name,
+            text,
+            stars: selectedStars,
+            createdAt: new Date().toISOString(),
+          });
+          writeLocal(local);
+
+          comments = [...local, ...comments].slice(0, 40);
+          renderComments();
+
+          textInput.value = '';
+          selectedStars = 0;
+          renderStars();
+          syncCount();
+          statusEl.textContent = 'SENT';
+          setCooldown();
+
+          setTimeout(() => {
+            statusEl.textContent = 'READY';
+          }, 1400);
+
+          sendBtn.disabled = false;
+        });
+
+        (async () => {
+          statusEl.textContent = 'LOADING...';
+          const remote = await fetchRemoteComments(endpoint);
+          const local = readLocal();
+          comments = [...remote, ...local].slice(0, 40);
+          renderComments();
+          statusEl.textContent = 'READY';
+        })();
+      }
+
+      return { mount };
+    })();
+  </script>
 </body>
 </html>
