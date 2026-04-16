@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLORP – Free Pixel Art to SVG Converter (PNG to Vector Online)</title>
-  <meta name="description" content="High-quality pixel art to Perfect and Clean SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
-  <meta name="keywords" content="pixel art to svg, png to svg converter, pixel to vector, svg generator">
+  <title>Pixel Art to SVG Converter | GLORP</title>
+  <meta name="description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload, made for artists, game asset creators, NFT/collectible makers, poster/print work, and developers.">
+  <meta name="keywords" content="pixel art to svg converter, png to svg converter, pixel to vector, svg generator, GLORP">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="shortcut icon" href="/favicon.png">
   <link rel="canonical" href="https://glorp.art/" />
-  <meta property="og:title" content="GLORP">
-  <meta property="og:description" content="Free Online Pixel Art to SVG Converter">
+  <meta property="og:title" content="Pixel Art to SVG Converter | GLORP">
+  <meta property="og:description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload.">
   <meta property="og:image" content="https://glorp.art/preview.png">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://glorp.art/">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="GLORP">
-  <meta name="twitter:description" content="Free Online Pixel Art to SVG Converter">
+  <meta name="twitter:title" content="Pixel Art to SVG Converter | GLORP">
+  <meta name="twitter:description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload.">
   <meta name="twitter:image" content="https://glorp.art/preview.png">
   
   <script type="application/ld+json">
@@ -329,9 +329,9 @@
   </style>
 </head>
 <body class="rules-active">
-  <h1 class="sr-only">Free Online Pixel Art to SVG Converter</h1>
+  <h1 class="sr-only">Pixel Art to SVG Converter</h1>
   <noscript>
-  <h1>GLORP - Pixel Art to SVG Converter</h1>
+  <h1>Pixel Art to SVG Converter | GLORP</h1>
   <p>Convert pixel art images to clean SVG online. Works directly in your browser.</p>
 </noscript>
 
@@ -362,8 +362,8 @@
     <div class="header-left"><span class="header-title">glorp</span></div>
     <nav>
       <a href="#app">Engine</a>
+      <a href="#logic">About</a>
       <a href="#compare">Modes</a>
-      <a href="#logic">Core</a>
       <a href="#faq">FAQ</a>
       <a href="#contact">Links</a>
       <a href="#feedback">Feedback</a>
@@ -403,6 +403,17 @@
     <div id="status-msg"></div>
   </section>
 
+  <section id="logic">
+    <h2 style="font-size:42px;font-weight:800;margin-bottom:30px">What is GLORP?</h2>
+    <div class="tech-grid" style="grid-template-columns:1fr;max-width:860px;">
+      <div class="tech-item" style="padding:28px 28px 24px;background:rgba(22,22,22,0.72);border:1px solid rgba(255,255,255,0.05);border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+        <p class="reveal-para visible" style="opacity:1;transform:none;color:#e0e0e0;font-size:18px;line-height:1.85;margin:0;text-align:left;max-width:100%;">
+          GLORP is an online tool for converting pixel art to SVG. It works locally in your browser, so your images stay on your device and are not sent to a server. It is useful for artists, game asset creators, NFT and collectible makers, poster and print work, and developers.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section id="compare">
     <div class="comp-row">
       <div class="vid-container">
@@ -426,36 +437,6 @@
       <div class="comp-info" style="text-align:right">
         <h2>Lego Mode</h2>
         <p>Exact 1:1 pixel-to-rect representation. In v4.0.0, we've implemented a performance detection overlay that warns you before generating heavy SVGs, preventing browser lag on massive grids.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="logic">
-    <h2>Engine Technical Overview</h2>
-    <div class="tech-grid">
-      <div class="tech-item">
-        <h3>Pixel classification & grid model</h3>
-        <p class="reveal-para">Input raster is read into a dense uint32 grid where each cell encodes RGBA. Fully transparent pixels are ignored during meshing. This compact layout enables vectorization algorithms to operate directly on a single numeric matrix for cache- and SIMD-friendly operations.</p>
-      </div>
-      <div class="tech-item">
-        <h3>Edge detection</h3>
-        <p class="reveal-para">Using a two-pass discrete edge-finder we construct horizontal and vertical edge maps. Edge types are encoded as directional markers (clockwise / anticlockwise) which the path extractor consumes to produce closed contours without redundant vertices.</p>
-      </div>
-      <div class="tech-item">
-        <h3>Greedy contour meshing</h3>
-        <p class="reveal-para">The engine performs greedy scans that consolidate adjacent runs of matching edges into compact path commands (hN / vN). This minimizes SVG node count by merging collinear runs and eliminating one-pixel noise through simple heuristics to output a <strong>clean SVG</strong>.</p>
-      </div>
-      <div class="tech-item">
-        <h3>Path extraction & safety guards</h3>
-        <p class="reveal-para">Contour traversal is implemented with boundary checks and fallbacks to prevent out-of-bounds access on irregular shapes. The browser engine simulates performance limits and warns before emitting extremely large vectors to protect the UI thread.</p>
-      </div>
-      <div class="tech-item">
-        <h3>Raster export (WebP)</h3>
-        <p class="reveal-para">Lossless WebP export path preserves alpha and applies browser-native encoding via canvas.toDataURL('image/webp'). This path is used when the user prefers raster output over vector conversion.</p>
-      </div>
-      <div class="tech-item">
-        <h3>Batch & UI integration</h3>
-        <p class="reveal-para">Files are queued in a lightweight drawer and processed sequentially inside a Pyodide worker context. Downloads are triggered per-file; the engine clears its queue after completion and restores scroll behavior reliably across devices.</p>
       </div>
     </div>
   </section>
