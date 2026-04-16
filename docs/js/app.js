@@ -124,6 +124,32 @@ function clearAll() {
 window.removeFile = removeFile;
 window.clearAll = clearAll;
 
+function initRulesOverlay() {
+  const overlay = $('#rules-overlay');
+  const button = $('#rules-dismiss');
+  if (!overlay || !button) return;
+
+  let dismissed = false;
+  const closeRules = () => {
+    if (dismissed) return;
+    dismissed = true;
+    overlay.classList.add('dismissed');
+    document.body.classList.remove('rules-active');
+    setTimeout(() => {
+      try {
+        overlay.remove();
+      } catch (error) {
+      }
+    }, 850);
+  };
+
+  button.addEventListener('click', closeRules);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeRules();
+  });
+}
+
+
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -848,6 +874,7 @@ function initLogoAndAppButton() {
 }
 
 function bootstrap() {
+  initRulesOverlay();
   initLoadingScreen();
   initLogoAndAppButton();
   initDragAndDrop();
