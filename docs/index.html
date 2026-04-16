@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pixel Art to SVG Converter | GLORP</title>
   <meta name="description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload, made for artists, game asset creators, NFT/collectible makers, poster/print work, and developers.">
   <meta name="keywords" content="pixel art to svg converter, png to svg converter, pixel to vector, svg generator, GLORP">
@@ -215,8 +215,11 @@
         opacity:0;
         transform:translate3d(0,-120px,0) rotate(var(--rot-start, 0deg)) scale(.78);
       }
-      10%{
-        opacity:.95;
+      12%{
+        opacity:1;
+      }
+      88%{
+        opacity:1;
       }
       100%{
         opacity:0;
@@ -792,7 +795,6 @@
 
         let selectedStars = 0;
         let comments = [];
-        let isLoading = false;
 
         const getCooldownUntil = () => {
           try {
@@ -992,15 +994,16 @@
           clearInterval(rainTimer);
           rainTimer = null;
         }
-        Array.from(rainLayer.children).forEach((node) => node.remove());
       };
 
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             startRain();
+            logicSection.classList.add('revealed-icons');
           } else {
             stopRain();
+            logicSection.classList.remove('revealed-icons');
           }
         });
       }, { threshold: 0.2 });
