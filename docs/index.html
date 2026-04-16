@@ -3,9 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLORP – Free Pixel Art to SVG Converter</title>
-  <meta name="description" content="High-quality pixel art to SVG converter. Process PNG to SVG locally in your browser.">
+  <title>GLORP – Free Pixel Art to SVG Converter (PNG to Vector Online)</title>
+  <meta name="description" content="High-quality pixel art to Perfect and Clean SVG vector converter. Batch process PNG to SVG locally in your browser using greedy meshing optimization.">
+  <meta name="keywords" content="pixel art to svg, png to svg converter, pixel to vector, svg generator">
+  <meta name="theme-color" content="#0a0a0a">
   <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="shortcut icon" href="/favicon.png">
+  <link rel="canonical" href="https://glorp.art/" />
+  <meta property="og:title" content="GLORP">
+  <meta property="og:description" content="Free Online Pixel Art to SVG Converter">
+  <meta property="og:image" content="https://glorp.art/preview.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://glorp.art/">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GLORP">
+  <meta name="twitter:description" content="Free Online Pixel Art to SVG Converter">
+  <meta name="twitter:image" content="https://glorp.art/preview.png">
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "GLORP",
+    "operatingSystem": "Windows, macOS, Linux, Android, iOS",
+    "applicationCategory": "DesignApplication",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "description": "High-performance pixel art to SVG converter using Greedy Meshing optimization. Process images locally and securely in your browser.",
+    "author": { "@type": "Person", "name": "ZackGphom" }
+  }
+  </script>
+
+  <!-- Temporary Yandex Metrika Webvisor setup for collecting interface usability, interaction, and behavior data. It will be removed in one week, on April 1, 2026. -->
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+      (function(m,e,t,r,i,k,a){
+          m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+          m[i].l=1*new Date();
+          for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+          k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=108224671', 'ym');
+
+      ym(108224671, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/108224671" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <!-- /Yandex.Metrika counter -->
+
   <style>
     :root{
       --bg:#0a0a0a;
@@ -15,128 +58,439 @@
       --accent:#ffffff;
       --radius:14px;
       --ease:cubic-bezier(0.19,1,0.22,1);
+      --reveal-translate:64px;
+      --reveal-scale:0.92;
+      --para-translate:36px;
+      --para-scale:0.94;
     }
-    html{scroll-behavior:smooth}
+    html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
     *{box-sizing:border-box;-webkit-user-select:none;user-select:none;outline:none}
     body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
     
-    #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;justify-content:center;align-items:center;transition:opacity 1s var(--ease),visibility 1s}
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+    .hero-subtitle { max-width: 720px; margin: 18px auto 0; color: #9a9a9a; font-size: 14px; line-height: 1.7; font-weight: 500; letter-spacing: 0.2px; }
+    
+    #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 1s var(--ease),visibility 1s}
     #loading-screen.loaded{opacity:0;visibility:hidden}
+    .loading-dots{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
+    .dot{width:6px;height:6px;background:#333;border-radius:50%;animation:blink 1.4s infinite both}
+    .dot:nth-child(2){animation-delay:.2s}
+    .dot:nth-child(3){animation-delay:.4s}
+    @keyframes blink{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
+    @keyframes headerGradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
     
-    #rules-modal{position:fixed;inset:0;z-index:9998;display:flex;justify-content:center;align-items:center;background:rgba(10,10,10,0.85);transition:opacity 0.5s}
-    #rules-modal.hidden{opacity:0;visibility:hidden}
-    .rules-content{background:rgba(22,22,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);padding:60px 40px;display:flex;flex-direction:column;align-items:center;text-align:center;max-width:500px;width:90%}
-    .rules-content h2{font-size:42px;font-weight:900;letter-spacing:4px;margin:0 0 30px 0;text-transform:uppercase}
-    .rules-content p{color:#888;margin-bottom:40px;line-height:1.6}
-    #btn-got-it{width:200px;height:50px;background:var(--accent);color:#000;border:none;border-radius:12px;font-weight:900;cursor:pointer;text-transform:uppercase}
-
-    header{position:fixed;top:20px;left:50%;width:calc(100vw - 40px);height:56px;transform:translateX(-50%);background:rgba(22,22,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);z-index:1000;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;transition:0.5s}
-    .header-title{font-weight:900;font-size:16px;letter-spacing:2px;text-transform:uppercase}
-    nav{display:flex;gap:20px}
-    nav a{color:#888;text-decoration:none;font-size:12px;font-weight:700;text-transform:uppercase}
-    nav a:hover{color:#fff}
-
-    section{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 20px;opacity:0;transform:translateY(30px);transition:0.9s var(--ease)}
-    section.revealed{opacity:1;transform:translateY(0)}
-
-    .hero-container{display:flex;width:100%;max-width:1100px;gap:40px;align-items:center;justify-content:center}
-    .hero-text-side{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center}
-    .hero-text-side img{height:120px;margin-bottom:20px}
-    .hero-text-side h1{font-size:28px;font-weight:900;text-transform:uppercase;margin:0;letter-spacing:2px}
+    header{position:fixed;top:20px;left:50%;width:calc(100vw - 40px);height:56px;transform:translateX(-50%);background:rgba(22,22,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);z-index:1000;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;overflow:hidden;box-sizing:border-box;transition:transform 1.45s var(--ease),opacity 1.45s var(--ease),background 1.45s var(--ease),padding 1.45s var(--ease),width 1.45s var(--ease),border-color 1.45s var(--ease),box-shadow 1.45s var(--ease);transform-origin:center center;will-change:width,transform,opacity,padding}
+    header.compact{width:min(700px,calc(100vw - 40px));padding:0 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.06)}
+    header.compact .header-left,header.compact .header-right{opacity:1;transform:none;pointer-events:auto}
+    header.compact nav{width:auto;max-width:none;min-width:0;margin:0;padding:0;opacity:1;overflow:hidden;pointer-events:auto;transform:none;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
+    header.files-hidden{width:0;padding:0;opacity:0;border-color:transparent;background:rgba(22,22,22,0);pointer-events:none}
+    header.files-hidden nav,header.files-hidden .header-right,header.files-hidden .header-left{opacity:0;transform:scaleX(0.2);pointer-events:none}
+    .header-left{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
+    .header-title{
+      font-weight:900;
+      font-size:16px;
+      letter-spacing:2px;
+      text-transform:uppercase;
+      background:linear-gradient(90deg,#ffffff 0%,#b8b8b8 18%,#f7f7f7 36%,#7f7f7f 54%,#ffffff 72%,#d7d7d7 100%);
+      background-size:300% 100%;
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      -webkit-text-fill-color:transparent;
+      animation:headerGradientShift 12s ease-in-out infinite;
+      transition:transform 1.45s var(--ease),font-size 1.45s var(--ease),opacity 1.45s var(--ease),filter 1.45s var(--ease);
+      filter:drop-shadow(0 0 8px rgba(255,255,255,0.06));
+    }
+    nav{display:flex;gap:18px;justify-content:center;align-items:center;min-width:0;overflow:hidden;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
+    nav a{color:#888;text-decoration:none;font-size:12px;font-weight:700;text-transform:uppercase;padding:6px 8px}
+    nav a:hover{color:var(--accent)}
+    .header-right{display:flex;justify-content:flex-end;align-items:center;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
+    .btn-support-head{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);color:var(--text);padding:8px 18px;border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;text-decoration:none;border:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(0,0,0,0.14);transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform} .btn-support-head:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.1);box-shadow:0 14px 34px rgba(0,0,0,0.24);transform:translateY(-1px) scale(1.035);color:#fff} .btn-support-head:active{transform:translateY(1px) scale(0.98);box-shadow:0 8px 18px rgba(0,0,0,0.18)}
+    section{min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 20px;text-align:center;opacity:0;transform:translateY(var(--reveal-translate)) scale(var(--reveal-scale));transition:opacity .9s var(--ease),transform .9s var(--ease);will-change:transform,opacity}
+    section.revealed{opacity:1;transform:translateY(0) scale(1)}
+    #logo-big{height:160px;margin-bottom:40px;transform-origin:center center;will-change:transform;transition:transform .78s cubic-bezier(.16,1,.3,1),filter .22s var(--ease)}
+    #logo-big.logo-hovered{transform:translateY(-5px) rotate(-1deg) scale(1.03)}
+    .workflow-container{width:100%;display:flex;flex-direction:column;align-items:center}
+    #btn-select,#btn-convert{width:240px;height:56px;background:var(--light);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);text-transform:uppercase;letter-spacing:1px;will-change:transform,box-shadow,background,filter}
+    #btn-select:hover{background:var(--hover);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.06)}
+    #btn-select:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
+    #btn-convert{background:var(--accent);color:#000}
+    #btn-convert:hover{background:#f3f3f3;transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.03)}
+    #btn-convert:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
+    .hint{font-size:10px;color:#444;margin-top:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+    #convert-block{display:none;opacity:0;transform:translateY(10px);transition:.5s var(--ease)}
+    #convert-block.active{display:block;opacity:1;transform:translateY(0)}
+    .mode-tabs{margin-top:25px;display:flex;gap:18px;justify-content:center}
+    .mode-tab{font-size:12px;font-weight:800;color:#888;cursor:pointer;text-transform:none;padding:6px 8px;border-radius:6px;transition:.18s;user-select:none}
+    .mode-tab:hover{color:var(--accent)}
+    .mode-tab.active{color:var(--accent);text-shadow:0 0 10px rgba(255,255,255,0.12);background:rgba(255,255,255,0.02)}
+    #drop-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.9);z-index:2000;display:flex;justify-content:center;align-items:center;opacity:0;visibility:hidden;transition:.3s;pointer-events:none}
+    #drop-overlay.visible{opacity:1;visibility:visible;pointer-events:auto}
+    #drop-overlay img{width:320px;height:auto;image-rendering:pixelated}
+    #file-drawer{position:fixed;right:-300px;top:100px;bottom:100px;width:280px;background:var(--light);border-radius:20px 0 0 20px;border:1px solid rgba(255,255,255,0.05);z-index:1100;transition:.6s var(--ease);display:flex;flex-direction:column;padding:20px}
+    #file-drawer.open{right:0}
+    .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+    .drawer-title{font-size:10px;font-weight:900;color:#555;letter-spacing:1px}
+    .btn-clear{background:none;border:none;color:#ff4444;font-size:9px;font-weight:800;cursor:pointer;text-transform:uppercase}
+    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0}
+    #file-list li{font-size:11px;padding:12px;background:#0f0f0f;margin-bottom:8px;border-radius:8px;color:#888;display:flex;justify-content:space-between;align-items:center}
+    .remove-file{color:#444;cursor:pointer;font-weight:bold;padding:0 5px;transition:.2s;font-size:14px}
+    .remove-file:hover{color:#fff}
+    .comp-row{width:100%;max-width:1100px;display:flex;align-items:center;gap:80px;margin-bottom:120px}
+    .vid-container{flex:1.3}
+    .vid-container video{width:100%;display:block;border-radius:20px;image-rendering:pixelated;box-shadow:0 40px 80px -20px rgba(0,0,0,0.6);outline:none}
+    .comp-info{flex:1;text-align:left}
+    .comp-info h2{font-size:36px;margin-bottom:20px;font-weight:800}
+    .comp-info p{color:#888;line-height:1.8;font-size:15px}
+    #logic h2{font-size:42px;margin-bottom:30px;font-weight:800}
+    .tech-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:1000px;text-align:left;margin-top:40px}
+    .tech-item h3{font-size:14px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+    .tech-item p{font-size:15px;color:#888;line-height:1.6;opacity:0;transform:translateY(var(--para-translate)) scale(var(--para-scale));transition:opacity .75s var(--ease),transform .75s var(--ease);will-change:transform,opacity}
+    .tech-item p.visible{opacity:1;transform:translateY(0) scale(1)}
+    .faq-grid{width:100%;max-width:550px;display:flex;flex-direction:column;gap:12px;text-align:left}
+    .faq-card{background:var(--light);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
+    .faq-btn{width:100%;padding:22px 25px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform}
+    .faq-dot{width:7px;height:7px;background:#333;border-radius:50%}
+    .faq-card.open .faq-dot{background:var(--accent);box-shadow:0 0 10px var(--accent)}
+    .faq-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.05)}
+    .faq-btn:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
+    .faq-ans{max-height:0;padding:0 25px;color:#888;font-size:13px;line-height:1.7;transition:max-height 0.5s var(--ease), padding 0.5s var(--ease), opacity 0.5s var(--ease);overflow:hidden;opacity:0}
+    .faq-card.open .faq-ans{max-height:200px;padding:14px 25px 25px;opacity:1}
+    #contact{padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+    .links{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap}
+    .icon-link{display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:14px;background:rgba(255,255,255,0.03);transition:.18s;text-decoration:none;color:inherit}
+    .icon-link svg{width:32px;height:32px;fill:white;opacity:0.75;transition:.18s}
+    .icon-link:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.6);background:rgba(255,255,255,0.08)}
+    .icon-link:hover svg{opacity:1}
+    footer{width:100%;padding:40px 20px;border-top:1px solid #161616;color:#444;font-size:11px;font-weight:800;letter-spacing:2px;text-align:center;display:flex;justify-content:center}
+    #status-msg{margin-top:30px;font-size:10px;color:#555;font-weight:900;letter-spacing:3px}
+    #toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(20,20,20,0.95);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:transform .35s var(--ease),opacity .35s var(--ease);z-index:3000;font-weight:800;letter-spacing:.6px;font-size:13px}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    #toast.success{border:1px solid rgba(100,255,180,0.12)}
+    #toast.error{border:1px solid rgba(255,100,100,0.12)}
+    #bloom{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(20px) scaleX(0.95);width:140%;height:80px;pointer-events:none;z-index:1200;background:radial-gradient(ellipse at center bottom,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 22%,rgba(0,0,0,0) 60%);filter:blur(18px) saturate(110%);opacity:.85;border-radius:50% 50% 0 0 / 100% 100% 0 0;transition:transform .35s var(--ease),height .35s var(--ease),opacity .35s var(--ease);will-change:transform,height,opacity}
     
-    .hero-upload-side{flex:1;display:flex;justify-content:center;position:relative;min-height:300px}
-    .upload-box{width:100%;max-width:400px;background:rgba(255,255,255,0.02);border:2px dashed rgba(255,255,255,0.1);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;transition:0.5s var(--ease)}
-    .upload-box.active-files{border-style:solid;border-color:rgba(255,255,255,0.05);background:rgba(255,255,255,0.03)}
-    
-    #btn-select,#btn-convert{width:220px;height:54px;border-radius:12px;font-weight:800;cursor:pointer;text-transform:uppercase;border:none;transition:0.3s}
-    #btn-select{background:var(--light);color:#fff}
-    #btn-convert{background:var(--accent);color:#000;margin-top:20px}
-    .drop-hint{font-size:11px;color:#555;margin-top:15px;text-transform:uppercase;font-weight:800;letter-spacing:1px}
+#feedback-root{position:relative;width:100%;min-height:100vh;overflow:visible}
+#feedback-root .feedback-stage{position:relative;width:100%;padding:clamp(36px,6vw,80px) 0 56px;display:flex;justify-content:center;align-items:center}
+#feedback-root .feedback-inner{width:100%;max-width:1400px;display:flex;flex-direction:column;align-items:center;gap:30px;padding:0 20px}
+#feedback-root .feedback-form-wrap{width:100%;display:flex;justify-content:center;pointer-events:auto}
+#feedback-root .feedback-form{width:min(460px, calc(100vw - 32px));min-height:560px;border-radius:28px;background:rgba(22,22,22,0.7);border:1px solid rgba(255,255,255,0.05);box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:40px 32px 38px;display:flex;flex-direction:column;justify-content:flex-start;transition:all .8s var(--ease);box-sizing:border-box}
+#feedback-root .feedback-title{font-size:15px;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,.94);margin:0 0 8px;text-align:center}
+#feedback-root .feedback-subtitle{font-size:9px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.48);text-align:center;margin-bottom:18px}
+#feedback-root .feedback-field,#feedback-root .feedback-textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;color:rgba(255,255,255,.94);padding:14px 16px;font-size:13px;outline:none;transition:transform .28s var(--ease),background .28s var(--ease),border-color .28s var(--ease),box-shadow .28s var(--ease),filter .28s var(--ease)}
+#feedback-root .feedback-field::placeholder,#feedback-root .feedback-textarea::placeholder{color:rgba(255,255,255,.34)}
+#feedback-root .feedback-field:focus,#feedback-root .feedback-textarea:focus{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);box-shadow:0 0 0 3px rgba(255,255,255,.04)}
+#feedback-root .feedback-textarea{min-height:160px;resize:none}
+#feedback-root .feedback-stars-picker{display:flex;justify-content:center;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+#feedback-root .feedback-star-btn{width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.24);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .22s var(--ease)}
+#feedback-root .feedback-star-btn:hover{transform:translateY(-2px) scale(1.04);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);box-shadow:0 10px 24px rgba(0,0,0,.12);color:rgba(255,255,255,.9)}
+#feedback-root .feedback-star-btn.active{color:rgba(255,255,255,.96);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
+#feedback-root .feedback-charline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.5)}
+#feedback-root .feedback-send{width:100%;margin-top:14px;background:rgba(255,255,255,.92);color:#111;border:none;border-radius:16px;padding:14px 16px;font-size:10px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease)}
+#feedback-root .feedback-send:hover{transform:translateY(-3px) scale(1.015);background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.14);filter:brightness(1.02)}
+#feedback-root .feedback-send:active{transform:translateY(1px) scale(.985);box-shadow:0 6px 16px rgba(0,0,0,.1)}
+#feedback-root .feedback-send:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
 
-    .file-list-container{width:100%;margin-top:30px;max-height:200px;overflow-y:auto}
-    .file-item{background:rgba(0,0,0,0.2);padding:10px 15px;border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;font-size:12px;align-items:center}
-    .file-item span{color:#888}
-    .remove-btn{color:#ff4444;cursor:pointer;font-weight:900}
+#feedback-root .feedback-list-wrapper{position:relative;width:100%;max-width:1400px;margin-top:30px;overflow:visible;transition:max-height 1.2s cubic-bezier(0.19,1,0.22,1)}
+#feedback-root .feedback-list{display:flex;gap:20px;width:100%;align-items:flex-start;margin:0;padding:0}
+#feedback-root .feedback-list-column{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px}
+@media (max-width: 1024px){#feedback-root .feedback-list{gap:16px}}
+@media (max-width: 600px){#feedback-root .feedback-list{display:block}}
+@media (max-width: 600px){#feedback-root .feedback-list-column{display:block}}
 
-    .mode-tabs{margin-top:30px;display:flex;gap:15px}
-    .mode-tab{font-size:12px;font-weight:800;color:#555;cursor:pointer;text-transform:uppercase;padding:8px 16px;border-radius:8px;transition:0.3s}
-    .mode-tab.active{color:#fff;background:rgba(255,255,255,0.05)}
+#feedback-root .feedback-comment{width:100%;background:rgba(22,22,22,0.7);border:1px solid rgba(255,255,255,0.05);border-radius:18px;padding:18px 18px 16px;box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin:0;display:block;transition:all .34s var(--ease);transform-origin:center center;will-change:transform,opacity,filter}
+#feedback-root .feedback-comment:hover{transform:translateY(-2px) scale(1.01);background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);filter:brightness(1.05);box-shadow:0 14px 34px rgba(0,0,0,0.24)}
+#feedback-root .feedback-name{font-size:10px;line-height:1.1;letter-spacing:.22em;font-weight:900;text-transform:uppercase;color:rgba(255,255,255,.76);margin-bottom:10px}
+#feedback-root .feedback-text{color:rgba(255,255,255,.9);font-size:14px;line-height:1.52;white-space:pre-wrap;word-break:break-word}
+#feedback-root .feedback-stars{display:flex;gap:4px;align-items:center;flex:0 0 auto;margin-top:12px}
+#feedback-root .feedback-stars span{font-size:12px;line-height:1;color:rgba(255,255,255,.22)}
+#feedback-root .feedback-stars span.filled{color:rgba(255,255,255,.9)}
 
-    .centered-info{max-width:800px;text-align:center}
-    .centered-info h2{font-size:36px;margin-bottom:20px}
-    .centered-info p{color:#888;line-height:1.7}
+#feedback-root .feedback-mask{position:absolute;bottom:0;left:0;right:0;height:350px;background:linear-gradient(to top, var(--bg) 0%, rgba(10,10,10,0) 100%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:30px;pointer-events:none;transition:opacity 0.6s var(--ease), visibility 0.6s;z-index:10}
+#feedback-root .feedback-mask.hidden{opacity:0;visibility:hidden;pointer-events:none}
+#feedback-root .feedback-mask.expanded{background:linear-gradient(to top, rgba(10,10,10,0) 0%, rgba(10,10,10,0) 100%)}
+#feedback-root .feedback-more{pointer-events:auto;background:rgba(22,22,22,0.9);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.24);color:rgba(255,255,255,.92);border-radius:999px;padding:14px 28px;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#feedback-root .feedback-more:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff}
 
-    .lang-toggle{position:fixed;bottom:25px;right:25px;width:50px;height:50px;border-radius:50%;background:rgba(22,22,22,0.8);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);color:#fff;font-weight:900;cursor:pointer;z-index:5000;display:flex;align-items:center;justify-content:center}
+@media (max-width: 900px){
+      .tech-grid{grid-template-columns:1fr}
+      .comp-row{flex-direction:column;gap:30px}
+      #file-drawer{display:none}
+      #bloom{height:50px;width:200%}
 
-    #drop-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.9);z-index:6000;display:none;justify-content:center;align-items:center}
-    #drop-overlay img{width:200px;image-rendering:pixelated}
+      #main-header{
+        top: 10px;
+        left: 50%;
+        width: calc(100vw - 16px);
+        height: auto;
+        min-height: 52px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto auto;
+        column-gap: 10px;
+        row-gap: 8px;
+        align-items: center;
+      }
 
-    @media (max-width: 768px) {
-      .hero-container{flex-direction:column}
-      header{grid-template-columns: 1fr auto}
-      nav{display:none}
+      #main-header.compact{
+        width: calc(100vw - 16px);
+        padding: 8px 10px;
+      }
+
+      .header-left{
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+      }
+
+      .header-title{
+        font-size: 14px;
+        letter-spacing: 1.6px;
+      }
+
+      nav{
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+        justify-content: flex-start;
+        gap: 12px;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding: 0 0 2px 0;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      nav::-webkit-scrollbar{
+        display: none;
+      }
+
+      nav a{
+        font-size: 10px;
+        padding: 4px 0;
+      }
+
+      .header-right{
+        grid-column: 3;
+        grid-row: 1;
+        justify-content: flex-end;
+      }
+
+      .btn-support-head{
+        padding: 6px 9px;
+        font-size: 8px;
+        border-radius: 8px;
+        white-space: nowrap;
+      }
+
+      .icon-link{width:74px;height:74px}
+    }
+
+    @media (max-width: 480px){
+      #main-header{
+        width: calc(100vw - 12px);
+        padding: 7px 8px;
+        border-radius: 11px;
+      }
+
+      nav{
+        gap: 10px;
+      }
+
+      nav a{
+        font-size: 9px;
+      }
+
+      .btn-support-head{
+        padding: 6px 8px;
+        font-size: 7px;
+      }
     }
   </style>
 </head>
 <body>
+  <h1 class="sr-only">Free Online Pixel Art to SVG Converter</h1>
+  <noscript>
+  <h1>GLORP - Pixel Art to SVG Converter</h1>
+  <p>Convert pixel art images to clean SVG online. Works directly in your browser.</p>
+</noscript>
 
-<div id="loading-screen">Loading...</div>
-
-<div id="rules-modal">
-  <div class="rules-content">
-    <h2>Rules</h2>
-    <p>Upload your pixel art, choose a conversion mode, and get a clean SVG vector file instantly. No data leaves your browser.</p>
-    <button id="btn-got-it">Got it</button>
+  <div id="loading-screen">
+    <div style="font-weight:900;font-size:10px;letter-spacing:5px;color:#333;text-transform:uppercase">STARTING ENGINE</div>
+    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
-</div>
 
-<header id="main-header">
-  <div class="header-title">GLORP</div>
-  <nav>
-    <a href="#app">Convert</a>
-    <a href="#about">About</a>
-    <a href="#faq">FAQ</a>
-  </nav>
-  <div style="text-align:right"><a href="#" class="header-title" style="text-decoration:none;font-size:10px">Support</a></div>
-</header>
+  <div id="drop-overlay"><img src="DropUrStuffHere.png" alt="Drop Here" decoding="async"></div>
 
-<section id="app" class="revealed">
-  <div class="hero-container">
-    <div class="hero-text-side">
-      <img src="logo.png" alt="Glorp Logo">
-      <h1>Pixel Art to SVG Converter</h1>
+  <header id="main-header">
+    <div class="header-left"><span class="header-title">glorp</span></div>
+    <nav>
+      <a href="#app">Engine</a>
+      <a href="#compare">Modes</a>
+      <a href="#logic">Core</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Links</a>
+      <a href="#feedback">Feedback</a>
+    </nav>
+    <div class="header-right">
+      <a class="btn-support-head" href="https://www.donationalerts.com/r/zackgphom" target="_blank" rel="noopener noreferrer">Support</a>
     </div>
-    <div class="hero-upload-side">
-      <div class="upload-box" id="upload-zone">
-        <div id="initial-upload-ui">
-          <button id="btn-select">Select File</button>
-          <div class="drop-hint">or drag and drop</div>
-        </div>
-        <div id="active-upload-ui" style="display:none; width:100%">
-          <div class="file-list-container" id="file-list"></div>
-          <div class="mode-tabs">
-            <div class="mode-tab active" data-mode="monolith">Monolith</div>
-            <div class="mode-tab" data-mode="lego">Lego</div>
-            <div class="mode-tab" data-mode="webp">WebP</div>
-          </div>
-          <button id="btn-convert">Convert and Save</button>
+  </header>
+
+  <div id="file-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">BATCH QUEUE</div>
+      <button class="btn-clear" onclick="clearAll()">Clear All</button>
+    </div>
+    <ul id="file-list"></ul>
+  </div>
+
+  <section id="app" class="revealed">
+    <img src="logo.png" id="logo-big" alt="GLORP logo" decoding="async" fetchpriority="high">
+    <div class="workflow-container">
+      <div id="select-block">
+        <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT ASSETS</button>
+        <div class="hint">DRAG & DROP ANYWHERE</div>
+      </div>
+
+      <div id="convert-block">
+        <button id="btn-convert">CONVERT</button>
+        <div class="mode-tabs" id="mode-tabs">
+          <div class="mode-tab active" data-mode="monolith">Monolith</div>
+          <div class="mode-tab" data-mode="lego">Lego</div>
+          <div class="mode-tab" data-mode="webp">WebP</div>
         </div>
       </div>
     </div>
-  </div>
+
+    <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+    <div id="status-msg"></div>
+  </section>
+
+  <section id="compare">
+    <div class="comp-row">
+      <div class="vid-container">
+        <video autoplay loop muted playsinline preload="metadata">
+          <source src="Monolith.webm" type="video/webm">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <div class="comp-info">
+        <h2>Monolith Mode</h2>
+        <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths using greedy meshing optimization. Version 4.0.0 improves vertex merging for even cleaner vector outputs.</p>
+      </div>
+    </div>
+    <div class="comp-row" style="flex-direction:row-reverse">
+      <div class="vid-container">
+        <video autoplay loop muted playsinline preload="metadata">
+          <source src="Lego.webm" type="video/webm">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <div class="comp-info" style="text-align:right">
+        <h2>Lego Mode</h2>
+        <p>Exact 1:1 pixel-to-rect representation. In v4.0.0, we've implemented a performance detection overlay that warns you before generating heavy SVGs, preventing browser lag on massive grids.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="logic">
+    <h2>Engine Technical Overview</h2>
+    <div class="tech-grid">
+      <div class="tech-item">
+        <h3>Pixel classification & grid model</h3>
+        <p class="reveal-para">Input raster is read into a dense uint32 grid where each cell encodes RGBA. Fully transparent pixels are ignored during meshing. This compact layout enables vectorization algorithms to operate directly on a single numeric matrix for cache- and SIMD-friendly operations.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Edge detection</h3>
+        <p class="reveal-para">Using a two-pass discrete edge-finder we construct horizontal and vertical edge maps. Edge types are encoded as directional markers (clockwise / anticlockwise) which the path extractor consumes to produce closed contours without redundant vertices.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Greedy contour meshing</h3>
+        <p class="reveal-para">The engine performs greedy scans that consolidate adjacent runs of matching edges into compact path commands (hN / vN). This minimizes SVG node count by merging collinear runs and eliminating one-pixel noise through simple heuristics to output a <strong>clean SVG</strong>.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Path extraction & safety guards</h3>
+        <p class="reveal-para">Contour traversal is implemented with boundary checks and fallbacks to prevent out-of-bounds access on irregular shapes. The browser engine simulates performance limits and warns before emitting extremely large vectors to protect the UI thread.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Raster export (WebP)</h3>
+        <p class="reveal-para">Lossless WebP export path preserves alpha and applies browser-native encoding via canvas.toDataURL('image/webp'). This path is used when the user prefers raster output over vector conversion.</p>
+      </div>
+      <div class="tech-item">
+        <h3>Batch & UI integration</h3>
+        <p class="reveal-para">Files are queued in a lightweight drawer and processed sequentially inside a Pyodide worker context. Downloads are triggered per-file; the engine clears its queue after completion and restores scroll behavior reliably across devices.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2 style="font-size:42px;font-weight:800;margin-bottom:50px">FAQ</h2>
+    <div class="faq-grid">
+      <div class="faq-card">
+        <button class="faq-btn">CAN I UPLOAD MULTIPLE FILES AT ONCE? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Yes — select several files via the file picker or drag multiple images into the page. They will be queued and processed one by one, allowing you to easily <strong>batch convert PNG to SVG</strong>.</div>
+      </div>
+
+      <div class="faq-card">
+        <button class="faq-btn">CAN I DROP A WHOLE FOLDER? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Folder uploads are supported only in the desktop app. On the web we intentionally block folders. Get the desktop version here: <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline">Itch</a>.</div>
+      </div>
+
+      <div class="faq-card">
+        <button class="faq-btn">WHAT FORMATS ARE SUPPORTED? <span class="faq-dot"></span></button>
+        <div class="faq-ans">PNG is recommended (best alpha support). JPEG and other common raster formats work too, but alpha/transparency handling is limited on those.</div>
+      </div>
+
+      <div class="faq-card">
+        <button class="faq-btn">HOW LONG DOES CONVERSION TAKE? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Conversion time depends on image size, mode and device power. Small sprites finish quickly; large images with many colors may take longer. The UI displays progress notifications and falls back to the safe 'Lego mod' if the mesher detects instability.</div>
+      </div>
+
+      <div class="faq-card">
+        <button class="faq-btn">IS EVERYTHING PROCESSED LOCALLY? <span class="faq-dot"></span></button>
+        <div class="faq-ans">Yes. We utilize <strong>local browser processing</strong> through WebAssembly (Pyodide). No image data is sent to any server.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <h2 style="font-size:30px;margin-bottom:6px">Contact & Links</h2>
+    <div class="links" role="list">
+      <a class="icon-link" href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" title="Itch.io">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24" fill="#000000" style="opacity:1;"><path  d="M16 5c-3.252 0-7.688.05-8.588.13c-1.01.607-3.01 2.901-3.03 3.497v1C4.383 10.89 5.567 12 6.638 12C7.92 12 8.99 10.93 8.99 9.668C8.99 10.93 10.03 12 11.312 12c1.293 0 2.293-1.069 2.293-2.332c0 1.262 1.09 2.332 2.383 2.332h.022c1.293 0 2.383-1.069 2.383-2.332c0 1.262 1.01 2.332 2.293 2.332s2.324-1.069 2.324-2.332c0 1.262 1.07 2.332 2.353 2.332c1.071 0 2.252-1.11 2.252-2.373v-1c-.02-.596-2.02-2.89-3.03-3.496C21.445 5.02 19.253 5 16 5m-2.45 6.742c-1.052 1.81-3.698 1.832-4.73.012c-.63 1.092-2.056 1.514-2.666 1.307c-.178 1.899-.3 11.648.992 13.283c3.797.885 14.019.866 17.708 0c1.495-1.524 1.16-11.522.992-13.283c-.61.207-2.037-.215-2.657-1.307c-1.043 1.82-3.688 1.798-4.74-.012c-.325.59-1.082 1.367-2.449 1.367a2.73 2.73 0 0 1-2.45-1.367M11.42 14c.8 0 1.53 0 2.41.98c1.45-.15 2.89-.15 4.34 0c.89-.97 1.61-.97 2.41-.97c2.58 0 3.2 3.81 4.13 7.09c.84 3.05-.28 3.13-1.67 3.13c-2.07-.08-3.22-1.58-3.22-3.09c-1.93.32-5.01.44-7.64 0c0 1.51-1.15 3.01-3.22 3.09c-1.39 0-2.51-.08-1.67-3.13c.93-3.3 1.55-7.09 4.13-7.09zM16 16.877s-1.694 1.562-2 2.107l1.107-.04v.966c0 .058.819.008.893.008c.447.017.893.033.893-.008v-.967l1.107.041c-.306-.546-2-2.107-2-2.107"/></svg>
+      </a>
+
+      <a class="icon-link" href="https://github.com/ZackGphom/GLORP" target="_blank" rel="noopener noreferrer" title="GitHub">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5c-6.3 0-11.4 5.1-11.4 11.4 0 5 3.3 9.3 7.8 10.8.6.1.8-.3.8-.6v-2c-3.2.7-3.8-1.5-3.8-1.5-.5-1.3-1.3-1.6-1.3-1.6-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.5-.3-5.2-1.3-5.2-5.6 0-1.2.4-2.2 1.2-3-.1-.3-.5-1.4.1-3 0 0 .9-.3 3 1.1.9-.2 1.8-.3 2.8-.3.9 0 1.9.1 2.8.3 2.1-1.4 3-1.1 3-1.1.6 1.6.2 2.7.1 3 .7.8 1.2 1.8 1.2 3 0 4.3-2.6 5.3-5.2 5.6.4.3.8 1 .8 2.1v3.1c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8 0-6.3-5.1-11.4-11.4-11.4z"/></svg>
+      </a>
+
+      <a class="icon-link" href="https://x.com/ZackGphom" target="_blank" rel="noopener noreferrer" title="Twitter / X">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+
+      <a class="icon-link" href="https://www.behance.net/maaxkeker" target="_blank" rel="noopener noreferrer" title="Behance">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 640 640"><path d="M185.577 119.517c18.862 0 35.847 1.642 51.331 5.008 15.52 3.236 28.63 8.752 39.757 16.24 10.996 7.512 19.476 17.516 25.748 29.989 6 12.354 9 27.862 9 46.229 0 19.878-4.476 36.355-13.512 49.63-9.118 13.24-22.358 24-40.122 32.516 24.236 6.993 42.118 19.24 54.118 36.627 11.989 17.516 17.753 38.504 17.753 63.225 0 19.996-3.886 37.11-11.469 51.615-7.748 14.634-18.248 26.492-31.11 35.634-12.993 9.236-27.993 15.992-44.753 20.363-16.642 4.346-33.756 6.626-51.45 6.626H0V119.553l185.601.012-.023-.048zm232.042 31.76h159.616v38.883l-159.616-.012v-38.883.012zm35.469 293.448c11.764 11.469 28.63 17.233 50.646 17.233 15.745 0 29.516-4.016 40.867-12.012 11.35-7.996 18.248-16.465 20.882-25.229l68.965.012c-11.126 34.347-27.874 58.749-50.859 73.5-22.642 14.753-50.35 22.241-82.5 22.241-22.524 0-42.627-3.65-60.757-10.772-18.119-7.24-33.237-17.35-45.993-30.638-12.366-13.24-22.11-28.984-28.996-47.493-6.756-18.354-10.229-38.752-10.229-60.744 0-21.367 3.52-41.245 10.477-59.623 7.122-18.52 16.878-34.359 29.87-47.753 12.98-13.382 28.229-24 46.24-31.748 17.883-7.76 37.631-11.646 59.505-11.646 24.107 0 45.225 4.642 63.356 14.126 18 9.355 32.87 21.993 44.492 37.749 11.646 15.768 19.878 33.874 25.004 54.107 5.126 20.232 6.875 41.35 5.469 63.508H433.706c0 22.359 7.512 43.76 19.358 55.1l.024.082zm89.871-149.707c-9.236-10.24-25.122-15.874-44.233-15.874-12.52 0-22.866 2.114-31.11 6.366-8.115 4.229-14.752 9.473-19.878 15.745-4.997 6.248-8.516 13.004-10.465 20.102-1.996 6.874-3.236 13.24-3.65 18.756l127.502-.012c-1.878-19.984-8.752-34.736-18.118-45.106l-.047.023zm-368.662-16.524c15.355 0 28.099-3.65 38.091-11.008 9.992-7.24 14.752-19.24 14.752-35.752 0-9.106-1.63-16.76-4.878-22.642-3.354-5.87-7.76-10.512-13.37-13.748-5.516-3.355-11.74-5.646-19.099-6.886-7.122-1.358-14.634-1.984-22.24-1.984H86.576v91.973h87.745l-.024.047zm4.748 167.59c8.528 0 16.642-.757 24.213-2.528 7.748-1.748 14.634-4.359 20.363-8.35 5.752-3.887 10.641-8.989 14.114-15.745 3.52-6.638 5.126-15.118 5.126-25.477 0-20.232-5.764-34.748-17.114-43.512-11.351-8.646-26.47-12.874-45.214-12.874H86.552V445.93l92.493-.012v.165z"/></svg>
+      </a>
+
+      <a class="icon-link" href="mailto:zackgphom@gmail.com" title="Email">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      </a>
+    </div>
+  </section>
+
+  <section id="feedback" style="min-height: 100vh; padding: 0; position: relative; overflow: hidden;">
+  <div id="feedback-root" class="w-full max-w-none mx-0"></div>
 </section>
 
-<section id="about">
-  <div class="centered-info">
-    <h2>What is GLORP?</h2>
-    <p>GLORP version 4.0 is a specialized tool for artists and developers. It uses a custom greedy meshing algorithm to turn small raster images into perfectly clean, scaleable vectors without any blur or artifacting.</p>
-  </div>
-</section>
+  <footer>
+    GLORP v4.0.0 | DEVELOPED BY ZACKGPHOM | © 2026
+  </footer>
 
-<button class="lang-toggle" id="lang-btn">EN</button>
-<input type="file" id="file-input" multiple accept="image/*" style="display:none">
-<div id="drop-overlay"><img src="logo.png"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="bloom" aria-hidden="true"></div>
 
-<script src="app.js"></script>
+  <script src="./js/app.js" defer></script>
 </body>
 </html>
