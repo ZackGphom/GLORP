@@ -1,7 +1,7 @@
 // ---------------------------------------------------------
 //  GLORP: The Pixel-to-Vector Beast v4.0.0 (Web Edition)
-//  (c) 2026 ZackGphom. All rights reserved.
-//  This code is for NON-COMMERCIAL use only.
+//  (c) 2026 ZackGphom. All rights reserved. 
+//  This code is for NON-COMMERCIAL use only. 
 //  If you use this code, you MUST credit ZackGphom.
 // ---------------------------------------------------------
 //  SPECIAL THANKS TO:
@@ -13,8 +13,11 @@ const CLOCKWISE = 1;
 const ANTICLOCKWISE = 2;
 
 const PIXEL_ART_SCALES = [2, 3, 4, 6, 8, 10, 12, 16];
+const NORMALIZE_MAX_DIMENSION = 800;
+const NORMALIZE_MAX_PIXELS = 800 * 800;
 const MIN_NORMALIZE_PIXELS = 24 * 24;
-const MAX_SAMPLE_PIXELS = 40000;
+const MAX_SAMPLE_PIXELS = 45000;
+const MAX_NORMALIZED_OUTPUT_DIMENSION = 800;
 
 function rgbaToKey(r, g, b, a) {
   return (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
@@ -46,15 +49,24 @@ function pixelOffset(x, y, width) {
   return ((y * width) + x) * 4;
 }
 
-function getPixelKey(data, offset) {
-  return rgbaToKey(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
-}
-
 function createImageDataSafe(data, width, height) {
   if (typeof ImageData === 'function') {
     return new ImageData(data, width, height);
   }
   return { data, width, height };
+}
+
+function getPixelRGBA(data, offset) {
+  return {
+    r: data[offset],
+    g: data[offset + 1],
+    b: data[offset + 2],
+    a: data[offset + 3],
+  };
+}
+
+function getPixelKey(data, offset) {
+  return rgbaToKey(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
 }
 
 function estimatePixelArtScale(imageData) {
@@ -74,18 +86,18 @@ function estimatePixelArtScale(imageData) {
 
   for (let y = 0; y < H; y += sampleStep) {
     for (let x = 0; x < W; x += sampleStep) {
-      const offset = pixelOffset(x, y, W);
-      const a = data[offset + 3];
+      const off = pixelOffset(x, y, W);
+      const a = data[off + 3];
 
       if (a > 0) {
         opaqueSamples++;
         if (a < 250) mixedAlphaSamples++;
       }
 
-      quantizedUnique.add(quantizeKey(data[offset], data[offset + 1], data[offset + 2], a));
-      if (quantizedUnique.size > 4096) break;
+      quantizedUnique.add(quantizeKey(data[off], data[off + 1], data[off + 2], a));
+      if (quantizedUnique.size > 8192) break;
     }
-    if (quantizedUnique.size > 4096) break;
+    if (quantizedUnique.size > 8192) break;
   }
 
   const uniqueRatio = quantizedUnique.size / Math.max(1, sampleCount);
@@ -96,155 +108,139 @@ function estimatePixelArtScale(imageData) {
   for (const scale of PIXEL_ART_SCALES) {
     const cellsX = Math.floor(W / scale);
     const cellsY = Math.floor(H / scale);
+
     if (cellsX < 4 || cellsY < 4) continue;
 
-    const usableW = cellsX * scale;
-    const usableH = cellsY * scale;
-    const remainderPenalty = ((W - usableW) + (H - usableH)) / Math.max(1, scale * 2);
-    const cellStepX = Math.max(1, Math.floor(cellsX / 24));
-    const cellStepY = Math.max(1, Math.floor(cellsY / 24));
+    const sampleBlocksX = Math.max(2, Math.min(12, cellsX));
+    const sampleBlocksY = Math.max(2, Math.min(12, cellsY));
+    const strideX = Math.max(1, Math.floor(cellsX / sampleBlocksX));
+    const strideY = Math.max(1, Math.floor(cellsY / sampleBlocksY));
 
-    let rowMatched = 0;
-    let rowTotal = 0;
-    let colMatched = 0;
-    let colTotal = 0;
-
-    for (let cy = 0; cy < cellsY; cy += cellStepY) {
-      const y0 = cy * scale;
-
-      for (let off = 1; off < scale; off++) {
-        const y1 = y0 + off;
-
-        for (let cx = 0; cx < cellsX; cx += cellStepX) {
-          const x = cx * scale;
-          const p0 = pixelOffset(x, y0, W);
-          const p1 = pixelOffset(x, y1, W);
-
-          if (
-            data[p0] === data[p1] &&
-            data[p0 + 1] === data[p1 + 1] &&
-            data[p0 + 2] === data[p1 + 2] &&
-            data[p0 + 3] === data[p1 + 3]
-          ) {
-            rowMatched++;
-          }
-          rowTotal++;
-        }
-      }
-    }
-
-    for (let cx = 0; cx < cellsX; cx += cellStepX) {
-      const x0 = cx * scale;
-
-      for (let off = 1; off < scale; off++) {
-        const x1 = x0 + off;
-
-        for (let cy = 0; cy < cellsY; cy += cellStepY) {
-          const y = cy * scale;
-          const p0 = pixelOffset(x0, y, W);
-          const p1 = pixelOffset(x1, y, W);
-
-          if (
-            data[p0] === data[p1] &&
-            data[p0 + 1] === data[p1 + 1] &&
-            data[p0 + 2] === data[p1 + 2] &&
-            data[p0 + 3] === data[p1 + 3]
-          ) {
-            colMatched++;
-          }
-          colTotal++;
-        }
-      }
-    }
-
-    const rowScore = rowTotal ? rowMatched / rowTotal : 0;
-    const colScore = colTotal ? colMatched / colTotal : 0;
-
-    let blockMatchedRatio = 0;
+    let totalBlockScore = 0;
     let sampledBlocks = 0;
-    const blockStepX = Math.max(1, Math.floor(cellsX / 16));
-    const blockStepY = Math.max(1, Math.floor(cellsY / 16));
 
-    for (let by = 0; by < cellsY; by += blockStepY) {
-      for (let bx = 0; bx < cellsX; bx += blockStepX) {
-        const counts = new Map();
+    for (let by = 0; by < cellsY; by += strideY) {
+      for (let bx = 0; bx < cellsX; bx += strideX) {
         const startX = bx * scale;
         const startY = by * scale;
 
-        let bestCount = 0;
-        let pxCount = 0;
+        const blockKeys = new Uint32Array(scale * scale);
+        const counts = new Map();
 
+        let idx = 0;
         for (let dy = 0; dy < scale; dy++) {
           let offset = pixelOffset(startX, startY + dy, W);
-
           for (let dx = 0; dx < scale; dx++) {
-            const key = getPixelKey(data, offset);
-            const next = (counts.get(key) || 0) + 1;
-            counts.set(key, next);
-            if (next > bestCount) bestCount = next;
+            const key = quantizeKey(
+              data[offset],
+              data[offset + 1],
+              data[offset + 2],
+              data[offset + 3]
+            );
+            blockKeys[idx++] = key;
+            counts.set(key, (counts.get(key) || 0) + 1);
             offset += 4;
-            pxCount++;
           }
         }
 
-        blockMatchedRatio += bestCount / Math.max(1, pxCount);
+        let dominantCount = 0;
+        for (const value of counts.values()) {
+          if (value > dominantCount) dominantCount = value;
+        }
+
+        let equalAdj = 0;
+        let adjChecks = 0;
+
+        for (let y = 0; y < scale; y++) {
+          const rowBase = y * scale;
+          for (let x = 1; x < scale; x++) {
+            if (blockKeys[rowBase + x] === blockKeys[rowBase + x - 1]) equalAdj++;
+            adjChecks++;
+          }
+        }
+
+        for (let y = 1; y < scale; y++) {
+          const rowBase = y * scale;
+          const prevRowBase = (y - 1) * scale;
+          for (let x = 0; x < scale; x++) {
+            if (blockKeys[rowBase + x] === blockKeys[prevRowBase + x]) equalAdj++;
+            adjChecks++;
+          }
+        }
+
+        const dominantRatio = dominantCount / (scale * scale);
+        const runScore = adjChecks ? (equalAdj / adjChecks) : 0;
+        const blockScore = (dominantRatio * 0.72) + (runScore * 0.28);
+
+        totalBlockScore += blockScore;
         sampledBlocks++;
+
+        if (sampledBlocks >= 180) break;
       }
+      if (sampledBlocks >= 180) break;
     }
 
-    const blockScore = sampledBlocks ? blockMatchedRatio / sampledBlocks : 0;
-    const divisibilityBonus = 1 - Math.min(1, Math.max(0, remainderPenalty) / Math.max(1, scale));
-    const score = (rowScore * 0.38) + (colScore * 0.38) + (blockScore * 0.24);
-    const adjustedScore = score * (0.92 + (divisibilityBonus * 0.08));
+    if (!sampledBlocks) continue;
 
-    if (!best || adjustedScore > best.score) {
+    const avgBlockScore = totalBlockScore / sampledBlocks;
+
+    let score = avgBlockScore;
+    score -= Math.min(0.18, uniqueRatio * 0.12);
+    score -= Math.min(0.12, alphaMixRatio * 0.16);
+
+    if (W % scale === 0 && H % scale === 0) {
+      score += 0.03;
+    }
+
+    if (!best || score > best.score) {
       best = {
         scale,
-        score: adjustedScore,
-        rowScore,
-        colScore,
-        blockScore,
+        score,
         uniqueRatio,
         alphaMixRatio,
-        divisibilityBonus,
+        avgBlockScore,
       };
     }
   }
 
-  if (!best) return null;
-
-  return {
-    ...best,
-    likelyPixelArt: isLikelyPixelArt(imageData, {
-      uniqueRatio,
-      alphaMixRatio,
-      best,
-    }),
-  };
+  return best;
 }
 
 function isLikelyPixelArt(imageData, stats = null) {
   const { width: W, height: H } = imageData;
-  if (W < 24 || H < 24 || W * H < MIN_NORMALIZE_PIXELS) {
+  const totalPixels = W * H;
+
+  if (W < 24 || H < 24 || totalPixels < MIN_NORMALIZE_PIXELS) {
     return false;
   }
 
   const s = stats || estimatePixelArtScale(imageData);
   if (!s) return false;
 
+  const score = s.score ?? 0;
   const uniqueRatio = s.uniqueRatio ?? 1;
   const alphaMixRatio = s.alphaMixRatio ?? 1;
-  const score = s.best?.score ?? s.score ?? 0;
 
-  if (score >= 0.72) return true;
-  if (score >= 0.66 && uniqueRatio <= 0.30 && alphaMixRatio <= 0.35) return true;
-  if (score >= 0.62 && uniqueRatio <= 0.18) return true;
+  if (score >= 0.58) return true;
+  if (score >= 0.50 && uniqueRatio <= 0.65) return true;
+  if (score >= 0.44 && uniqueRatio <= 0.45 && alphaMixRatio <= 0.45) return true;
+
+  if (totalPixels >= 320000 && score >= 0.42 && uniqueRatio <= 0.80) {
+    return true;
+  }
+
   return false;
 }
 
-function downsampleBlockMajority(data, W, H, scale) {
+function downsampleByMajority(imageData, scale) {
+  const { data, width: W, height: H } = imageData;
   const newW = Math.floor(W / scale);
   const newH = Math.floor(H / scale);
+
+  if (newW < 1 || newH < 1) {
+    return imageData;
+  }
+
   const out = new Uint8ClampedArray(newW * newH * 4);
 
   for (let by = 0; by < newH; by++) {
@@ -255,25 +251,35 @@ function downsampleBlockMajority(data, W, H, scale) {
       const counts = new Map();
       let bestKey = 0;
       let bestCount = 0;
+      let bestSample = null;
       let transparentCount = 0;
 
       for (let dy = 0; dy < scale; dy++) {
         let offset = pixelOffset(srcX, srcY + dy, W);
 
         for (let dx = 0; dx < scale; dx++) {
+          const r = data[offset];
+          const g = data[offset + 1];
+          const b = data[offset + 2];
           const a = data[offset + 3];
-          const key = a < 5
-            ? 0
-            : rgbaToKey(data[offset], data[offset + 1], data[offset + 2], a > 250 ? 255 : a);
 
-          if (key === 0) transparentCount++;
+          const key = a < 5 ? 0 : quantizeKey(r, g, b, a > 250 ? 255 : a);
 
-          const next = (counts.get(key) || 0) + 1;
-          counts.set(key, next);
+          if (key === 0) {
+            transparentCount++;
+          } else {
+            let entry = counts.get(key);
+            if (!entry) {
+              entry = { count: 0, r, g, b, a: a > 250 ? 255 : a };
+              counts.set(key, entry);
+            }
+            entry.count++;
 
-          if (next > bestCount) {
-            bestCount = next;
-            bestKey = key;
+            if (entry.count > bestCount) {
+              bestCount = entry.count;
+              bestKey = key;
+              bestSample = entry;
+            }
           }
 
           offset += 4;
@@ -282,133 +288,133 @@ function downsampleBlockMajority(data, W, H, scale) {
 
       if (transparentCount >= bestCount) {
         bestKey = 0;
+        bestSample = null;
       }
 
       const dst = (by * newW + bx) * 4;
-      const rgba = keyToRgba(bestKey);
-      out[dst] = rgba.r;
-      out[dst + 1] = rgba.g;
-      out[dst + 2] = rgba.b;
-      out[dst + 3] = rgba.a;
+
+      if (bestKey === 0 || !bestSample) {
+        out[dst] = 0;
+        out[dst + 1] = 0;
+        out[dst + 2] = 0;
+        out[dst + 3] = 0;
+      } else {
+        out[dst] = bestSample.r;
+        out[dst + 1] = bestSample.g;
+        out[dst + 2] = bestSample.b;
+        out[dst + 3] = bestSample.a;
+      }
     }
   }
 
-  return { data: out, width: newW, height: newH };
+  return createImageDataSafe(out, newW, newH);
 }
 
 function cleanupPixelNoise(imageData) {
   const { data, width: W, height: H } = imageData;
-  const dst = new Uint8ClampedArray(data);
+  const current = new Uint8ClampedArray(data);
   const idx = (x, y) => ((y * W) + x) * 4;
 
   for (let pass = 0; pass < 2; pass++) {
-    const current = pass === 0 ? dst : new Uint8ClampedArray(dst);
-    const next = new Uint8ClampedArray(current);
+    const src = pass === 0 ? current : new Uint8ClampedArray(current);
+    const dst = new Uint8ClampedArray(src);
 
     for (let y = 1; y < H - 1; y++) {
       for (let x = 1; x < W - 1; x++) {
         const p = idx(x, y);
-        const a = current[p + 3];
+        const a = src[p + 3];
         if (a < 5) continue;
 
-        const currentKey = rgbaToKey(
-          current[p],
-          current[p + 1],
-          current[p + 2],
+        const selfKey = rgbaToKey(
+          src[p],
+          src[p + 1],
+          src[p + 2],
           a > 250 ? 255 : a
         );
 
-        let sameOrthogonal = 0;
-        const neighborCounts = new Map();
-        let bestNeighborKey = currentKey;
-        let bestNeighborCount = 0;
+        let orthSame = 0;
         let validNeighbors = 0;
+        const counts = new Map();
+        let bestNeighborKey = selfKey;
+        let bestNeighborCount = 0;
 
-        for (let ny = -1; ny <= 1; ny++) {
-          for (let nx = -1; nx <= 1; nx++) {
-            if (nx === 0 && ny === 0) continue;
+        const offsets = [
+          idx(x - 1, y),
+          idx(x + 1, y),
+          idx(x, y - 1),
+          idx(x, y + 1),
+          idx(x - 1, y - 1),
+          idx(x + 1, y - 1),
+          idx(x - 1, y + 1),
+          idx(x + 1, y + 1),
+        ];
 
-            const q = idx(x + nx, y + ny);
-            const qa = current[q + 3];
-            if (qa < 5) continue;
+        for (let n = 0; n < offsets.length; n++) {
+          const q = offsets[n];
+          const na = src[q + 3];
+          if (na < 5) continue;
 
-            const key = rgbaToKey(
-              current[q],
-              current[q + 1],
-              current[q + 2],
-              qa > 250 ? 255 : qa
-            );
+          const nk = rgbaToKey(
+            src[q],
+            src[q + 1],
+            src[q + 2],
+            na > 250 ? 255 : na
+          );
 
-            validNeighbors++;
-            const nextCount = (neighborCounts.get(key) || 0) + 1;
-            neighborCounts.set(key, nextCount);
+          validNeighbors++;
+          const nextCount = (counts.get(nk) || 0) + 1;
+          counts.set(nk, nextCount);
 
-            if (nextCount > bestNeighborCount) {
-              bestNeighborCount = nextCount;
-              bestNeighborKey = key;
-            }
+          if (nextCount > bestNeighborCount) {
+            bestNeighborCount = nextCount;
+            bestNeighborKey = nk;
           }
+
+          if (n < 4 && nk === selfKey) orthSame++;
         }
 
-        const leftOffset = idx(x - 1, y);
-        const rightOffset = idx(x + 1, y);
-        const upOffset = idx(x, y - 1);
-        const downOffset = idx(x, y + 1);
-
-        const leftKey = rgbaToKey(
-          current[leftOffset],
-          current[leftOffset + 1],
-          current[leftOffset + 2],
-          current[leftOffset + 3] > 250 ? 255 : current[leftOffset + 3]
-        );
-        const rightKey = rgbaToKey(
-          current[rightOffset],
-          current[rightOffset + 1],
-          current[rightOffset + 2],
-          current[rightOffset + 3] > 250 ? 255 : current[rightOffset + 3]
-        );
-        const upKey = rgbaToKey(
-          current[upOffset],
-          current[upOffset + 1],
-          current[upOffset + 2],
-          current[upOffset + 3] > 250 ? 255 : current[upOffset + 3]
-        );
-        const downKey = rgbaToKey(
-          current[downOffset],
-          current[downOffset + 1],
-          current[downOffset + 2],
-          current[downOffset + 3] > 250 ? 255 : current[downOffset + 3]
-        );
-
-        if (leftKey === currentKey) sameOrthogonal++;
-        if (rightKey === currentKey) sameOrthogonal++;
-        if (upKey === currentKey) sameOrthogonal++;
-        if (downKey === currentKey) sameOrthogonal++;
-
-        if (sameOrthogonal > 0) continue;
+        if (orthSame > 0) continue;
         if (validNeighbors < 5) continue;
         if (bestNeighborCount < 5) continue;
         if (bestNeighborCount / validNeighbors < 0.7) continue;
 
         const rgba = keyToRgba(bestNeighborKey);
-        next[p] = rgba.r;
-        next[p + 1] = rgba.g;
-        next[p + 2] = rgba.b;
-        next[p + 3] = rgba.a;
+        dst[p] = rgba.r;
+        dst[p + 1] = rgba.g;
+        dst[p + 2] = rgba.b;
+        dst[p + 3] = rgba.a;
       }
     }
 
-    dst.set(next);
+    current.set(dst);
   }
 
-  return { data: dst, width: W, height: H };
+  return createImageDataSafe(current, W, H);
+}
+
+function limitOutputSize(imageData, maxDimension = MAX_NORMALIZED_OUTPUT_DIMENSION) {
+  const { width: W, height: H } = imageData;
+  const maxSide = Math.max(W, H);
+
+  if (maxSide <= maxDimension) return imageData;
+
+  const safetyScale = Math.ceil(maxSide / maxDimension);
+  if (safetyScale <= 1) return imageData;
+
+  return downsampleByMajority(imageData, safetyScale);
 }
 
 function normalizePixelArt(imageData) {
   const { width: W, height: H } = imageData;
 
+  if (W <= NORMALIZE_MAX_DIMENSION && H <= NORMALIZE_MAX_DIMENSION && (W * H) <= NORMALIZE_MAX_PIXELS) {
+    return imageData;
+  }
+
   const estimate = estimatePixelArtScale(imageData);
-  if (!estimate || !estimate.likelyPixelArt) return imageData;
+  if (!estimate || !isLikelyPixelArt(imageData, estimate)) {
+    return imageData;
+  }
 
   const scale = estimate.scale;
   if (!scale || scale < 2) return imageData;
@@ -417,14 +423,20 @@ function normalizePixelArt(imageData) {
   const cellsY = Math.floor(H / scale);
   if (cellsX < 4 || cellsY < 4) return imageData;
 
-  const downsampled = downsampleBlockMajority(imageData.data, W, H, scale);
+  let normalized = downsampleByMajority(imageData, scale);
+  normalized = cleanupPixelNoise(normalized);
+  normalized = limitOutputSize(normalized, MAX_NORMALIZED_OUTPUT_DIMENSION);
 
-  if (downsampled.width < 4 || downsampled.height < 4) {
-    return imageData;
+  if (
+    normalized &&
+    normalized.width >= 4 &&
+    normalized.height >= 4 &&
+    normalized.width * normalized.height >= 16
+  ) {
+    normalized = cleanupPixelNoise(normalized);
   }
 
-  const cleaned = cleanupPixelNoise(downsampled);
-  return createImageDataSafe(cleaned.data, cleaned.width, cleaned.height);
+  return normalized;
 }
 
 // --- CORE MESHING ENGINE ---
@@ -624,15 +636,15 @@ async function decodeFile(file) {
   }
 
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('2d', {
+  const ctx = canvas.getContext('2d', { 
     willReadFrequently: true,
     colorSpace: 'srgb'
   });
-
+  
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(bitmap, 0, 0);
   if (bitmap.close) bitmap.close();
-
+  
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height, { colorSpace: 'srgb' });
   return { canvas, imageData, width: canvas.width, height: canvas.height };
 }
