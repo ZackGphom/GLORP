@@ -2,7 +2,59 @@ const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyDgo-V24srcF2nAVzrPKb
 const FEEDBACK_SECRET = atob('YWZzODk3cjVoIV9hOXM4Zmg5MzVoXyY/Zzk4MzVoOW5mOThuM2g0XyEy');
 const FEEDBACK_COOLDOWN_MS = 60 * 60 * 1000;
 const FEEDBACK_COOLDOWN_KEY = 'glorp_feedback_last_submit_at';
-const ACCEPTED_IMAGE_RE = /\.(png|jpe?g|gif|webp)$/i;
+const ACCEPTED_IMAGE_RE = /\.(png|gif|webp)$/i;
+const BLOCKED_IMAGE_RE = /\.(jpe?g)$/i;
+const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/gif', 'image/webp']);
+const MAX_COLOR_SAMPLE_PIXELS = 80000;
+const MAX_UNIQUE_COLOR_THRESHOLD = 4096;
+const AI_METADATA_SIGNATURES = [
+  /(?:^|[^a-z0-9])ai[-_\s]*generated(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])generated[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])generated[-_\s]*by[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])created[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])created[-_\s]*by[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])made[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])artificial[-_\s]*intelligence(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])openai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])chatgpt(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])gpt[-_\s]*[0-9]+(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])gemini(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])google[-_\s]*gemini(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])bard(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])claude(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])anthropic(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])midjourney(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])stable[-_\s]*diffusion(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])sdxl(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])flux(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])dall[-_\s]*e(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])dalle(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])ideogram(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])leonardo(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])runway(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])firefly(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])copilot(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])canva(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])krea(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])novelai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])pixai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])niji(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])prompt(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])negative[-_\s]*prompt(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])controlnet(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])lora(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])checkpoint(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])sampler(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])seed(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])steps(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])cfg[-_\s]*scale(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])txt2img(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])img2img(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])generative[-_\s]*fill(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])magic[-_\s]*media(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])image[-_\s]*generation(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])image[-_\s]*creator(?:[^a-z0-9]|$)/i,
+];
 
 const state = {
   selectedFiles: [],
@@ -14,7 +66,7 @@ const state = {
   feedbackLoaded: false,
   feedbackScriptPromise: null,
   feedbackReadyPromise: null,
-  rulesOpen: true,
+  fileValidationCache: new WeakMap(),
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -27,6 +79,93 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function normalizeInspectionText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\u0000/g, ' ')
+    .replace(/[\r\n\t]+/g, ' ');
+}
+
+function isAllowedImageFile(file) {
+  if (!file) return false;
+  const type = String(file.type || '').toLowerCase();
+  return ACCEPTED_IMAGE_RE.test(file.name) || ACCEPTED_IMAGE_TYPES.has(type);
+}
+
+function findAiMetadataSignature(text) {
+  const haystack = normalizeInspectionText(text);
+  for (const signature of AI_METADATA_SIGNATURES) {
+    if (signature.test(haystack)) return signature.source || 'ai metadata';
+  }
+  return '';
+}
+
+async function readFileHeaderText(file, maxBytes = 512 * 1024) {
+  const slice = file.slice(0, Math.min(file.size, maxBytes));
+  const buffer = await slice.arrayBuffer();
+  const latin1 = new TextDecoder('latin1').decode(buffer);
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+  return `${latin1}\n${utf8}`;
+}
+
+async function inspectFileForAiSignals(file) {
+  const headerText = await readFileHeaderText(file);
+  const match = findAiMetadataSignature(`${file.name}\n${headerText}`);
+  return match ? { blocked: true, reason: 'AI metadata / tags detected' } : { blocked: false, reason: '' };
+}
+
+function estimateUniqueColors(imageData) {
+  const { data, width, height } = imageData;
+  const totalPixels = width * height;
+  if (!totalPixels) return { uniqueCount: 0, blocked: false };
+
+  const samplePixels = Math.min(totalPixels, MAX_COLOR_SAMPLE_PIXELS);
+  const step = Math.max(1, Math.floor(totalPixels / samplePixels));
+  const unique = new Set();
+
+  for (let pixel = 0; pixel < totalPixels; pixel += step) {
+    const idx = pixel * 4;
+    const a = data[idx + 3];
+    if (a === 0) continue;
+    const key = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | a) >>> 0);
+    unique.add(key);
+    if (unique.size > MAX_UNIQUE_COLOR_THRESHOLD) {
+      return { uniqueCount: unique.size, blocked: true };
+    }
+  }
+
+  return { uniqueCount: unique.size, blocked: unique.size > MAX_UNIQUE_COLOR_THRESHOLD };
+}
+
+async function inspectFileForBlockingReasons(file) {
+  if (!file) return { blocked: true, reason: 'Invalid file' };
+  if (!isAllowedImageFile(file)) {
+    if (BLOCKED_IMAGE_RE.test(file.name) || /image\/jpeg/i.test(file.type)) {
+      return { blocked: true, reason: 'JPG / JPEG uploads are disabled' };
+    }
+    return { blocked: true, reason: 'Only PNG, GIF, and WEBP are allowed' };
+  }
+
+  const metadataInspection = await inspectFileForAiSignals(file);
+  if (metadataInspection.blocked) return metadataInspection;
+
+  try {
+    const { canvas, ctx, width, height } = await decodeFileToCanvas(file);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const colorInspection = estimateUniqueColors(imageData);
+    if (colorInspection.blocked) {
+      return {
+        blocked: true,
+        reason: `too many colors (${colorInspection.uniqueCount.toLocaleString()} sampled)`
+      };
+    }
+    return { blocked: false, reason: '' };
+  } catch (error) {
+    console.error('File inspection failed:', error);
+    return { blocked: true, reason: 'Unreadable image' };
+  }
 }
 
 function showToast(message, type = 'success', ms = 2200) {
@@ -49,7 +188,7 @@ function setLoadingDone() {
 }
 
 function syncHeaderState() {
-  if (state.headerLock || state.rulesOpen) return;
+  if (state.headerLock) return;
   const header = $('#main-header');
   if (!header) return;
   const hasFiles = state.selectedFiles.length > 0;
@@ -69,8 +208,8 @@ function updateUI() {
   if (selectBlock) selectBlock.style.display = hasFiles ? 'none' : 'block';
   if (convertBlock) convertBlock.classList.toggle('active', hasFiles);
 
-  document.body.style.overflow = hasFiles || state.rulesOpen ? 'hidden' : '';
-  document.documentElement.style.overflow = hasFiles || state.rulesOpen ? 'hidden' : '';
+  document.body.style.overflow = hasFiles ? 'hidden' : 'auto';
+  document.documentElement.style.overflow = hasFiles ? 'hidden' : 'auto';
 
   const list = $('#file-list');
   if (list) {
@@ -88,11 +227,11 @@ function updateUI() {
   }
 }
 
-function handleFiles(list) {
+async function handleFiles(list) {
   const incoming = Array.from(list || []).filter((file) => {
     if (!file) return false;
     if (file.size === 0) return false;
-    return file.type.startsWith('image/') || ACCEPTED_IMAGE_RE.test(file.name);
+    return isAllowedImageFile(file);
   });
 
   if (incoming.length === 0) {
@@ -100,14 +239,42 @@ function handleFiles(list) {
     return;
   }
 
+  const accepted = [];
+  const blocked = [];
+
   for (const file of incoming) {
-    if (!state.selectedFiles.some((existing) => existing.name === file.name && existing.size === file.size)) {
-      state.selectedFiles.push(file);
+    if (state.selectedFiles.some((existing) => existing.name === file.name && existing.size === file.size)) {
+      continue;
     }
+
+    let verdict = state.fileValidationCache.get(file);
+    if (!verdict) {
+      verdict = await inspectFileForBlockingReasons(file);
+      state.fileValidationCache.set(file, verdict);
+    }
+
+    if (verdict.blocked) {
+      blocked.push({ file, reason: verdict.reason || 'blocked' });
+      continue;
+    }
+
+    accepted.push(file);
+  }
+
+  if (accepted.length > 0) {
+    state.selectedFiles.push(...accepted);
   }
 
   updateUI();
-  showToast(`${incoming.length} file(s) added`, 'success', 1400);
+
+  if (blocked.length > 0) {
+    const summary = blocked.slice(0, 2).map(({ file, reason }) => `${file.name}: ${reason}`).join(' | ');
+    showToast(blocked.length === 1 ? `Blocked: ${summary}` : `Blocked ${blocked.length} file(s): ${summary}`, 'error', 4200);
+  }
+
+  if (accepted.length > 0) {
+    showToast(`${accepted.length} file(s) added`, 'success', 1400);
+  }
 }
 
 function removeFile(index) {
@@ -124,303 +291,6 @@ function clearAll() {
 
 window.removeFile = removeFile;
 window.clearAll = clearAll;
-
-function injectRulesStyles() {
-  if (document.getElementById('rules-inline-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'rules-inline-styles';
-  style.textContent = `
-    #rules-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      isolation: isolate;
-      opacity: 1;
-      visibility: visible;
-      transition: opacity .6s var(--ease), visibility .6s;
-    }
-
-    #rules-backdrop {
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      background: rgba(5, 5, 5, 0.4);
-      backdrop-filter: blur(126px) saturate(150%);
-      -webkit-backdrop-filter: blur(126px) saturate(150%);
-      pointer-events: auto;
-    }
-
-    #rules-card {
-      position: relative;
-      z-index: 10;
-      width: min(560px, 90vw);
-      max-height: 80vh;
-      padding: 40px;
-      background: #161616;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 28px;
-      text-align: center;
-      overflow-y: auto;
-      transform: translateZ(0);
-      transition: transform .6s var(--ease), opacity .6s var(--ease);
-      backface-visibility: hidden;
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-      pointer-events: auto;
-    }
-
-    #rules-overlay.dismissed {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    #rules-overlay.dismissed #rules-card {
-      transform: scale(0.95) translateY(20px);
-      opacity: 0;
-    }
-
-    .rules-title {
-      margin: 0 0 22px;
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.02;
-      font-weight: 900;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: #fff;
-      text-align: center;
-    }
-
-    .rules-list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      text-align: left;
-      margin: 0 0 28px;
-    }
-
-    .rules-item {
-      font-size: 14px;
-      line-height: 1.7;
-      color: #d1d1d1;
-      letter-spacing: .1px;
-    }
-
-    .rules-item strong {
-      color: #fff;
-    }
-
-    .rules-note {
-      display: inline-block;
-      margin-top: 4px;
-      color: #9a9a9a;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    .rules-golden {
-      padding: 14px 14px 15px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .rules-dismiss {
-      display: block;
-      min-width: 180px;
-      height: 50px;
-      margin: 0 auto;
-      border: none;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.94);
-      color: #111;
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: transform .28s var(--ease), background .28s var(--ease), box-shadow .28s var(--ease), opacity .28s var(--ease);
-      position: relative;
-      z-index: 11;
-      pointer-events: auto;
-    }
-
-    .rules-dismiss:hover {
-      background: #fff;
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 12px 30px rgba(0,0,0,.18);
-    }
-
-    .rules-dismiss:active {
-      transform: translateY(1px) scale(.985);
-    }
-
-    body.rules-active {
-      overflow: hidden !important;
-      overscroll-behavior: none;
-      touch-action: none;
-      width: 100%;
-    }
-
-    body.rules-active header {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-18px) scale(.98);
-      pointer-events: none;
-      filter: blur(10px);
-    }
-
-    body.rules-active #bloom {
-      opacity: 0;
-    }
-
-    #rules-toggle {
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      z-index: 20000;
-      width: 54px;
-      height: 54px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(22,22,22,.78);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      color: #fff;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: 900;
-      line-height: 1;
-      cursor: pointer;
-      box-shadow: 0 10px 30px rgba(0,0,0,.24);
-      transition: transform .28s var(--ease), background .28s var(--ease), box-shadow .28s var(--ease), opacity .28s var(--ease), filter .28s var(--ease);
-    }
-
-    #rules-toggle:hover {
-      transform: translateY(-3px) scale(1.03);
-      background: rgba(255,255,255,.08);
-      box-shadow: 0 14px 34px rgba(0,0,0,.34);
-      filter: brightness(1.05);
-    }
-
-    #rules-toggle:active {
-      transform: translateY(1px) scale(.97);
-    }
-
-    #rules-toggle.hidden {
-      display: none !important;
-    }
-
-    @media (max-width: 480px) {
-      #rules-toggle {
-        right: 12px;
-        bottom: 12px;
-        width: 50px;
-        height: 50px;
-        font-size: 22px;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-function ensureRulesOverlay() {
-  let overlay = $('#rules-overlay');
-  if (overlay) return overlay;
-
-  overlay = document.createElement('div');
-  overlay.id = 'rules-overlay';
-  overlay.innerHTML = `
-    <div id="rules-backdrop" aria-hidden="true"></div>
-    <div id="rules-card" role="dialog" aria-modal="true" aria-labelledby="rules-title">
-      <h2 class="rules-title" id="rules-title">GLORP: THE RULES</h2>
-      <div class="rules-list">
-        <div class="rules-item"><strong>1:1 Pixel Ratio.</strong> Upload the file exactly as you saved it from your editor (Aseprite, Photoshop, etc.). Do not resize it!</div>
-        <div class="rules-item"><strong>PNG Only.</strong> JPEG compression creates "invisible" color noise. Noise = Broken SVG.</div>
-        <div class="rules-item"><strong>No Post-FX.</strong> No blurs, soft shadows, or gradients. Only solid colors.<br><span class="rules-note">(Note: Gradients work, but the result will be heavy and laggy).</span></div>
-        <div class="rules-item rules-golden"><strong>THE GOLDEN RULE:</strong> If the image looks blurry or "too big" for its resolution, GLORP will see it as trash data and crash. Keep it original.</div>
-      </div>
-      <button class="rules-dismiss" id="rules-dismiss" type="button">Got it</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  return overlay;
-}
-
-function ensureRulesToggle() {
-  let button = $('#rules-toggle');
-  if (button) return button;
-
-  button = document.createElement('button');
-  button.id = 'rules-toggle';
-  button.type = 'button';
-  button.setAttribute('aria-label', 'Open rules');
-  button.textContent = '?';
-  document.body.appendChild(button);
-  return button;
-}
-
-function lockScroll() {
-  document.body.style.overflow = 'hidden';
-  document.documentElement.style.overflow = 'hidden';
-}
-
-function unlockScroll() {
-  document.body.style.overflow = '';
-  document.documentElement.style.overflow = '';
-}
-
-function openRules(overlay, toggleBtn) {
-  state.rulesOpen = true;
-  overlay.classList.remove('dismissed');
-
-  const toggle = toggleBtn || document.getElementById('rules-toggle');
-  if (toggle) {
-    toggle.classList.add('hidden');
-  }
-
-  document.body.classList.add('rules-active');
-  lockScroll();
-  updateUI();
-}
-
-function closeRules(overlay) {
-  state.rulesOpen = false;
-  overlay.classList.add('dismissed');
-
-  const toggle = document.getElementById('rules-toggle');
-  if (toggle) {
-    toggle.classList.remove('hidden');
-  }
-
-  document.body.classList.remove('rules-active');
-  unlockScroll();
-  updateUI();
-}
-
-function initRulesOverlay() {
-  injectRulesStyles();
-  const overlay = ensureRulesOverlay();
-  const toggle = ensureRulesToggle();
-  const dismissButton = $('#rules-dismiss', overlay);
-  const backdrop = $('#rules-backdrop', overlay);
-
-  if (!overlay || !toggle || !dismissButton || !backdrop) return;
-
-  toggle.addEventListener('click', () => openRules(overlay, toggle));
-  dismissButton.addEventListener('click', () => closeRules(overlay));
-  backdrop.addEventListener('click', () => closeRules(overlay));
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeRules(overlay);
-  });
-
-  setTimeout(() => openRules(overlay, toggle), 100);
-}
 
 function fileToDataURL(file) {
   return new Promise((resolve, reject) => {
@@ -446,15 +316,15 @@ async function decodeFileToCanvas(file) {
       premultiplyAlpha: 'none',
       colorSpaceConversion: 'none'
     });
-
+    
     const canvas = document.createElement('canvas');
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
+    
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(bitmap, 0, 0);
-
+    
     if (bitmap.close) bitmap.close();
     return { canvas, ctx, width: canvas.width, height: canvas.height };
   }
@@ -465,10 +335,10 @@ async function decodeFileToCanvas(file) {
   canvas.width = img.width;
   canvas.height = img.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
+  
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0);
-
+  
   return { canvas, ctx, width: canvas.width, height: canvas.height };
 }
 
@@ -521,7 +391,7 @@ function edgeFinding(grid, W, H) {
 }
 
 function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
-  let path = '';
+  let path = "";
   let r = startR;
   let c = startC;
   let dir = 'R';
@@ -581,7 +451,7 @@ function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
 
 function pathFinding(grid, W, H) {
   const { ver_edges, hor_edges } = edgeFinding(grid, W, H);
-  let path_data = '';
+  let path_data = "";
   const hor_len = (H + 1) * W;
   for (let i = 0; i < hor_len; i++) {
     if (hor_edges[i] === CLOCKWISE) {
@@ -589,7 +459,7 @@ function pathFinding(grid, W, H) {
       let c = i % W;
       path_data += `M${c},${r}`;
       path_data += tracePath(r, c, ver_edges, hor_edges, W, H);
-      path_data += 'z';
+      path_data += "z";
     }
   }
   return path_data;
@@ -598,7 +468,7 @@ function pathFinding(grid, W, H) {
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
   const uniqueColors = new Set();
-
+  
   for (let i = 0; i < data.length; i += 4) {
     const a = data[i + 3];
     if (a === 0) continue;
@@ -612,7 +482,7 @@ function buildMonolithSvgFromImageData(imageData) {
   for (const key of uniqueColors) {
     grid.fill(0);
     let hasPixels = false;
-
+    
     for (let i = 0; i < W * H; i++) {
       const idx = i * 4;
       const pKey = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | data[idx + 3]) >>> 0);
@@ -780,6 +650,19 @@ async function convertSelectedFiles() {
 
   for (const file of state.selectedFiles.slice()) {
     try {
+      let verdict = state.fileValidationCache.get(file);
+      if (!verdict) {
+        verdict = await inspectFileForBlockingReasons(file);
+        state.fileValidationCache.set(file, verdict);
+      }
+
+      if (verdict.blocked) {
+        state.selectedFiles = state.selectedFiles.filter((item) => item !== file);
+        updateUI();
+        showToast(`Removed: ${file.name} — ${verdict.reason}`, 'error', 3200);
+        continue;
+      }
+
       if (status) status.innerText = `CONVERTING: ${file.name}`;
       await convertSingleFile(file, mode);
       if (status) status.innerText = `CONVERTED: ${file.name}`;
@@ -848,7 +731,7 @@ function initDragAndDrop() {
           continue;
         }
         const file = item.getAsFile();
-        if (file && file.size !== 0 && ACCEPTED_IMAGE_RE.test(file.name)) {
+        if (file && file.size !== 0 && isAllowedImageFile(file)) {
           files.push(file);
         }
       }
@@ -859,7 +742,7 @@ function initDragAndDrop() {
           foldersDetected += 1;
           return false;
         }
-        return ACCEPTED_IMAGE_RE.test(file.name);
+        return isAllowedImageFile(file);
       });
     }
 
@@ -1110,7 +993,7 @@ function initFaq() {
 function initFileInput() {
   const input = $('#file-input');
   if (!input) return;
-  input.addEventListener('change', (event) => handleFiles(event.target.files));
+  input.addEventListener('change', (event) => { handleFiles(event.target.files); });
 }
 
 function initConvertButton() {
@@ -1146,7 +1029,6 @@ function initLogoAndAppButton() {
 }
 
 function bootstrap() {
-  initRulesOverlay();
   initLoadingScreen();
   initLogoAndAppButton();
   initDragAndDrop();
