@@ -65,6 +65,9 @@ To avoid bloated or inefficient SVG output:
 
 GLORP is optimized strictly for pixel-perfect artwork.
 
+And remember...
+
+##NO AI SLOP!!!
 ------------------------------------------------------------------------
 
 ## 🛠 How to Use
