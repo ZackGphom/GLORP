@@ -3,7 +3,7 @@ const FEEDBACK_SECRET = atob('YWZzODk3cjVoIV9hOXM4Zmg5MzVoXyY/Zzk4MzVoOW5mOThuM2
 const FEEDBACK_COOLDOWN_MS = 60 * 60 * 1000;
 const FEEDBACK_COOLDOWN_KEY = 'glorp_feedback_last_submit_at';
 const ACCEPTED_IMAGE_RE = /\.(png|gif|webp|jpe?g)$/i;
-const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/gif', 'image/webp', 'image/jpe?g']);
+const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/gif', 'image/webp', 'image/jpeg', 'image/jpg']);
 const MAX_COLOR_SAMPLE_PIXELS = 80000;
 const MAX_UNIQUE_COLOR_THRESHOLD = 4096;
 const AI_BLOCKING_TYPES = new Set(['ai', 'colors']);
@@ -143,12 +143,9 @@ function estimateUniqueColors(imageData) {
 
 async function inspectFileForBlockingReasons(file) {
   if (!file) return { blocked: true, reason: 'Invalid file' };
-  if (!isAllowedImageFile(file)) {
-    if (BLOCKED_IMAGE_RE.test(file.name) || /image\/jpeg/i.test(file.type)) {
-      return { blocked: true, reason: 'JPG / JPEG uploads are disabled', blockType: 'format' };
-    }
-    return { blocked: true, reason: 'Only PNG, GIF, and WEBP are allowed', blockType: 'format' };
-  }
+if (!isAllowedImageFile(file)) {
+  return { blocked: true, reason: 'Only PNG, GIF, WEBP, JPG, and JPEG are allowed', blockType: 'format' };
+}
 
   const metadataInspection = await inspectFileForAiSignals(file);
   if (metadataInspection.blocked) return metadataInspection;
