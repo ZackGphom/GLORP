@@ -304,12 +304,12 @@
     #ai-block-overlay{position:fixed;inset:0;z-index:9850;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform;isolation:isolate}
     #ai-block-backdrop{position:absolute;inset:0;z-index:0;background:rgba(5,5,5,0.82);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:auto}
     #ai-block-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
-    #ai-block-card{position:relative;z-index:1;width:min(1040px,calc(100vw - 24px));max-height:min(88vh,920px);overflow:hidden;padding:28px 22px 22px;border-radius:28px;background:rgba(22,22,22,0.76);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.52),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
+    #ai-block-card{position:relative;z-index:1;width:min(1040px,calc(100vw - 24px));max-height:min(88vh,920px);overflow:hidden;padding:28px 22px 34px;border-radius:28px;background:rgba(22,22,22,0.76);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.52),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
     #ai-block-overlay.dismissed #ai-block-card{transform:translateY(44px) scale(.98);opacity:0}
-    #ai-block-art{display:block;width:min(94vw,920px);max-height:68vh;object-fit:contain;image-rendering:auto;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.24)}
+    #ai-block-art{display:block;width:min(94vw,920px);max-height:68vh;object-fit:contain;image-rendering:auto}
     #ai-block-title{margin:0;font-size:clamp(32px,6vw,74px);line-height:.95;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-shadow:0 0 18px rgba(255,255,255,.04)}
     #ai-block-subtitle{margin:0;font-size:12px;line-height:1.6;letter-spacing:3px;text-transform:uppercase;color:#a6a6a6}
-    #ai-block-dismiss{display:inline-flex;align-items:center;justify-content:center;width:180px;height:50px;box-sizing:border-box;flex:0 0 auto;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
+    #ai-block-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:50px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
     #ai-block-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
     #ai-block-dismiss:active{transform:translateY(1px) scale(.985)}
     body.ai-active{overflow:hidden}
@@ -928,7 +928,7 @@
         const drift = (Math.random() * 120 - 60).toFixed(1) + 'px';
         const rotStart = (Math.random() * 180 - 90).toFixed(1) + 'deg';
         const rotEnd = (Math.random() * 240 - 120).toFixed(1) + 'deg';
-        const duration = 8500 + Math.random() * 3000;
+        const duration = 9800 + Math.random() * 3200;
 
         icon.style.left = left + '%';
         icon.style.width = size + 'px';
@@ -946,20 +946,28 @@
         });
       };
 
+      const pulseRain = () => {
+        if (!active) return;
+
+        const current = rainLayer.children.length;
+        const target = 12;
+        const spawnCount = current < 4 ? 3 : current < target ? 2 : 1;
+
+        for (let i = 0; i < spawnCount; i++) {
+          spawnIcon();
+        }
+      };
+
       const startRain = () => {
         if (active) return;
         active = true;
 
-        for (let i = 0; i < 3; i++) {
-          setTimeout(spawnIcon, i * 260);
+        for (let i = 0; i < 8; i++) {
+          setTimeout(spawnIcon, i * 140);
         }
 
-        rainTimer = setInterval(() => {
-          if (!active) return;
-          if (rainLayer.children.length < 7) {
-            spawnIcon();
-          }
-        }, 1200 + Math.random() * 700);
+        pulseRain();
+        rainTimer = setInterval(pulseRain, 260);
       };
 
       const stopRain = () => {
