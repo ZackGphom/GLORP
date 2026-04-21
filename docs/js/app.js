@@ -7,6 +7,7 @@ const BLOCKED_IMAGE_RE = /\.(jpe?g)$/i;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/gif', 'image/webp']);
 const MAX_COLOR_SAMPLE_PIXELS = 80000;
 const MAX_UNIQUE_COLOR_THRESHOLD = 4096;
+const AI_BLOCKING_TYPES = new Set(['ai', 'colors']);
 const AI_METADATA_SIGNATURES = [
   /(?:^|[^a-z0-9])ai[-_\s]*generated(?:[^a-z0-9]|$)/i,
   /(?:^|[^a-z0-9])generated[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
@@ -107,13 +108,15 @@ async function readFileHeaderText(file, maxBytes = 512 * 1024) {
   const buffer = await slice.arrayBuffer();
   const latin1 = new TextDecoder('latin1').decode(buffer);
   const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
-  return `${latin1}\n${utf8}`;
+  return `${latin1}
+${utf8}`;
 }
 
 async function inspectFileForAiSignals(file) {
   const headerText = await readFileHeaderText(file);
-  const match = findAiMetadataSignature(`${file.name}\n${headerText}`);
-  return match ? { blocked: true, reason: 'AI metadata / tags detected' } : { blocked: false, reason: '' };
+  const match = findAiMetadataSignature(`${file.name}
+${headerText}`);
+  return match ? { blocked: true, reason: 'AI metadata / tags detected', blockType: 'ai' } : { blocked: false, reason: '', blockType: '' };
 }
 
 function estimateUniqueColors(imageData) {
@@ -132,20 +135,20 @@ function estimateUniqueColors(imageData) {
     const key = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | a) >>> 0);
     unique.add(key);
     if (unique.size > MAX_UNIQUE_COLOR_THRESHOLD) {
-      return { uniqueCount: unique.size, blocked: true };
+      return { uniqueCount: unique.size, blocked: true, blockType: 'colors' };
     }
   }
 
-  return { uniqueCount: unique.size, blocked: unique.size > MAX_UNIQUE_COLOR_THRESHOLD };
+  return { uniqueCount: unique.size, blocked: unique.size > MAX_UNIQUE_COLOR_THRESHOLD, blockType: unique.size > MAX_UNIQUE_COLOR_THRESHOLD ? 'colors' : '' };
 }
 
 async function inspectFileForBlockingReasons(file) {
   if (!file) return { blocked: true, reason: 'Invalid file' };
   if (!isAllowedImageFile(file)) {
     if (BLOCKED_IMAGE_RE.test(file.name) || /image\/jpeg/i.test(file.type)) {
-      return { blocked: true, reason: 'JPG / JPEG uploads are disabled' };
+      return { blocked: true, reason: 'JPG / JPEG uploads are disabled', blockType: 'format' };
     }
-    return { blocked: true, reason: 'Only PNG, GIF, and WEBP are allowed' };
+    return { blocked: true, reason: 'Only PNG, GIF, and WEBP are allowed', blockType: 'format' };
   }
 
   const metadataInspection = await inspectFileForAiSignals(file);
@@ -164,7 +167,7 @@ async function inspectFileForBlockingReasons(file) {
     return { blocked: false, reason: '' };
   } catch (error) {
     console.error('File inspection failed:', error);
-    return { blocked: true, reason: 'Unreadable image' };
+    return { blocked: true, reason: 'Unreadable image', blockType: 'format' };
   }
 }
 
@@ -179,6 +182,40 @@ function showToast(message, type = 'success', ms = 2200) {
   toast._hideTimeout = setTimeout(() => {
     toast.classList.remove('show', 'success', 'error');
   }, ms);
+}
+
+function openRulesOverlay() {
+  const overlay = $('#rules-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('dismissed');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('rules-active');
+}
+
+function closeRulesOverlay() {
+  const overlay = $('#rules-overlay');
+  if (!overlay) return;
+  overlay.classList.add('dismissed');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('rules-active');
+}
+
+function showAiBlockOverlay(reason = '') {
+  const overlay = $('#ai-block-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('dismissed');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('ai-active');
+  const subtitle = $('#ai-block-subtitle');
+  if (subtitle) subtitle.textContent = 'read the rules in -> ?';
+}
+
+function hideAiBlockOverlay() {
+  const overlay = $('#ai-block-overlay');
+  if (!overlay) return;
+  overlay.classList.add('dismissed');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('ai-active');
 }
 
 function setLoadingDone() {
@@ -254,7 +291,10 @@ async function handleFiles(list) {
     }
 
     if (verdict.blocked) {
-      blocked.push({ file, reason: verdict.reason || 'blocked' });
+      blocked.push({ file, reason: verdict.reason || 'blocked', blockType: verdict.blockType || '' });
+      if (AI_BLOCKING_TYPES.has(verdict.blockType)) {
+        showAiBlockOverlay(verdict.blockType);
+      }
       continue;
     }
 
@@ -659,6 +699,9 @@ async function convertSelectedFiles() {
       if (verdict.blocked) {
         state.selectedFiles = state.selectedFiles.filter((item) => item !== file);
         updateUI();
+        if (AI_BLOCKING_TYPES.has(verdict.blockType)) {
+          showAiBlockOverlay(verdict.blockType);
+        }
         showToast(`Removed: ${file.name} — ${verdict.reason}`, 'error', 3200);
         continue;
       }
@@ -1017,6 +1060,22 @@ function initLoadingScreen() {
   });
 }
 
+function initRulesOverlay() {
+  const dismiss = $('#rules-dismiss');
+  const backdrop = $('#rules-backdrop');
+  const openBtn = $('#rules-open-btn');
+  if (dismiss) dismiss.addEventListener('click', closeRulesOverlay);
+  if (backdrop) backdrop.addEventListener('click', closeRulesOverlay);
+  if (openBtn) openBtn.addEventListener('click', openRulesOverlay);
+}
+
+function initAiOverlay() {
+  const dismiss = $('#ai-block-dismiss');
+  const backdrop = $('#ai-block-backdrop');
+  if (dismiss) dismiss.addEventListener('click', hideAiBlockOverlay);
+  if (backdrop) backdrop.addEventListener('click', hideAiBlockOverlay);
+}
+
 function initLogoAndAppButton() {
   initLogoHover();
   const selectButton = $('#btn-select');
@@ -1030,6 +1089,8 @@ function initLogoAndAppButton() {
 
 function bootstrap() {
   initLoadingScreen();
+  initRulesOverlay();
+  initAiOverlay();
   initLogoAndAppButton();
   initDragAndDrop();
   initNavigation();
