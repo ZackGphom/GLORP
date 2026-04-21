@@ -1,995 +1,1105 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pixel Art to SVG Converter | GLORP</title>
-  <meta name="description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload, made for artists, game asset creators, NFT/collectible makers, poster/print work, and developers.">
-  <meta name="keywords" content="pixel art to svg converter, png to svg converter, pixel to vector, svg generator, GLORP">
-  <meta name="theme-color" content="#0a0a0a">
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="shortcut icon" href="/favicon.png">
-  <link rel="canonical" href="https://glorp.art/" />
-  <meta property="og:title" content="Pixel Art to SVG Converter | GLORP">
-  <meta property="og:description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload.">
-  <meta property="og:image" content="https://glorp.art/preview.png">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://glorp.art/">
+const ENDPOINT = 'https://script.google.com/macros/s/AKfycbyDgo-V24srcF2nAVzrPKb6iqYp-mTCwzAfN6fWizx1gyA3jxluVG_bQg7ucBRnoeLe/exec';
+const FEEDBACK_SECRET = atob('YWZzODk3cjVoIV9hOXM4Zmg5MzVoXyY/Zzk4MzVoOW5mOThuM2g0XyEy');
+const FEEDBACK_COOLDOWN_MS = 60 * 60 * 1000;
+const FEEDBACK_COOLDOWN_KEY = 'glorp_feedback_last_submit_at';
+const ACCEPTED_IMAGE_RE = /\.(png|gif|webp|jpe?g)$/i;
+const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/gif', 'image/webp', 'image/jpe?g']);
+const MAX_COLOR_SAMPLE_PIXELS = 80000;
+const MAX_UNIQUE_COLOR_THRESHOLD = 4096;
+const AI_BLOCKING_TYPES = new Set(['ai', 'colors']);
+const AI_METADATA_SIGNATURES = [
+  /(?:^|[^a-z0-9])ai[-_\s]*generated(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])generated[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])generated[-_\s]*by[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])created[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])created[-_\s]*by[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])made[-_\s]*with[-_\s]*ai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])artificial[-_\s]*intelligence(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])openai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])chatgpt(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])gpt[-_\s]*[0-9]+(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])gemini(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])google[-_\s]*gemini(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])bard(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])claude(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])anthropic(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])midjourney(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])stable[-_\s]*diffusion(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])sdxl(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])flux(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])dall[-_\s]*e(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])dalle(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])ideogram(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])leonardo(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])runway(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])firefly(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])copilot(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])canva(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])krea(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])novelai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])pixai(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])niji(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])prompt(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])negative[-_\s]*prompt(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])controlnet(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])lora(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])checkpoint(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])sampler(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])seed(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])steps(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])cfg[-_\s]*scale(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])txt2img(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])img2img(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])generative[-_\s]*fill(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])magic[-_\s]*media(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])image[-_\s]*generation(?:[^a-z0-9]|$)/i,
+  /(?:^|[^a-z0-9])image[-_\s]*creator(?:[^a-z0-9]|$)/i,
+];
 
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Pixel Art to SVG Converter | GLORP">
-  <meta name="twitter:description" content="Convert pixel art to SVG in your browser with GLORP. Local processing, no server upload.">
-  <meta name="twitter:image" content="https://glorp.art/preview.png">
-  
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "GLORP",
-    "operatingSystem": "Windows, macOS, Linux, Android, iOS",
-    "applicationCategory": "DesignApplication",
-    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "description": "High-performance pixel art to SVG converter using Greedy Meshing optimization. Process images locally and securely in your browser.",
-    "author": { "@type": "Person", "name": "ZackGphom" }
+const state = {
+  selectedFiles: [],
+  appInView: true,
+  headerLock: false,
+  worker: null,
+  workerReqId: 0,
+  workerRequests: new Map(),
+  feedbackLoaded: false,
+  feedbackScriptPromise: null,
+  feedbackReadyPromise: null,
+  fileValidationCache: new WeakMap(),
+};
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeInspectionText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\u0000/g, ' ')
+    .replace(/[\r\n\t]+/g, ' ');
+}
+
+function isAllowedImageFile(file) {
+  if (!file) return false;
+  const type = String(file.type || '').toLowerCase();
+  return ACCEPTED_IMAGE_RE.test(file.name) || ACCEPTED_IMAGE_TYPES.has(type);
+}
+
+function findAiMetadataSignature(text) {
+  const haystack = normalizeInspectionText(text);
+  for (const signature of AI_METADATA_SIGNATURES) {
+    if (signature.test(haystack)) return signature.source || 'ai metadata';
   }
-  </script>
+  return '';
+}
 
-  <!-- Temporary Yandex Metrika Webvisor setup for collecting interface usability, interaction, and behavior data. -->
-  <!-- Yandex.Metrika counter -->
-  <script type="text/javascript">
-      (function(m,e,t,r,i,k,a){
-          m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-          m[i].l=1*new Date();
-          for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-          k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=108224671', 'ym');
+async function readFileHeaderText(file, maxBytes = 512 * 1024) {
+  const slice = file.slice(0, Math.min(file.size, maxBytes));
+  const buffer = await slice.arrayBuffer();
+  const latin1 = new TextDecoder('latin1').decode(buffer);
+  const utf8 = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
+  return `${latin1}
+${utf8}`;
+}
 
-      ym(108224671, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-  </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/108224671" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-  <!-- /Yandex.Metrika counter -->
+async function inspectFileForAiSignals(file) {
+  const headerText = await readFileHeaderText(file);
+  const match = findAiMetadataSignature(`${file.name}
+${headerText}`);
+  return match ? { blocked: true, reason: 'AI metadata / tags detected', blockType: 'ai' } : { blocked: false, reason: '', blockType: '' };
+}
 
-  <style>
-    :root{
-      --bg:#0a0a0a;
-      --light:#161616;
-      --hover:#222222;
-      --text:#e6e6e6;
-      --accent:#ffffff;
-      --radius:14px;
-      --ease:cubic-bezier(0.19,1,0.22,1);
-      --reveal-translate:64px;
-      --reveal-scale:0.92;
-      --para-translate:36px;
-      --para-scale:0.94;
+function estimateUniqueColors(imageData) {
+  const { data, width, height } = imageData;
+  const totalPixels = width * height;
+  if (!totalPixels) return { uniqueCount: 0, blocked: false };
+
+  const samplePixels = Math.min(totalPixels, MAX_COLOR_SAMPLE_PIXELS);
+  const step = Math.max(1, Math.floor(totalPixels / samplePixels));
+  const unique = new Set();
+
+  for (let pixel = 0; pixel < totalPixels; pixel += step) {
+    const idx = pixel * 4;
+    const a = data[idx + 3];
+    if (a === 0) continue;
+    const key = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | a) >>> 0);
+    unique.add(key);
+    if (unique.size > MAX_UNIQUE_COLOR_THRESHOLD) {
+      return { uniqueCount: unique.size, blocked: true, blockType: 'colors' };
     }
-    html{scroll-behavior:smooth;overflow-anchor:none;-webkit-overflow-scrolling:touch}
-    *{box-sizing:border-box;-webkit-user-select:none;user-select:none;outline:none}
-    body,html{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;overflow-x:hidden}
+  }
+
+  return { uniqueCount: unique.size, blocked: unique.size > MAX_UNIQUE_COLOR_THRESHOLD, blockType: unique.size > MAX_UNIQUE_COLOR_THRESHOLD ? 'colors' : '' };
+}
+
+async function inspectFileForBlockingReasons(file) {
+  if (!file) return { blocked: true, reason: 'Invalid file' };
+  if (!isAllowedImageFile(file)) {
+    if (BLOCKED_IMAGE_RE.test(file.name) || /image\/jpeg/i.test(file.type)) {
+      return { blocked: true, reason: 'JPG / JPEG uploads are disabled', blockType: 'format' };
+    }
+    return { blocked: true, reason: 'Only PNG, GIF, and WEBP are allowed', blockType: 'format' };
+  }
+
+  const metadataInspection = await inspectFileForAiSignals(file);
+  if (metadataInspection.blocked) return metadataInspection;
+
+  try {
+    const { canvas, ctx, width, height } = await decodeFileToCanvas(file);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const colorInspection = estimateUniqueColors(imageData);
+    if (colorInspection.blocked) {
+      return {
+        blocked: true,
+        reason: `too many colors (${colorInspection.uniqueCount.toLocaleString()} sampled)`
+      };
+    }
+    return { blocked: false, reason: '' };
+  } catch (error) {
+    console.error('File inspection failed:', error);
+    return { blocked: true, reason: 'Unreadable image', blockType: 'format' };
+  }
+}
+
+function showToast(message, type = 'success', ms = 2200) {
+  const toast = $('#toast');
+  if (!toast) return;
+  toast.className = '';
+  toast.classList.add(type === 'error' ? 'error' : 'success');
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimeout);
+  toast._hideTimeout = setTimeout(() => {
+    toast.classList.remove('show', 'success', 'error');
+  }, ms);
+}
+
+function openRulesOverlay() {
+  const overlay = $('#rules-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('dismissed');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('rules-active');
+}
+
+function closeRulesOverlay() {
+  const overlay = $('#rules-overlay');
+  if (!overlay) return;
+  overlay.classList.add('dismissed');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('rules-active');
+}
+
+function showAiBlockOverlay(reason = '') {
+  const overlay = $('#ai-block-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('dismissed');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('ai-active');
+  const subtitle = $('#ai-block-subtitle');
+  if (subtitle) subtitle.textContent = 'read the rules in -> ?';
+}
+
+function hideAiBlockOverlay() {
+  const overlay = $('#ai-block-overlay');
+  if (!overlay) return;
+  overlay.classList.add('dismissed');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('ai-active');
+}
+
+function setLoadingDone() {
+  const screen = $('#loading-screen');
+  if (!screen) return;
+  screen.classList.add('loaded');
+}
+
+function syncHeaderState() {
+  if (state.headerLock) return;
+  const header = $('#main-header');
+  if (!header) return;
+  const hasFiles = state.selectedFiles.length > 0;
+  header.classList.toggle('files-hidden', hasFiles);
+  header.classList.toggle('compact', !hasFiles && !state.appInView);
+}
+
+function updateUI() {
+  const hasFiles = state.selectedFiles.length > 0;
+  syncHeaderState();
+
+  const drawer = $('#file-drawer');
+  const selectBlock = $('#select-block');
+  const convertBlock = $('#convert-block');
+
+  if (drawer) drawer.classList.toggle('open', hasFiles);
+  if (selectBlock) selectBlock.style.display = hasFiles ? 'none' : 'block';
+  if (convertBlock) convertBlock.classList.toggle('active', hasFiles);
+
+  document.body.style.overflow = hasFiles ? 'hidden' : 'auto';
+  document.documentElement.style.overflow = hasFiles ? 'hidden' : 'auto';
+
+  const list = $('#file-list');
+  if (list) {
+    list.innerHTML = state.selectedFiles.map((file, index) => {
+      const displayName = file.name.length > 28 ? `${file.name.substring(0, 25)}...` : file.name;
+      return `<li><span title="${escapeHtml(file.name)}">${escapeHtml(displayName)}</span><span class="remove-file" data-index="${index}">×</span></li>`;
+    }).join('');
+
+    list.querySelectorAll('.remove-file').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const index = Number(btn.getAttribute('data-index'));
+        removeFile(index);
+      });
+    });
+  }
+}
+
+async function handleFiles(list) {
+  const incoming = Array.from(list || []).filter((file) => {
+    if (!file) return false;
+    if (file.size === 0) return false;
+    return isAllowedImageFile(file);
+  });
+
+  if (incoming.length === 0) {
+    if (list && list.length > 0) showToast('No valid images found', 'error');
+    return;
+  }
+
+  const accepted = [];
+  const blocked = [];
+
+  for (const file of incoming) {
+    if (state.selectedFiles.some((existing) => existing.name === file.name && existing.size === file.size)) {
+      continue;
+    }
+
+    let verdict = state.fileValidationCache.get(file);
+    if (!verdict) {
+      verdict = await inspectFileForBlockingReasons(file);
+      state.fileValidationCache.set(file, verdict);
+    }
+
+    if (verdict.blocked) {
+      blocked.push({ file, reason: verdict.reason || 'blocked', blockType: verdict.blockType || '' });
+      if (AI_BLOCKING_TYPES.has(verdict.blockType)) {
+        showAiBlockOverlay(verdict.blockType);
+      }
+      continue;
+    }
+
+    accepted.push(file);
+  }
+
+  if (accepted.length > 0) {
+    state.selectedFiles.push(...accepted);
+  }
+
+  updateUI();
+
+  if (blocked.length > 0) {
+    const summary = blocked.slice(0, 2).map(({ file, reason }) => `${file.name}: ${reason}`).join(' | ');
+    showToast(blocked.length === 1 ? `Blocked: ${summary}` : `Blocked ${blocked.length} file(s): ${summary}`, 'error', 4200);
+  }
+
+  if (accepted.length > 0) {
+    showToast(`${accepted.length} file(s) added`, 'success', 1400);
+  }
+}
+
+function removeFile(index) {
+  state.selectedFiles.splice(index, 1);
+  updateUI();
+  showToast('File removed', 'success', 900);
+}
+
+function clearAll() {
+  state.selectedFiles = [];
+  updateUI();
+  showToast('Queue cleared', 'success', 900);
+}
+
+window.removeFile = removeFile;
+window.clearAll = clearAll;
+
+function fileToDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => resolve(event.target.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageFromSource(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Image load error'));
+    img.src = src;
+  });
+}
+
+async function decodeFileToCanvas(file) {
+  if (typeof createImageBitmap === 'function') {
+    const bitmap = await createImageBitmap(file, {
+      premultiplyAlpha: 'none',
+      colorSpaceConversion: 'none'
+    });
     
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
-    .hero-subtitle { max-width: 720px; margin: 18px auto 0; color: #9a9a9a; font-size: 14px; line-height: 1.7; font-weight: 500; letter-spacing: 0.2px; }
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     
-    #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 1s var(--ease),visibility 1s}
-    #loading-screen.loaded{opacity:0;visibility:hidden}
-    .loading-dots{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
-    .dot{width:6px;height:6px;background:#333;border-radius:50%;animation:blink 1.4s infinite both}
-    .dot:nth-child(2){animation-delay:.2s}
-    .dot:nth-child(3){animation-delay:.4s}
-    @keyframes blink{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
-    @keyframes headerGradientShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(bitmap, 0, 0);
     
-    header{position:fixed;top:20px;left:50%;width:calc(100vw - 40px);height:56px;transform:translateX(-50%);background:rgba(22,22,22,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.05);border-radius:var(--radius);z-index:1000;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;overflow:hidden;box-sizing:border-box;transition:transform 1.45s var(--ease),opacity 1.45s var(--ease),background 1.45s var(--ease),padding 1.45s var(--ease),width 1.45s var(--ease),border-color 1.45s var(--ease),box-shadow 1.45s var(--ease);transform-origin:center center;will-change:width,transform,opacity,padding}
-    header.compact{width:min(700px,calc(100vw - 40px));padding:0 14px;background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.06)}
-    header.compact .header-left,header.compact .header-right{opacity:1;transform:none;pointer-events:auto}
-    header.compact nav{width:auto;max-width:none;min-width:0;margin:0;padding:0;opacity:1;overflow:hidden;pointer-events:auto;transform:none;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
-    header.files-hidden{width:0;padding:0;opacity:0;border-color:transparent;background:rgba(22,22,22,0);pointer-events:none}
-    header.files-hidden nav,header.files-hidden .header-right,header.files-hidden .header-left{opacity:0;transform:scaleX(0.2);pointer-events:none}
-    .header-left{display:flex;align-items:center;justify-content:flex-start;gap:10px;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
-    .header-title{
-      font-weight:900;
-      font-size:16px;
-      letter-spacing:2px;
-      text-transform:uppercase;
-      background:linear-gradient(90deg,#ffffff 0%,#b8b8b8 18%,#f7f7f7 36%,#7f7f7f 54%,#ffffff 72%,#d7d7d7 100%);
-      background-size:300% 100%;
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-      -webkit-text-fill-color:transparent;
-      animation:headerGradientShift 12s ease-in-out infinite;
-      transition:transform 1.45s var(--ease),font-size 1.45s var(--ease),opacity 1.45s var(--ease),filter 1.45s var(--ease);
-      filter:drop-shadow(0 0 8px rgba(255,255,255,0.06));
-    }
-    nav{display:flex;gap:18px;justify-content:center;align-items:center;min-width:0;overflow:hidden;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),max-width 1.45s var(--ease),padding 1.45s var(--ease),margin 1.45s var(--ease)}
-    nav a{color:#888;text-decoration:none;font-size:12px;font-weight:700;text-transform:uppercase;padding:6px 8px}
-    nav a:hover{color:var(--accent)}
-    .header-right{display:flex;justify-content:flex-end;align-items:center;min-width:0;transition:opacity 1.45s var(--ease),transform 1.45s var(--ease),width 1.45s var(--ease),min-width 1.45s var(--ease)}
-    .btn-support-head{display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.04);color:var(--text);padding:8px 18px;border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;text-decoration:none;border:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 30px rgba(0,0,0,0.14);transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform} .btn-support-head:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.1);box-shadow:0 14px 34px rgba(0,0,0,0.24);transform:translateY(-1px) scale(1.035);color:#fff} .btn-support-head:active{transform:translateY(1px) scale(0.98);box-shadow:0 8px 18px rgba(0,0,0,0.18)}
-    section{min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:120px 20px;text-align:center;opacity:0;transform:translateY(var(--reveal-translate)) scale(var(--reveal-scale));transition:opacity .9s var(--ease),transform .9s var(--ease);will-change:transform,opacity}
-    section.revealed{opacity:1;transform:translateY(0) scale(1)}
-    #logo-big{height:160px;margin-bottom:40px;transform-origin:center center;will-change:transform;transition:transform .78s cubic-bezier(.16,1,.3,1),filter .22s var(--ease)}
-    #logo-big.logo-hovered{transform:translateY(-5px) rotate(-1deg) scale(1.03)}
-    .workflow-container{width:100%;display:flex;flex-direction:column;align-items:center}
-    #btn-select,#btn-convert{width:240px;height:56px;background:var(--light);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);text-transform:uppercase;letter-spacing:1px;will-change:transform,box-shadow,background,filter}
-    #btn-select:hover{background:var(--hover);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.06)}
-    #btn-select:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
-    #btn-convert{background:var(--accent);color:#000}
-    #btn-convert:hover{background:#f3f3f3;transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.03)}
-    #btn-convert:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
-    .hint{font-size:10px;color:#444;margin-top:18px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
-    #convert-block{display:none;opacity:0;transform:translateY(10px);transition:.5s var(--ease)}
-    #convert-block.active{display:block;opacity:1;transform:translateY(0)}
-    .mode-tabs{margin-top:25px;display:flex;gap:18px;justify-content:center}
-    .mode-tab{font-size:12px;font-weight:800;color:#888;cursor:pointer;text-transform:none;padding:6px 8px;border-radius:6px;transition:.18s;user-select:none}
-    .mode-tab:hover{color:var(--accent)}
-    .mode-tab.active{color:var(--accent);text-shadow:0 0 10px rgba(255,255,255,0.12);background:rgba(255,255,255,0.02)}
-    #drop-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.9);z-index:2000;display:flex;justify-content:center;align-items:center;opacity:0;visibility:hidden;transition:.3s;pointer-events:none}
-    #drop-overlay.visible{opacity:1;visibility:visible;pointer-events:auto}
-    #drop-overlay img{width:320px;height:auto;image-rendering:pixelated}
-    #file-drawer{position:fixed;right:-300px;top:100px;bottom:100px;width:280px;background:var(--light);border-radius:20px 0 0 20px;border:1px solid rgba(255,255,255,0.05);z-index:1100;transition:.6s var(--ease);display:flex;flex-direction:column;padding:20px}
-    #file-drawer.open{right:0}
-    .drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
-    .drawer-title{font-size:10px;font-weight:900;color:#555;letter-spacing:1px}
-    .btn-clear{background:none;border:none;color:#ff4444;font-size:9px;font-weight:800;cursor:pointer;text-transform:uppercase}
-    #file-list{flex:1;overflow-y:auto;list-style:none;padding:0;margin:0}
-    #file-list li{font-size:11px;padding:12px;background:#0f0f0f;margin-bottom:8px;border-radius:8px;color:#888;display:flex;justify-content:space-between;align-items:center}
-    .remove-file{color:#444;cursor:pointer;font-weight:bold;padding:0 5px;transition:.2s;font-size:14px}
-    .remove-file:hover{color:#fff}
-    .comp-row{width:100%;max-width:1100px;display:flex;align-items:center;gap:80px;margin-bottom:120px}
-    .vid-container{flex:1.3}
-    .vid-container video{width:100%;display:block;border-radius:20px;image-rendering:pixelated;box-shadow:0 40px 80px -20px rgba(0,0,0,0.6);outline:none}
-    .comp-info{flex:1;text-align:left}
-    .comp-info h2{font-size:36px;margin-bottom:20px;font-weight:800}
-    .comp-info p{color:#888;line-height:1.8;font-size:15px}
+    if (bitmap.close) bitmap.close();
+    return { canvas, ctx, width: canvas.width, height: canvas.height };
+  }
 
-    #logic{
-      padding-top:150px;
-      padding-bottom:150px;
-      position:relative;
-      overflow:visible;
-    }
-    #logic .about-wrap{
-      width:min(1120px,100%);
-      display:flex;
-      flex-direction:column;
-      align-items:flex-start;
-      text-align:left;
-      position:relative;
-      z-index:2;
-    }
-    #logic h2{
-      font-size:clamp(34px,5vw,54px);
-      margin:0 0 26px;
-      font-weight:900;
-      line-height:1.05;
-      letter-spacing:-0.02em;
-      text-align:left;
-    }
-    #logic .about-copy{
-      width:100%;
-      max-width:none;
-      font-size:clamp(18px,2.15vw,24px);
-      line-height:1.95;
-      color:#d7d7d7;
-      margin:0;
-      padding:0;
-      background:none;
-      border:none;
-      box-shadow:none;
-      backdrop-filter:none;
-      -webkit-backdrop-filter:none;
-      text-align:left;
-      letter-spacing:0;
-    }
-    #logic .about-copy strong{color:#fff}
-    #logic .about-copy span{color:#9a9a9a}
+  const dataUrl = await fileToDataURL(file);
+  const img = await loadImageFromSource(dataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0);
+  
+  return { canvas, ctx, width: canvas.width, height: canvas.height };
+}
 
-    #logic .about-rain{
-      position:absolute;
-      inset:-120px 0 -120px 0;
-      overflow:visible;
-      pointer-events:none;
-      z-index:1;
+function rgbaToHex(r, g, b) {
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function buildLegoSvgFromImageData(imageData) {
+  const { data, width, height } = imageData;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">`;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0) continue;
+    const pixel = i / 4;
+    const x = pixel % width;
+    const y = Math.floor(pixel / width);
+    svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="${rgbaToHex(data[i], data[i + 1], data[i + 2])}" fill-opacity="${(a / 255).toFixed(3)}"/>`;
+  }
+
+  svg += '</svg>';
+  return svg;
+}
+
+const CLOCKWISE = 1;
+const ANTICLOCKWISE = 2;
+
+function edgeFinding(grid, W, H) {
+  const ver_edges = new Uint8Array(H * (W + 1));
+  const hor_edges = new Uint8Array((H + 1) * W);
+  for (let r = 0; r <= H; r++) {
+    for (let c = 0; c < W; c++) {
+      const p = (r < H) ? grid[r * W + c] : 0;
+      const prev_p = (r > 0) ? grid[(r - 1) * W + c] : 0;
+      const n = 1 - prev_p;
+      if (p === 1 && n === 1) hor_edges[r * W + c] = CLOCKWISE;
+      else if (p === 0 && n === 0) hor_edges[r * W + c] = ANTICLOCKWISE;
     }
-    .about-rain-icon{
-      position:absolute;
-      top:-160px;
-      width:72px;
-      height:auto;
-      opacity:0;
-      transform:translate3d(0,-120px,0) rotate(0deg) scale(.82);
-      animation-name:glorpRainFall;
-      animation-timing-function:linear;
-      animation-fill-mode:forwards;
-      will-change:transform,opacity;
-      filter:drop-shadow(0 18px 25px rgba(0,0,0,.18));
+  }
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c <= W; c++) {
+      const p = (c < W) ? grid[r * W + c] : 0;
+      const prev_p = (c > 0) ? grid[r * W + (c - 1)] : 0;
+      const n = 1 - prev_p;
+      if (p === 1 && n === 1) ver_edges[r * (W + 1) + c] = ANTICLOCKWISE;
+      else if (p === 0 && n === 0) ver_edges[r * (W + 1) + c] = CLOCKWISE;
     }
-    .about-rain-icon svg{
-      display:block;
-      width:100%;
-      height:auto;
+  }
+  return { ver_edges, hor_edges };
+}
+
+function tracePath(startR, startC, ver_edges, hor_edges, W, H) {
+  let path = "";
+  let r = startR;
+  let c = startC;
+  let dir = 'R';
+  while (true) {
+    if (dir === 'R') {
+      let destC;
+      for (destC = c; destC < W; destC++) {
+        if (hor_edges[r * W + destC] === CLOCKWISE) hor_edges[r * W + destC] = 0;
+        else break;
+      }
+      path += `h${destC - c}`;
+      if (destC < (W + 1) && ver_edges[r * (W + 1) + destC] === CLOCKWISE) {
+        c = destC; dir = 'D';
+      } else if (r > 0 && ver_edges[(r - 1) * (W + 1) + destC] === ANTICLOCKWISE) {
+        r = r - 1; c = destC; dir = 'U';
+      } else break;
+    } else if (dir === 'D') {
+      let destR;
+      for (destR = r; destR < H; destR++) {
+        if (ver_edges[destR * (W + 1) + c] === CLOCKWISE) ver_edges[destR * (W + 1) + c] = 0;
+        else break;
+      }
+      path += `v${destR - r}`;
+      if (c > 0 && hor_edges[destR * W + (c - 1)] === ANTICLOCKWISE) {
+        r = destR; c = c - 1; dir = 'L';
+      } else if (destR < (H + 1) && hor_edges[destR * W + c] === CLOCKWISE) {
+        r = destR; dir = 'R';
+      } else break;
+    } else if (dir === 'L') {
+      let destC;
+      for (destC = c; destC >= 0; destC--) {
+        if (hor_edges[r * W + destC] === ANTICLOCKWISE) hor_edges[r * W + destC] = 0;
+        else break;
+      }
+      path += `h${destC - c}`;
+      if (r > 0 && ver_edges[(r - 1) * (W + 1) + (destC + 1)] === ANTICLOCKWISE) {
+        r = r - 1; c = destC + 1; dir = 'U';
+      } else if ((destC + 1) < (W + 1) && ver_edges[r * (W + 1) + (destC + 1)] === CLOCKWISE) {
+        c = destC + 1; dir = 'D';
+      } else break;
+    } else if (dir === 'U') {
+      let destR;
+      for (destR = r; destR >= 0; destR--) {
+        if (ver_edges[destR * (W + 1) + c] === ANTICLOCKWISE) ver_edges[destR * (W + 1) + c] = 0;
+        else break;
+      }
+      path += `v${destR - r}`;
+      if (hor_edges[(destR + 1) * W + c] === CLOCKWISE) {
+        r = destR + 1; dir = 'R';
+      } else if (c > 0 && hor_edges[(destR + 1) * W + (c - 1)] === ANTICLOCKWISE) {
+        r = destR + 1; c = c - 1; dir = 'L';
+      } else break;
     }
-    @keyframes glorpRainFall{
-      0%{
-        opacity:0;
-        transform:translate3d(0,-120px,0) rotate(var(--rot-start, 0deg)) scale(.78);
-      }
-      12%{
-        opacity:1;
-      }
-      88%{
-        opacity:1;
-      }
-      100%{
-        opacity:0;
-        transform:translate3d(var(--drift, 0px), calc(100vh + 180px), 0) rotate(var(--rot-end, 180deg)) scale(.68);
-      }
+  }
+  return path;
+}
+
+function pathFinding(grid, W, H) {
+  const { ver_edges, hor_edges } = edgeFinding(grid, W, H);
+  let path_data = "";
+  const hor_len = (H + 1) * W;
+  for (let i = 0; i < hor_len; i++) {
+    if (hor_edges[i] === CLOCKWISE) {
+      let r = Math.floor(i / W);
+      let c = i % W;
+      path_data += `M${c},${r}`;
+      path_data += tracePath(r, c, ver_edges, hor_edges, W, H);
+      path_data += "z";
     }
+  }
+  return path_data;
+}
+
+function buildMonolithSvgFromImageData(imageData) {
+  const { data, width: W, height: H } = imageData;
+  const uniqueColors = new Set();
+  
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0) continue;
+    const key = (((data[i] << 24) | (data[i + 1] << 16) | (data[i + 2] << 8) | a) >>> 0);
+    uniqueColors.add(key);
+  }
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">`;
+  const grid = new Uint8Array(W * H);
+
+  for (const key of uniqueColors) {
+    grid.fill(0);
+    let hasPixels = false;
     
-    .tech-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:1000px;text-align:left;margin-top:40px}
-    .tech-item h3{font-size:14px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
-    .tech-item p{font-size:15px;color:#888;line-height:1.6;opacity:0;transform:translateY(var(--para-translate)) scale(var(--para-scale));transition:opacity .75s var(--ease),transform .75s var(--ease);will-change:transform,opacity}
-    .tech-item p.visible{opacity:1;transform:translateY(0) scale(1)}
-    .faq-grid{width:100%;max-width:550px;display:flex;flex-direction:column;gap:12px;text-align:left}
-    .faq-card{background:var(--light);border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.02)}
-    .faq-btn{width:100%;padding:22px 25px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:14px;color:#fff;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:14px;font-weight:600;text-align:left;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),border-color .28s var(--ease),color .28s var(--ease),filter .28s var(--ease);will-change:transform}
-    .faq-dot{width:7px;height:7px;background:#333;border-radius:50%}
-    .faq-card.open .faq-dot{background:var(--accent);box-shadow:0 0 10px var(--accent)}
-    .faq-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.08);transform:translateY(-3px) scale(1.015);box-shadow:0 10px 30px rgba(0,0,0,0.24);filter:brightness(1.05)}
-    .faq-btn:active{transform:translateY(1px) scale(0.985);box-shadow:0 6px 16px rgba(0,0,0,0.18)}
-    .faq-ans{max-height:0;padding:0 25px;color:#888;font-size:13px;line-height:1.7;transition:max-height 0.5s var(--ease), padding 0.5s var(--ease), opacity 0.5s var(--ease);overflow:hidden;opacity:0}
-    .faq-card.open .faq-ans{max-height:200px;padding:14px 25px 25px;opacity:1}
-    #contact{padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
-    .links{display:flex;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap}
-    .icon-link{display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border-radius:14px;background:rgba(255,255,255,0.03);transition:.18s;text-decoration:none;color:inherit}
-    .icon-link svg{width:32px;height:32px;fill:white;opacity:0.75;transition:.18s}
-    .icon-link:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.6);background:rgba(255,255,255,0.08)}
-    .icon-link:hover svg{opacity:1}
-    footer{width:100%;padding:40px 20px;border-top:1px solid #161616;color:#444;font-size:11px;font-weight:800;letter-spacing:2px;text-align:center;display:flex;justify-content:center}
-    #status-msg{margin-top:30px;font-size:10px;color:#555;font-weight:900;letter-spacing:3px}
-    #toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(20,20,20,0.95);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:transform .35s var(--ease),opacity .35s var(--ease);z-index:3000;font-weight:800;letter-spacing:.6px;font-size:13px}
-    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
-    #toast.success{border:1px solid rgba(100,255,180,0.12)}
-    #toast.error{border:1px solid rgba(255,100,100,0.12)}
-    #bloom{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(20px) scaleX(0.95);width:140%;height:80px;pointer-events:none;z-index:1200;background:radial-gradient(ellipse at center bottom,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 22%,rgba(0,0,0,0) 60%);filter:blur(18px) saturate(110%);opacity:.85;border-radius:50% 50% 0 0 / 100% 100% 0 0;transition:transform .35s var(--ease),height .35s var(--ease),opacity .35s var(--ease);will-change:transform,height,opacity}
-    
-#feedback-root{position:relative;width:100%;min-height:100vh;overflow:visible}
-#feedback-root .feedback-stage{position:relative;width:100%;padding:clamp(36px,6vw,80px) 0 56px;display:flex;justify-content:center;align-items:center}
-#feedback-root .feedback-inner{width:100%;max-width:1400px;display:flex;flex-direction:column;align-items:center;gap:30px;padding:0 20px}
-#feedback-root .feedback-form-wrap{width:100%;display:flex;justify-content:center;pointer-events:auto}
-#feedback-root .feedback-form{width:min(460px, calc(100vw - 32px));min-height:560px;border-radius:28px;background:rgba(22,22,22,0.7);border:1px solid rgba(255,255,255,0.05);box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:40px 32px 38px;display:flex;flex-direction:column;justify-content:flex-start;transition:all .8s var(--ease);box-sizing:border-box}
-#feedback-root .feedback-title{font-size:15px;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,.94);margin:0 0 8px;text-align:center}
-#feedback-root .feedback-subtitle{font-size:9px;font-weight:900;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.48);text-align:center;margin-bottom:18px}
-#feedback-root .feedback-field,#feedback-root .feedback-textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;color:rgba(255,255,255,.94);padding:14px 16px;font-size:13px;outline:none;transition:transform .28s var(--ease),background .28s var(--ease),border-color .28s var(--ease),box-shadow .28s var(--ease),filter .28s var(--ease)}
-#feedback-root .feedback-field::placeholder,#feedback-root .feedback-textarea::placeholder{color:rgba(255,255,255,.34)}
-#feedback-root .feedback-field:focus,#feedback-root .feedback-textarea:focus{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.15);box-shadow:0 0 0 3px rgba(255,255,255,.04)}
-#feedback-root .feedback-textarea{min-height:160px;resize:none}
-#feedback-root .feedback-stars-picker{display:flex;justify-content:center;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
-#feedback-root .feedback-star-btn{width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.24);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .22s var(--ease)}
-#feedback-root .feedback-star-btn:hover{transform:translateY(-2px) scale(1.04);background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);box-shadow:0 10px 24px rgba(0,0,0,.12);color:rgba(255,255,255,.9)}
-#feedback-root .feedback-star-btn.active{color:rgba(255,255,255,.96);background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
-#feedback-root .feedback-charline{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.5)}
-#feedback-root .feedback-send{width:100%;margin-top:14px;background:rgba(255,255,255,.92);color:#111;border:none;border-radius:16px;padding:14px 16px;font-size:10px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease)}
-#feedback-root .feedback-send:hover{transform:translateY(-3px) scale(1.015);background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.14);filter:brightness(1.02)}
-#feedback-root .feedback-send:active{transform:translateY(1px) scale(.985);box-shadow:0 6px 16px rgba(0,0,0,.1)}
-#feedback-root .feedback-send:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
-
-#feedback-root .feedback-list-wrapper{position:relative;width:100%;max-width:1400px;margin-top:30px;overflow:visible;transition:max-height 1.2s cubic-bezier(0.19,1,0.22,1)}
-#feedback-root .feedback-list{display:flex;gap:20px;width:100%;align-items:flex-start;margin:0;padding:0}
-#feedback-root .feedback-list-column{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px}
-@media (max-width: 1024px){#feedback-root .feedback-list{gap:16px}}
-@media (max-width: 600px){#feedback-root .feedback-list{display:block}}
-@media (max-width: 600px){#feedback-root .feedback-list-column{display:block}}
-
-#feedback-root .feedback-comment{width:100%;background:rgba(22,22,22,0.7);border:1px solid rgba(255,255,255,0.05);border-radius:18px;padding:18px 18px 16px;box-shadow:0 10px 30px rgba(0,0,0,0.14);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);margin:0;display:block;transition:all .34s var(--ease);transform-origin:center center;will-change:transform,opacity,filter}
-#feedback-root .feedback-comment:hover{transform:translateY(-2px) scale(1.01);background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);filter:brightness(1.05);box-shadow:0 14px 34px rgba(0,0,0,0.24)}
-#feedback-root .feedback-name{font-size:10px;line-height:1.1;letter-spacing:.22em;font-weight:900;text-transform:uppercase;color:rgba(255,255,255,.76);margin-bottom:10px}
-#feedback-root .feedback-text{color:rgba(255,255,255,.9);font-size:14px;line-height:1.52;white-space:pre-wrap;word-break:break-word}
-#feedback-root .feedback-stars{display:flex;gap:4px;align-items:center;flex:0 0 auto;margin-top:12px}
-#feedback-root .feedback-stars span{font-size:12px;line-height:1;color:rgba(255,255,255,.22)}
-#feedback-root .feedback-stars span.filled{color:rgba(255,255,255,.9)}
-
-#feedback-root .feedback-mask{position:absolute;bottom:0;left:0;right:0;height:350px;background:linear-gradient(to top, var(--bg) 0%, rgba(10,10,10,0) 100%);display:flex;align-items:flex-end;justify-content:center;padding-bottom:30px;pointer-events:none;transition:opacity 0.6s var(--ease), visibility 0.6s;z-index:10}
-#feedback-root .feedback-mask.hidden{opacity:0;visibility:hidden;pointer-events:none}
-#feedback-root .feedback-mask.expanded{background:linear-gradient(to top, rgba(10,10,10,0) 0%, rgba(10,10,10,0) 100%)}
-#feedback-root .feedback-more{pointer-events:auto;background:rgba(22,22,22,0.9);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.24);color:rgba(255,255,255,.92);border-radius:999px;padding:14px 28px;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-#feedback-root .feedback-more:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff}
-
-    #rules-open-btn{position:fixed;right:20px;bottom:20px;z-index:9400;width:54px;height:54px;border:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.92);color:#111;font-size:20px;font-weight:900;line-height:1;cursor:pointer;box-shadow:0 14px 34px rgba(0,0,0,0.34);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease),filter .28s var(--ease)}
-    #rules-open-btn:hover{background:#fff;transform:translateY(-3px) scale(1.04);box-shadow:0 18px 40px rgba(0,0,0,0.42);filter:brightness(1.02)}
-    #rules-open-btn:active{transform:translateY(1px) scale(.96)}
-    body.rules-active #rules-open-btn,body.ai-active #rules-open-btn{opacity:0;pointer-events:none;transform:scale(.85)}
-
-    #ai-block-overlay{position:fixed;inset:0;z-index:9850;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform;isolation:isolate}
-    #ai-block-backdrop{position:absolute;inset:0;z-index:0;background:rgba(5,5,5,0.82);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:auto}
-    #ai-block-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
-    #ai-block-card{position:relative;z-index:1;width:min(1040px,calc(100vw - 24px));max-height:min(88vh,920px);overflow:hidden;padding:28px 22px 34px;border-radius:28px;background:rgba(22,22,22,0.76);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.52),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
-    #ai-block-overlay.dismissed #ai-block-card{transform:translateY(44px) scale(.98);opacity:0}
-    #ai-block-art{display:block;width:min(94vw,920px);max-height:68vh;object-fit:contain;image-rendering:auto}
-    #ai-block-title{margin:0;font-size:clamp(32px,6vw,74px);line-height:.95;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-shadow:0 0 18px rgba(255,255,255,.04)}
-    #ai-block-subtitle{margin:0;font-size:12px;line-height:1.6;letter-spacing:3px;text-transform:uppercase;color:#a6a6a6}
-    #ai-block-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:50px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
-    #ai-block-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
-    #ai-block-dismiss:active{transform:translateY(1px) scale(.985)}
-    body.ai-active{overflow:hidden}
-    body.ai-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
-    body.ai-active #bloom{opacity:0}
-
-    #rules-overlay{position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform;isolation:isolate}
-    #rules-backdrop{position:absolute;inset:0;z-index:0;background:rgba(5,5,5,0.72);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:auto}
-    #rules-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
-    #rules-card{position:relative;z-index:1;width:min(560px,calc(100vw - 28px));max-height:min(82vh,760px);overflow:auto;padding:30px 26px 22px;border-radius:24px;background:rgba(22,22,22,0.74);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
-    #rules-overlay.dismissed #rules-card{transform:translateY(44px) scale(.98);opacity:0}
-    .rules-title{margin:0 0 22px;font-size:clamp(28px,4vw,42px);line-height:1.02;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-align:center;text-shadow:0 0 18px rgba(255,255,255,.04)}
-    .rules-list{display:flex;flex-direction:column;gap:14px;text-align:left;margin:0 0 24px}
-    .rules-item{font-size:14px;line-height:1.7;color:#d1d1d1;letter-spacing:.1px}
-    .rules-item strong{color:#fff}
-    .rules-note{display:inline-block;margin-top:4px;color:#9a9a9a;font-size:12px;line-height:1.6}
-    .rules-golden{padding:14px 14px 15px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05)}
-    .rules-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:50px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
-    .rules-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
-    .rules-dismiss:active{transform:translateY(1px) scale(.985)}
-    body.rules-active{overflow:hidden}
-    body.rules-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
-    body.rules-active #bloom{opacity:0}
-
-    @media (max-width: 900px){
-      .tech-grid{grid-template-columns:1fr}
-      .comp-row{flex-direction:column;gap:30px}
-      #file-drawer{display:none}
-      #bloom{height:50px;width:200%}
-
-      #main-header{
-        top: 10px;
-        left: 50%;
-        width: calc(100vw - 16px);
-        height: auto;
-        min-height: 52px;
-        padding: 8px 10px;
-        border-radius: 12px;
-        grid-template-columns: auto 1fr auto;
-        grid-template-rows: auto auto;
-        column-gap: 10px;
-        row-gap: 8px;
-        align-items: center;
-      }
-
-      #main-header.compact{
-        width: calc(100vw - 16px);
-        padding: 8px 10px;
-      }
-
-      .header-left{
-        grid-column: 1;
-        grid-row: 1;
-        min-width: 0;
-      }
-
-      .header-title{
-        font-size: 14px;
-        letter-spacing: 1.6px;
-      }
-
-      nav{
-        grid-column: 1 / -1;
-        grid-row: 2;
-        width: 100%;
-        justify-content: flex-start;
-        gap: 12px;
-        overflow-x: auto;
-        white-space: nowrap;
-        padding: 0 0 2px 0;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-      }
-
-      nav::-webkit-scrollbar{
-        display: none;
-      }
-
-      nav a{
-        font-size: 10px;
-        padding: 4px 0;
-      }
-
-      .header-right{
-        grid-column: 3;
-        grid-row: 1;
-        justify-content: flex-end;
-      }
-
-      .btn-support-head{
-        padding: 6px 9px;
-        font-size: 8px;
-        border-radius: 8px;
-        white-space: nowrap;
-      }
-
-      .icon-link{width:74px;height:74px}
-      #logic{
-        padding-top:120px;
-        padding-bottom:120px;
-      }
-      #logic .about-copy{
-        font-size:18px;
-        line-height:1.85;
+    for (let i = 0; i < W * H; i++) {
+      const idx = i * 4;
+      const pKey = (((data[idx] << 24) | (data[idx + 1] << 16) | (data[idx + 2] << 8) | data[idx + 3]) >>> 0);
+      if (pKey === key) {
+        grid[i] = 1;
+        hasPixels = true;
       }
     }
 
-    @media (max-width: 480px){
-      #main-header{
-        width: calc(100vw - 12px);
-        padding: 7px 8px;
-        border-radius: 11px;
+    if (hasPixels) {
+      const pathData = pathFinding(grid, W, H);
+      if (pathData) {
+        const r = (key >>> 24) & 255;
+        const g = (key >>> 16) & 255;
+        const b = (key >>> 8) & 255;
+        const a = key & 255;
+        svg += `<path d="${pathData}" fill="${rgbaToHex(r, g, b)}" fill-opacity="${(a / 255).toFixed(3)}" fill-rule="evenodd"/>`;
       }
-
-      nav{
-        gap: 10px;
-      }
-
-      nav a{
-        font-size: 9px;
-      }
-
-      .btn-support-head{
-        padding: 6px 8px;
-        font-size: 7px;
-      }
-      #logic h2{font-size:32px}
     }
-  </style>
-</head>
-<body class="rules-active">
-  <h1 class="sr-only">Pixel Art to SVG Converter</h1>
-  <noscript>
-  <h1>Pixel Art to SVG Converter | GLORP</h1>
-  <p>Convert pixel art images to clean SVG online. Works directly in your browser.</p>
-</noscript>
+  }
 
-  <div id="loading-screen">
-    <div style="font-weight:900;font-size:10px;letter-spacing:5px;color:#333;text-transform:uppercase">STARTING ENGINE</div>
-    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-  </div>
+  svg += '</svg>';
+  return svg;
+}
 
-  <div id="rules-overlay" role="dialog" aria-modal="true" aria-labelledby="rules-title">
-    <div id="rules-backdrop" aria-hidden="true"></div>
-    <div id="rules-card" class="rules-card">
-      <h2 id="rules-title" class="rules-title">NO AI SLOP!</h2>
-      <div style="margin:-4px 0 18px;font-size:12px;line-height:1.8;letter-spacing:3px;text-transform:uppercase;color:#a7a7a7">keep ur ai shit from my glorp away!</div>
+async function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch (error) {
+    }
+    try {
+      link.remove();
+    } catch (error) {
+    }
+  }, 1500);
+}
 
-      <div class="rules-list">
-        <div class="rules-item"><strong>Original files only.</strong> Keep the image crisp, clean, and saved at the size you actually made it.</div>
-        <div class="rules-item"><strong>PNG, GIF, or WEBP.</strong> JPG and JPEG uploads are blocked.</div>
-        <div class="rules-item"><strong>No blurry upscales.</strong> If it looks smeared, overprocessed, or cooked by a generator, GLORP will stop it.</div>
-        <div class="rules-item rules-golden"><strong>KEEP IT CLEAN:</strong> GLORP works best with real pixel art and other sharp source images. No slop, no mush, no fake detail.</div>
-      </div>
+function getBaseName(fileName) {
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+}
 
-      <button id="rules-dismiss" class="rules-dismiss" type="button">GOT IT</button>
-    </div>
-  </div>
+function getConversionWorker() {
+  if (state.worker) return state.worker;
 
-  <div id="ai-block-overlay" class="dismissed" role="dialog" aria-modal="true" aria-labelledby="ai-block-title" aria-hidden="true">
-    <div id="ai-block-backdrop" aria-hidden="true"></div>
-    <div id="ai-block-card">
-      <h2 id="ai-block-title">NO AI SLOP!</h2>
-      <img id="ai-block-art" src="FUCK_AI.png" alt="NO AI SLOP" decoding="async" fetchpriority="high">
-      <div id="ai-block-subtitle">read the rules in -&gt; ?</div>
-      <button id="ai-block-dismiss" type="button">GOT IT</button>
-    </div>
-  </div>
+  const worker = new Worker('./js/conversion-worker.js');
+  worker.onmessage = (event) => {
+    const { id, ok, blob, filename, error } = event.data || {};
+    const pending = state.workerRequests.get(id);
+    if (!pending) return;
+    state.workerRequests.delete(id);
 
-  <button id="rules-open-btn" type="button" aria-label="Open rules">?</button>
+    if (ok) {
+      pending.resolve({ blob, filename });
+    } else {
+      pending.reject(new Error(error || 'Worker conversion failed'));
+    }
+  };
 
-  <div id="drop-overlay"><img src="DropUrStuffHere.png" alt="Drop Here" decoding="async"></div>
+  worker.onerror = (error) => {
+    const err = (error && error.error) || new Error((error && error.message) || 'Worker error');
+    for (const [, pending] of state.workerRequests) pending.reject(err);
+    state.workerRequests.clear();
+    try {
+      worker.terminate();
+    } catch (terminateError) {
+    }
+    state.worker = null;
+  };
 
-  <header id="main-header">
-    <div class="header-left"><span class="header-title">glorp</span></div>
-    <nav>
-      <a href="#app">Engine</a>
-      <a href="#logic">About</a>
-      <a href="#compare">Modes</a>
-      <a href="#faq">FAQ</a>
-      <a href="#contact">Links</a>
-      <a href="#feedback">Feedback</a>
-    </nav>
-    <div class="header-right">
-      <a class="btn-support-head" href="https://www.donationalerts.com/r/zackgphom" target="_blank" rel="noopener noreferrer">Support</a>
-    </div>
-  </header>
+  state.worker = worker;
+  return worker;
+}
 
-  <div id="file-drawer">
-    <div class="drawer-header">
-      <div class="drawer-title">BATCH QUEUE</div>
-      <button class="btn-clear" onclick="clearAll()">Clear All</button>
-    </div>
-    <ul id="file-list"></ul>
-  </div>
+function convertFileInWorker(file, mode) {
+  const worker = getConversionWorker();
+  const id = ++state.workerReqId;
+  return new Promise((resolve, reject) => {
+    state.workerRequests.set(id, { resolve, reject });
+    worker.postMessage({ id, file, mode });
+  });
+}
 
-  <section id="app" class="revealed">
-    <img src="logo.png" id="logo-big" alt="GLORP logo" decoding="async" fetchpriority="high">
-    <div class="workflow-container">
-      <div id="select-block">
-        <button id="btn-select" onclick="document.getElementById('file-input').click()">SELECT ASSETS</button>
-        <div class="hint">DRAG & DROP ANYWHERE</div>
-      </div>
+async function convertFileInMainThread(file, mode) {
+  const { canvas, ctx, width, height } = await decodeFileToCanvas(file);
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const baseName = getBaseName(file.name);
 
-      <div id="convert-block">
-        <button id="btn-convert">CONVERT</button>
-        <div class="mode-tabs" id="mode-tabs">
-          <div class="mode-tab active" data-mode="monolith">Monolith</div>
-          <div class="mode-tab" data-mode="lego">Lego</div>
-          <div class="mode-tab" data-mode="webp">WebP</div>
-        </div>
-      </div>
-    </div>
+  if (mode === 'webp') {
+    const blob = await new Promise((resolve, reject) => {
+      if (canvas.convertToBlob) {
+        canvas.convertToBlob({ type: 'image/webp', quality: 1 })
+          .then(resolve)
+          .catch(reject);
+      } else {
+        canvas.toBlob((result) => {
+          if (result) resolve(result);
+          else reject(new Error('WebP export failed'));
+        }, 'image/webp', 1.0);
+      }
+    });
+    return { blob, filename: `${baseName}.webp` };
+  }
 
-    <input type="file" id="file-input" multiple accept="image/png,image/gif,image/webp" style="display:none">
-    <div id="status-msg"></div>
-  </section>
+  const svg = mode === 'lego'
+    ? buildLegoSvgFromImageData(imageData)
+    : buildMonolithSvgFromImageData(imageData);
 
-  <section id="logic">
-    <div class="about-wrap">
-      <h2>What is GLORP?</h2>
-      <p class="about-copy">
-        <strong>GLORP</strong> is an online tool for converting pixel art to SVG. It works locally in your browser, so your images stay on your device and are not sent to a server. It is useful for <strong>artists</strong>, <strong>game asset creators</strong>, <strong>NFT / collectible makers</strong>, <strong>poster / print work</strong>, and <strong>developers</strong>.
-      </p>
-    </div>
+  return {
+    blob: new Blob([svg], { type: 'image/svg+xml' }),
+    filename: `${baseName}.svg`,
+  };
+}
 
-    <div class="about-rain" aria-hidden="true"></div>
-  </section>
+async function convertSingleFile(file, mode) {
+  try {
+    const result = await convertFileInWorker(file, mode);
+    await downloadBlob(result.blob, result.filename);
+  } catch (error) {
+    console.error('Worker conversion failed, falling back to main thread:', error);
 
-  <section id="compare">
-    <div class="comp-row">
-      <div class="vid-container">
-        <video autoplay loop muted playsinline preload="metadata">
-          <source src="Monolith.webm" type="video/webm">
-          Your browser does not support the video tag.
-        </video>
-      </div>
-      <div class="comp-info">
-        <h2>Monolith Mode</h2>
-        <p>The core GLORP algorithm. It analyzes color adjacency to build complex, multi-anchor SVG paths using greedy meshing optimization. Version 4.0.0 improves vertex merging for even cleaner vector outputs.</p>
-      </div>
-    </div>
-    <div class="comp-row" style="flex-direction:row-reverse">
-      <div class="vid-container">
-        <video autoplay loop muted playsinline preload="metadata">
-          <source src="Lego.webm" type="video/webm">
-          Your browser does not support the video tag.
-        </video>
-      </div>
-      <div class="comp-info" style="text-align:right">
-        <h2>Lego Mode</h2>
-        <p>Exact 1:1 pixel-to-rect representation. In v4.0.0, we've implemented a performance detection overlay that warns you before generating heavy SVGs, preventing browser lag on massive grids.</p>
-      </div>
-    </div>
-  </section>
+    if (mode === 'monolith') {
+      showToast('Engine error — falling back to monolith fallback', 'error', 3000);
+      const fallback = await convertFileInMainThread(file, 'monolith');
+      await downloadBlob(fallback.blob, fallback.filename);
+      return;
+    }
 
-  <section id="faq">
-    <h2 style="font-size:42px;font-weight:800;margin-bottom:50px">FAQ</h2>
-    <div class="faq-grid">
-      <div class="faq-card">
-        <button class="faq-btn">CAN I UPLOAD MULTIPLE FILES AT ONCE? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Yes — select several files via the file picker or drag multiple images into the page. They will be queued and processed one by one, allowing you to easily <strong>batch convert PNG to SVG</strong>.</div>
-      </div>
+    if (mode === 'lego') {
+      const fallback = await convertFileInMainThread(file, 'lego');
+      await downloadBlob(fallback.blob, fallback.filename);
+      return;
+    }
 
-      <div class="faq-card">
-        <button class="faq-btn">CAN I DROP A WHOLE FOLDER? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Folder uploads are supported only in the desktop app. On the web we intentionally block folders. Get the desktop version here: <a href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" style="color:#fff;text-decoration:underline">Itch</a>.</div>
-      </div>
+    if (mode === 'webp') {
+      const fallback = await convertFileInMainThread(file, 'webp');
+      await downloadBlob(fallback.blob, fallback.filename);
+      return;
+    }
 
-      <div class="faq-card">
-        <button class="faq-btn">WHAT FORMATS ARE SUPPORTED? <span class="faq-dot"></span></button>
-        <div class="faq-ans">PNG is recommended (best alpha support). JPEG and other common raster formats work too, but alpha/transparency handling is limited on those.</div>
-      </div>
+    throw error;
+  }
+}
 
-      <div class="faq-card">
-        <button class="faq-btn">HOW LONG DOES CONVERSION TAKE? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Conversion time depends on image size, mode and device power. Small sprites finish quickly; large images with many colors may take longer. The UI displays progress notifications and falls back to the safe 'Lego mod' if the mesher detects instability.</div>
-      </div>
+async function convertSelectedFiles() {
+  const activeTab = $('.mode-tab.active');
+  const mode = activeTab ? activeTab.dataset.mode : 'monolith';
+  const status = $('#status-msg');
 
-      <div class="faq-card">
-        <button class="faq-btn">IS EVERYTHING PROCESSED LOCALLY? <span class="faq-dot"></span></button>
-        <div class="faq-ans">Yes. We utilize <strong>local browser processing</strong> through WebAssembly (Pyodide). No image data is sent to any server.</div>
-      </div>
-    </div>
-  </section>
+  if (state.selectedFiles.length === 0) {
+    if (status) status.innerText = 'NO FILES SELECTED';
+    showToast('No files selected', 'error');
+    return;
+  }
 
-  <section id="contact">
-    <h2 style="font-size:30px;margin-bottom:6px">Contact & Links</h2>
-    <div class="links" role="list">
-      <a class="icon-link" href="https://zack-gphom.itch.io/glorp-pixel-to-svg" target="_blank" rel="noopener noreferrer" title="Itch.io">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="24" height="24" fill="#000000" style="opacity:1;"><path  d="M16 5c-3.252 0-7.688.05-8.588.13c-1.01.607-3.01 2.901-3.03 3.497v1C4.383 10.89 5.567 12 6.638 12C7.92 12 8.99 10.93 8.99 9.668C8.99 10.93 10.03 12 11.312 12c1.293 0 2.293-1.069 2.293-2.332c0 1.262 1.09 2.332 2.383 2.332h.022c1.293 0 2.383-1.069 2.383-2.332c0 1.262 1.01 2.332 2.293 2.332s2.324-1.069 2.324-2.332c0 1.262 1.07 2.332 2.353 2.332c1.071 0 2.252-1.11 2.252-2.373v-1c-.02-.596-2.02-2.89-3.03-3.496C21.445 5.02 19.253 5 16 5m-2.45 6.742c-1.052 1.81-3.698 1.832-4.73.012c-.63 1.092-2.056 1.514-2.666 1.307c-.178 1.899-.3 11.648.992 13.283c3.797.885 14.019.866 17.708 0c1.495-1.524 1.16-11.522.992-13.283c-.61.207-2.037-.215-2.657-1.307c-1.043 1.82-3.688 1.798-4.74-.012c-.325.59-1.082 1.367-2.449 1.367a2.73 2.73 0 0 1-2.45-1.367M11.42 14c.8 0 1.53 0 2.41.98c1.45-.15 2.89-.15 4.34 0c.89-.97 1.61-.97 2.41-.97c2.58 0 3.2 3.81 4.13 7.09c.84 3.05-.28 3.13-1.67 3.13c-2.07-.08-3.22-1.58-3.22-3.09c-1.93.32-5.01.44-7.64 0c0 1.51-1.15 3.01-3.22 3.09c-1.39 0-2.51-.08-1.67-3.13c.93-3.3 1.55-7.09 4.13-7.09zM16 16.877s-1.694 1.562-2 2.107l1.107-.04v.966c0 .058.819.008.893.008c.447.017.893.033.893-.008v-.967l1.107.041c-.306-.546-2-2.107-2-2.107"/></svg>
-      </a>
+  if (status) status.innerText = `CONVERTING ${state.selectedFiles.length} ASSETS...`;
+  showToast(`Converting ${state.selectedFiles.length} file(s)...`, 'success', 1400);
 
-      <a class="icon-link" href="https://github.com/ZackGphom/GLORP" target="_blank" rel="noopener noreferrer" title="GitHub">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5c-6.3 0-11.4 5.1-11.4 11.4 0 5 3.3 9.3 7.8 10.8.6.1.8-.3.8-.6v-2c-3.2.7-3.8-1.5-3.8-1.5-.5-1.3-1.3-1.6-1.3-1.6-1-.7.1-.7.1-.7 1.1.1 1.7 1.1 1.7 1.1 1 1.7 2.6 1.2 3.2.9.1-.7.4-1.2.7-1.5-2.5-.3-5.2-1.3-5.2-5.6 0-1.2.4-2.2 1.2-3-.1-.3-.5-1.4.1-3 0 0 .9-.3 3 1.1.9-.2 1.8-.3 2.8-.3.9 0 1.9.1 2.8.3 2.1-1.4 3-1.1 3-1.1.6 1.6.2 2.7.1 3 .7.8 1.2 1.8 1.2 3 0 4.3-2.6 5.3-5.2 5.6.4.3.8 1 .8 2.1v3.1c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8 0-6.3-5.1-11.4-11.4-11.4z"/></svg>
-      </a>
+  for (const file of state.selectedFiles.slice()) {
+    try {
+      let verdict = state.fileValidationCache.get(file);
+      if (!verdict) {
+        verdict = await inspectFileForBlockingReasons(file);
+        state.fileValidationCache.set(file, verdict);
+      }
 
-      <a class="icon-link" href="https://x.com/ZackGphom" target="_blank" rel="noopener noreferrer" title="Twitter / X">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </a>
-
-      <a class="icon-link" href="https://www.behance.net/maaxkeker" target="_blank" rel="noopener noreferrer" title="Behance">
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" shape-rendering="geometricPrecision" text-rendering="geometricPrecision" image-rendering="optimizeQuality" fill-rule="evenodd" clip-rule="evenodd" viewBox="0 0 640 640"><path d="M185.577 119.517c18.862 0 35.847 1.642 51.331 5.008 15.52 3.236 28.63 8.752 39.757 16.24 10.996 7.512 19.476 17.516 25.748 29.989 6 12.354 9 27.862 9 46.229 0 19.878-4.476 36.355-13.512 49.63-9.118 13.24-22.358 24-40.122 32.516 24.236 6.993 42.118 19.24 54.118 36.627 11.989 17.516 17.753 38.504 17.753 63.225 0 19.996-3.886 37.11-11.469 51.615-7.748 14.634-18.248 26.492-31.11 35.634-12.993 9.236-27.993 15.992-44.753 20.363-16.642 4.346-33.756 6.626-51.45 6.626H0V119.553l185.601.012-.023-.048zm232.042 31.76h159.616v38.883l-159.616-.012v-38.883.012zm35.469 293.448c11.764 11.469 28.63 17.233 50.646 17.233 15.745 0 29.516-4.016 40.867-12.012 11.35-7.996 18.248-16.465 20.882-25.229l68.965.012c-11.126 34.347-27.874 58.749-50.859 73.5-22.642 14.753-50.35 22.241-82.5 22.241-22.524 0-42.627-3.65-60.757-10.772-18.119-7.24-33.237-17.35-45.993-30.638-12.366-13.24-22.11-28.984-28.996-47.493-6.756-18.354-10.229-38.752-10.229-60.744 0-21.367 3.52-41.245 10.477-59.623 7.122-18.52 16.878-34.359 29.87-47.753 12.98-13.382 28.229-24 46.24-31.748 17.883-7.76 37.631-11.646 59.505-11.646 24.107 0 45.225 4.642 63.356 14.126 18 9.355 32.87 21.993 44.492 37.749 11.646 15.768 19.878 33.874 25.004 54.107 5.126 20.232 6.875 41.35 5.469 63.508H433.706c0 22.359 7.512 43.76 19.358 55.1l.024.082zm89.871-149.707c-9.236-10.24-25.122-15.874-44.233-15.874-12.52 0-22.866 2.114-31.11 6.366-8.115 4.229-14.752 9.473-19.878 15.745-4.997 6.248-8.516 13.004-10.465 20.102-1.996 6.874-3.236 13.24-3.65 18.756l127.502-.012c-1.878-19.984-8.752-34.736-18.118-45.106l-.047.023zm-368.662-16.524c15.355 0 28.099-3.65 38.091-11.008 9.992-7.24 14.752-19.24 14.752-35.752 0-9.106-1.63-16.76-4.878-22.642-3.354-5.87-7.76-10.512-13.37-13.748-5.516-3.355-11.74-5.646-19.099-6.886-7.122-1.358-14.634-1.984-22.24-1.984H86.576v91.973h87.745l-.024.047zm4.748 167.59c8.528 0 16.642-.757 24.213-2.528 7.748-1.748 14.634-4.359 20.363-8.35 5.752-3.887 10.641-8.989 14.114-15.745 3.52-6.638 5.126-15.118 5.126-25.477 0-20.232-5.764-34.748-17.114-43.512-11.351-8.646-26.47-12.874-45.214-12.874H86.552V445.93l92.493-.012v.165z"/></svg>
-      </a>
-
-      <a class="icon-link" href="mailto:zackgphom@gmail.com" title="Email">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-      </a>
-    </div>
-  </section>
-
-  <section id="feedback" style="min-height: 100vh; padding: 0; position: relative; overflow: hidden;">
-    <div id="feedback-root" class="w-full max-w-none mx-0"></div>
-  </section>
-
-  <footer>
-    GLORP v4.0.0 | DEVELOPED BY ZACKGPHOM | © 2026
-  </footer>
-
-  <div id="toast" role="status" aria-live="polite"></div>
-  <div id="bloom" aria-hidden="true"></div>
-
-  <script src="./js/app.js" defer></script>
-
-  <script>
-    window.GlorpFeedback = (() => {
-      const STORAGE_KEY = 'glorp_feedback_local_comments_v1';
-
-      const safeParse = (text) => {
-        if (typeof text !== 'string') return null;
-        const trimmed = text.trim();
-        if (!trimmed) return null;
-        if (!(trimmed.startsWith('{') || trimmed.startsWith('['))) return null;
-        try {
-          return JSON.parse(trimmed);
-        } catch {
-          return null;
+      if (verdict.blocked) {
+        state.selectedFiles = state.selectedFiles.filter((item) => item !== file);
+        updateUI();
+        if (AI_BLOCKING_TYPES.has(verdict.blockType)) {
+          showAiBlockOverlay(verdict.blockType);
         }
-      };
-
-      const normalizeItems = (payload) => {
-        const source = Array.isArray(payload)
-          ? payload
-          : Array.isArray(payload?.comments)
-            ? payload.comments
-            : Array.isArray(payload?.data)
-              ? payload.data
-              : Array.isArray(payload?.items)
-                ? payload.items
-                : [];
-
-        return source
-          .map((item, index) => ({
-            id: item?.id ?? `${index}`,
-            name: item?.name || item?.author || item?.username || 'Anonymous',
-            text: item?.text || item?.message || item?.comment || '',
-            stars: Number(item?.stars ?? item?.rating ?? 0) || 0,
-            createdAt: item?.createdAt || item?.date || item?.time || '',
-          }))
-          .filter((item) => item.text);
-      };
-
-      const readLocal = () => {
-        try {
-          return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        } catch {
-          return [];
-        }
-      };
-
-      const writeLocal = (items) => {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 50)));
-        } catch {}
-      };
-
-      const starMarkup = (n) => '★★★★★'.split('').map((s, i) => `<span class="${i < n ? 'filled' : ''}">★</span>`).join('');
-
-      const itemMarkup = (item) => `
-        <article class="feedback-comment">
-          <div class="feedback-name">${String(item.name).replace(/[<>&"]/g, '')}</div>
-          <div class="feedback-text">${String(item.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-          <div class="feedback-stars">${starMarkup(item.stars || 0)}</div>
-        </article>
-      `;
-
-      async function fetchRemoteComments(endpoint) {
-        if (!endpoint) return [];
-        try {
-          const response = await fetch(endpoint, { method: 'GET', cache: 'no-store', credentials: 'omit' });
-          const text = await response.text();
-          const parsed = safeParse(text);
-          if (!parsed) throw new Error('Non-JSON response');
-          return normalizeItems(parsed);
-        } catch (error) {
-          console.warn('Feedback load fallback:', error);
-          return [];
-        }
+        showToast(`Removed: ${file.name} — ${verdict.reason}`, 'error', 3200);
+        continue;
       }
 
-      function mount(root, options = {}) {
-        if (!root) return;
+      if (status) status.innerText = `CONVERTING: ${file.name}`;
+      await convertSingleFile(file, mode);
+      if (status) status.innerText = `CONVERTED: ${file.name}`;
+      showToast(`Converted: ${file.name}`, 'success', 1200);
+    } catch (error) {
+      console.error('Conversion failed for', file.name, error);
+      showToast(`Conversion failed: ${file.name}`, 'error', 2500);
+    }
+  }
 
-        const endpoint = options.endpoint || '';
-        const secret = options.secret || '';
-        const cooldownMs = Number(options.cooldownMs || 0);
-        const cooldownKey = options.cooldownKey || 'glorp_feedback_last_submit_at';
+  if (status) status.innerText = 'CONVERSION COMPLETE';
+  showToast('Conversion complete', 'success', 1800);
+  setTimeout(() => {
+    if (status && status.innerText === 'CONVERSION COMPLETE') status.innerText = '';
+  }, 4000);
+  state.selectedFiles = [];
+  updateUI();
+}
 
-        root.innerHTML = `
-          <div class="feedback-stage">
-            <div class="feedback-inner">
-              <div class="feedback-form-wrap">
-                <form class="feedback-form" data-feedback-form>
-                  <div class="feedback-title">Feedback</div>
-                  <div class="feedback-subtitle">Share your thoughts</div>
+function initLogoHover() {
+  const logoBig = $('#logo-big');
+  if (!logoBig) return;
+  const hoverIn = () => logoBig.classList.add('logo-hovered');
+  const hoverOut = () => logoBig.classList.remove('logo-hovered');
+  logoBig.addEventListener('mouseenter', hoverIn);
+  logoBig.addEventListener('mouseleave', hoverOut);
+  logoBig.addEventListener('focus', hoverIn);
+  logoBig.addEventListener('blur', hoverOut);
+}
 
-                  <input class="feedback-field" data-name type="text" maxlength="36" placeholder="Your name" autocomplete="name" />
-                  <div style="height:12px"></div>
-                  <textarea class="feedback-textarea" data-text placeholder="Write something..." maxlength="800"></textarea>
+function initDragAndDrop() {
+  const overlay = $('#drop-overlay');
+  if (!overlay) return;
 
-                  <div class="feedback-stars-picker" data-stars-picker>
-                    ${Array.from({ length: 5 }, (_, i) => `<button class="feedback-star-btn" type="button" data-star="${i + 1}">★</button>`).join('')}
-                  </div>
+  window.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    overlay.classList.add('visible');
+  });
 
-                  <div class="feedback-charline">
-                    <span data-count>0 / 800</span>
-                    <span data-status>READY</span>
-                  </div>
+  window.addEventListener('dragleave', (event) => {
+    if (
+      event.clientX <= 0 ||
+      event.clientY <= 0 ||
+      event.clientX >= window.innerWidth ||
+      event.clientY >= window.innerHeight
+    ) {
+      overlay.classList.remove('visible');
+    }
+  });
 
-                  <button class="feedback-send" type="submit" data-send>Send</button>
-                </form>
-              </div>
+  window.addEventListener('drop', async (event) => {
+    event.preventDefault();
+    overlay.classList.remove('visible');
 
-              <div class="feedback-list-wrapper">
-                <div class="feedback-list" data-list>
-                  <div class="feedback-list-column" data-col-a></div>
-                  <div class="feedback-list-column" data-col-b></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
+    const items = event.dataTransfer && event.dataTransfer.items;
+    let files = [];
+    let foldersDetected = 0;
 
-        const form = root.querySelector('[data-feedback-form]');
-        const nameInput = root.querySelector('[data-name]');
-        const textInput = root.querySelector('[data-text]');
-        const countEl = root.querySelector('[data-count]');
-        const statusEl = root.querySelector('[data-status]');
-        const sendBtn = root.querySelector('[data-send]');
-        const starsButtons = Array.from(root.querySelectorAll('[data-star]'));
-        const colA = root.querySelector('[data-col-a]');
-        const colB = root.querySelector('[data-col-b]');
-        const picker = root.querySelector('[data-stars-picker]');
+    if (items && items.length) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind !== 'file') continue;
+        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+        if (entry && entry.isDirectory) {
+          foldersDetected += 1;
+          continue;
+        }
+        const file = item.getAsFile();
+        if (file && file.size !== 0 && isAllowedImageFile(file)) {
+          files.push(file);
+        }
+      }
+    } else {
+      files = Array.from(event.dataTransfer.files).filter((file) => {
+        if (!file) return false;
+        if (file.size === 0 && !ACCEPTED_IMAGE_RE.test(file.name)) {
+          foldersDetected += 1;
+          return false;
+        }
+        return isAllowedImageFile(file);
+      });
+    }
 
-        let selectedStars = 0;
-        let comments = [];
+    if (foldersDetected > 0) {
+      showToast('Folder upload available only in the desktop app.', 'error', 5000);
+    }
 
-        const getCooldownUntil = () => {
-          try {
-            return Number(localStorage.getItem(cooldownKey) || 0);
-          } catch {
-            return 0;
-          }
-        };
+    if (!files.length) return;
 
-        const setCooldown = () => {
-          try {
-            localStorage.setItem(cooldownKey, String(Date.now() + cooldownMs));
-          } catch {}
-        };
+    if (window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      let fallbackTimer = null;
+      const checkTimer = setInterval(() => {
+        if (window.scrollY <= 0) {
+          clearInterval(checkTimer);
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          handleFiles(files);
+        }
+      }, 50);
+      fallbackTimer = setTimeout(() => {
+        clearInterval(checkTimer);
+        handleFiles(files);
+      }, 800);
+    } else {
+      handleFiles(files);
+    }
+  });
+}
 
-        const renderStars = () => {
-          starsButtons.forEach((btn) => {
-            const value = Number(btn.dataset.star || 0);
-            btn.classList.toggle('active', value <= selectedStars);
-          });
-        };
+function scrollToSection(target, offset = 0) {
+  if (!target) return;
+  const rect = target.getBoundingClientRect();
+  const top = (window.pageYOffset || window.scrollY || 0) + rect.top + offset;
+  window.scrollTo({ behavior: 'smooth', top: Math.max(0, top) });
+}
 
-        const renderComments = () => {
-          const combined = [...comments];
-          if (!combined.length) {
-            colA.innerHTML = '<div style="padding:30px 6px;color:#666;font-size:11px;letter-spacing:2px;text-transform:uppercase;">No comments yet</div>';
-            colB.innerHTML = '';
-            return;
-          }
+function ensureFeedbackModuleLoaded() {
+  if (window.GlorpFeedback && typeof window.GlorpFeedback.mount === 'function') {
+    return Promise.resolve(window.GlorpFeedback);
+  }
 
-          const left = [];
-          const right = [];
-          combined.forEach((item, index) => {
-            (index % 2 === 0 ? left : right).push(itemMarkup(item));
-          });
-          colA.innerHTML = left.join('');
-          colB.innerHTML = right.join('');
-        };
+  if (state.feedbackReadyPromise) return state.feedbackReadyPromise;
 
-        const syncCount = () => {
-          countEl.textContent = `${textInput.value.length} / 800`;
-        };
+  if (!state.feedbackScriptPromise) {
+    state.feedbackScriptPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-feedback-module="1"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve());
+        existing.addEventListener('error', () => reject(new Error('Failed to load feedback module')));
+        return;
+      }
 
-        starsButtons.forEach((btn) => {
-          btn.addEventListener('click', () => {
-            selectedStars = Number(btn.dataset.star || 0);
-            renderStars();
-          });
+      const script = document.createElement('script');
+      script.src = './js/feedback.js';
+      script.defer = true;
+      script.async = true;
+      script.dataset.feedbackModule = '1';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load feedback module'));
+      document.head.appendChild(script);
+    });
+  }
+
+  state.feedbackReadyPromise = state.feedbackScriptPromise.then(() => {
+    if (!window.GlorpFeedback || typeof window.GlorpFeedback.mount !== 'function') {
+      throw new Error('Feedback module did not register correctly');
+    }
+    return window.GlorpFeedback;
+  });
+
+  return state.feedbackReadyPromise;
+}
+
+window.loadFeedbackModule = ensureFeedbackModuleLoaded;
+
+function mountFeedbackIfNeeded() {
+  const root = $('#feedback-root');
+  if (!root) return;
+  if (state.feedbackLoaded) return;
+  state.feedbackLoaded = true;
+
+  ensureFeedbackModuleLoaded()
+    .then((api) => {
+      if (api && typeof api.mount === 'function') {
+        api.mount(root, {
+          endpoint: ENDPOINT,
+          secret: FEEDBACK_SECRET,
+          cooldownMs: FEEDBACK_COOLDOWN_MS,
+          cooldownKey: FEEDBACK_COOLDOWN_KEY,
         });
+      }
+    })
+    .catch((error) => {
+      console.error('Feedback module failed to load:', error);
+      state.feedbackLoaded = false;
+      const target = $('#feedback-root');
+      if (target) {
+        target.innerHTML = '<div style="padding:40px 20px;color:#888;text-align:center;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Feedback is unavailable right now.</div>';
+      }
+    });
+}
 
-        textInput.addEventListener('input', syncCount);
-        syncCount();
-        renderStars();
+function initNavigation() {
+  const mainHeader = $('#main-header');
+  const appSection = $('#app');
+  const feedbackSection = $('#feedback');
 
-        picker.addEventListener('click', (event) => event.preventDefault());
+  if (appSection) {
+    const appObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        state.appInView = entry.intersectionRatio >= 0.6;
+        syncHeaderState();
+      });
+    }, { threshold: [0, 0.25, 0.6, 0.95] });
+    appObserver.observe(appSection);
+  }
 
-        form.addEventListener('submit', async (event) => {
-          event.preventDefault();
+  if (feedbackSection) {
+    const preloadObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          mountFeedbackIfNeeded();
+          preloadObserver.disconnect();
+        }
+      });
+    }, { threshold: 0.15 });
+    preloadObserver.observe(feedbackSection);
 
-          const now = Date.now();
-          const cooldownUntil = getCooldownUntil();
-          if (cooldownUntil && now < cooldownUntil) {
-            const remaining = Math.ceil((cooldownUntil - now) / 1000);
-            statusEl.textContent = `WAIT ${remaining}S`;
-            return;
-          }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => mountFeedbackIfNeeded(), { timeout: 2500 });
+    } else {
+      setTimeout(() => mountFeedbackIfNeeded(), 1200);
+    }
+  }
 
-          const name = nameInput.value.trim().slice(0, 36) || 'Anonymous';
-          const text = textInput.value.trim().slice(0, 800);
-          if (!text) {
-            statusEl.textContent = 'WRITE SOMETHING';
-            return;
-          }
+  $$('nav a').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const href = link.getAttribute('href');
+      const target = document.querySelector(href);
+      if (!target) return;
 
-          const payload = {
-            name,
-            text,
-            stars: selectedStars,
-            secret,
-          };
-
-          sendBtn.disabled = true;
-          statusEl.textContent = 'SENDING...';
-
-          try {
-            if (endpoint) {
-              await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-              });
-            }
-          } catch (error) {
-            console.warn('Feedback submit fallback:', error);
-          }
-
-          const local = readLocal();
-          local.unshift({
-            id: `local-${Date.now()}`,
-            name,
-            text,
-            stars: selectedStars,
-            createdAt: new Date().toISOString(),
-          });
-          writeLocal(local);
-
-          comments = [...local, ...comments].slice(0, 40);
-          renderComments();
-
-          textInput.value = '';
-          selectedStars = 0;
-          renderStars();
-          syncCount();
-          statusEl.textContent = 'SENT';
-          setCooldown();
-
-          setTimeout(() => {
-            statusEl.textContent = 'READY';
-          }, 1400);
-
-          sendBtn.disabled = false;
-        });
-
-        (async () => {
-          statusEl.textContent = 'LOADING...';
-          const remote = await fetchRemoteComments(endpoint);
-          const local = readLocal();
-          comments = [...remote, ...local].slice(0, 40);
-          renderComments();
-          statusEl.textContent = 'READY';
-        })();
+      if (href === '#app') {
+        state.headerLock = true;
+        mainHeader && mainHeader.classList.remove('compact');
+        setTimeout(() => {
+          state.headerLock = false;
+        }, 1200);
+        scrollToSection(target, -120);
+        return;
       }
 
-      return { mount };
-    })();
-  </script>
+      if (href === '#compare') {
+        mainHeader && mainHeader.classList.add('compact');
+        scrollToSection(target, -120);
+        return;
+      }
 
-  <script>
-    (function () {
-      const logicSection = document.getElementById('logic');
-      const rainLayer = logicSection ? logicSection.querySelector('.about-rain') : null;
-      if (!logicSection || !rainLayer) return;
+      if (href === '#feedback') {
+        mainHeader && mainHeader.classList.add('compact');
+        mountFeedbackIfNeeded();
+        scrollToSection(target, -120);
+        return;
+      }
 
-      const svgMarkup = `
-        <svg width="122" height="137" viewBox="0 0 122 137" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M61.0754 136.065C94.1258 136.065 120.918 114.804 120.918 88.5769C120.918 82.2706 119.369 76.2515 116.557 70.746L119.961 49.8397L121.825 41.767C122.27 39.8363 121.37 37.8459 119.626 36.9057C118.496 36.2967 117.156 36.2116 115.959 36.6728L88.8735 46.512C87.2301 45.8267 85.5416 45.2003 83.8126 44.6363L86.6192 32.0829C86.9195 30.7398 87.341 29.4268 87.8787 28.16L90.7702 21.347C91.6021 19.3867 93.2694 17.9027 95.3129 17.3035C97.3642 16.7021 99.0358 15.2093 99.8646 13.2389L100.468 11.8043C101.042 10.4407 101.161 8.92875 100.81 7.4918C100.341 5.57693 99.0756 3.95415 97.3324 3.03339L96.9479 2.83024C95.2149 1.91482 93.1875 1.73109 91.3182 2.32003C89.7928 2.80061 88.4662 3.76664 87.5406 5.07095L87.2298 5.50904C85.9369 7.3309 85.607 9.66626 86.3445 11.775C87.0418 13.7689 86.7866 15.9725 85.652 17.7543L80.7703 25.4201C80.0288 26.5846 79.3825 27.8072 78.8379 29.0758L73.2581 42.0733L73.1359 42.0534C69.2402 41.4208 65.2067 41.0886 61.0754 41.0886C56.7031 41.0886 52.4404 41.4607 48.3347 42.1671L44.2715 28.7979C43.8922 27.4705 43.4063 26.1758 42.8184 24.9266L38.9487 16.7034C38.0493 14.7921 38.0757 12.574 39.0203 10.6846C40.0194 8.68648 39.9884 6.32813 38.9371 4.35698L38.6843 3.88299C37.9317 2.4718 36.7384 1.3453 35.2862 0.675077C33.5067 -0.146249 31.4725 -0.221181 29.6373 0.466997L29.2301 0.619715C27.3842 1.31191 25.9229 2.76101 25.2152 4.60097C24.6842 5.98171 24.6112 7.49663 25.0072 8.922L25.4237 10.4215C25.9958 12.4812 27.4646 14.1739 29.423 15.0307C31.374 15.8843 32.8395 17.5678 33.4161 19.6179L35.4199 26.7426C35.7925 28.0674 36.0441 29.4233 36.1716 30.7936L37.5243 44.9074L37.4468 44.9339C36.1618 45.3725 34.9001 45.8459 33.6635 46.3524L6.48704 31.6245C5.35733 31.015 4.01775 30.9295 2.81969 31.3903C0.970293 32.1016 -0.175189 33.9617 0.0219744 35.9333L0.846369 44.1772L4.63764 72.7474C2.43239 77.6985 1.23245 83.0265 1.23245 88.5769C1.23245 114.804 28.0251 136.065 61.0754 136.065Z" fill="currentColor"/>
-        </svg>
-      `;
+      mainHeader && mainHeader.classList.add('compact');
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
 
-      const colors = ['#6FA455', '#E7E14F', '#AECA49'];
-      let rainTimer = null;
-      let active = false;
+function initRevealObservers() {
+  const sections = $$('section');
+  const paras = $$('.reveal-para');
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.intersectionRatio > 0.10) {
+        entry.target.classList.add('revealed');
+      } else {
+        entry.target.classList.remove('revealed');
+      }
+    });
+  }, { threshold: [0, 0.10, 0.4] });
+  sections.forEach((section) => sectionObserver.observe(section));
 
-      const spawnIcon = () => {
-        const icon = document.createElement('span');
-        icon.className = 'about-rain-icon';
+  const paraObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const el = entry.target;
+      if (entry.intersectionRatio > 0.12) {
+        el.classList.add('visible');
+      } else {
+        el.classList.remove('visible');
+      }
+    });
+  }, { threshold: [0, 0.12, 0.5] });
+  paras.forEach((para) => paraObserver.observe(para));
+}
 
-        const size = 42 + Math.random() * 34;
-        const left = Math.random() * 92;
-        const drift = (Math.random() * 120 - 60).toFixed(1) + 'px';
-        const rotStart = (Math.random() * 180 - 90).toFixed(1) + 'deg';
-        const rotEnd = (Math.random() * 240 - 120).toFixed(1) + 'deg';
-        const duration = 9800 + Math.random() * 3200;
+function initBloom() {
+  const bloom = $('#bloom');
+  if (!bloom) return;
 
-        icon.style.left = left + '%';
-        icon.style.width = size + 'px';
-        icon.style.color = colors[Math.floor(Math.random() * colors.length)];
-        icon.style.setProperty('--drift', drift);
-        icon.style.setProperty('--rot-start', rotStart);
-        icon.style.setProperty('--rot-end', rotEnd);
-        icon.style.animationDuration = duration + 'ms';
+  function updateBloom() {
+    const max = 420;
+    const y = window.scrollY || window.pageYOffset;
+    const progress = Math.min(Math.max(y / max, 0), 1);
+    const scale = 0.95 + 0.5 * progress;
+    const translateY = 20 - 20 * progress;
+    const height = 80 + (180 - 80) * progress;
+    const opacity = 0.85 - 0.5 * progress;
+    bloom.style.transform = `translateX(-50%) translateY(${translateY}px) scaleX(${scale})`;
+    bloom.style.height = `${height}px`;
+    bloom.style.opacity = `${opacity}`;
+  }
 
-        icon.innerHTML = svgMarkup;
-        rainLayer.appendChild(icon);
+  window.addEventListener('scroll', updateBloom, { passive: true });
+  updateBloom();
+}
 
-        icon.addEventListener('animationend', () => {
-          icon.remove();
-        });
-      };
+function initFaq() {
+  let faqSwitchTimer = null;
+  $$('.faq-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const card = button.parentElement;
+      const wasOpen = card.classList.contains('open');
+      const prev = $('.faq-card.open');
+      if (faqSwitchTimer) {
+        clearTimeout(faqSwitchTimer);
+        faqSwitchTimer = null;
+      }
+      if (wasOpen) {
+        card.classList.remove('open');
+        return;
+      }
+      if (prev && prev !== card) {
+        prev.classList.remove('open');
+        faqSwitchTimer = setTimeout(() => {
+          card.classList.add('open');
+          faqSwitchTimer = null;
+        }, 520);
+      } else {
+        card.classList.add('open');
+      }
+    });
+  });
+}
 
-      const pulseRain = () => {
-        if (!active) return;
+function initFileInput() {
+  const input = $('#file-input');
+  if (!input) return;
+  input.addEventListener('change', (event) => { handleFiles(event.target.files); });
+}
 
-        const current = rainLayer.children.length;
-        const target = 12;
-        const spawnCount = current < 4 ? 3 : current < target ? 2 : 1;
+function initConvertButton() {
+  const button = $('#btn-convert');
+  if (!button) return;
+  button.addEventListener('click', convertSelectedFiles);
+}
 
-        for (let i = 0; i < spawnCount; i++) {
-          spawnIcon();
-        }
-      };
+function initModeTabs() {
+  $$('.mode-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      $$('.mode-tab').forEach((item) => item.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+}
 
-      const startRain = () => {
-        if (active) return;
-        active = true;
+function initLoadingScreen() {
+  requestAnimationFrame(() => {
+    setLoadingDone();
+  });
+}
 
-        for (let i = 0; i < 8; i++) {
-          setTimeout(spawnIcon, i * 140);
-        }
+function initRulesOverlay() {
+  const dismiss = $('#rules-dismiss');
+  const backdrop = $('#rules-backdrop');
+  const openBtn = $('#rules-open-btn');
+  if (dismiss) dismiss.addEventListener('click', closeRulesOverlay);
+  if (backdrop) backdrop.addEventListener('click', closeRulesOverlay);
+  if (openBtn) openBtn.addEventListener('click', openRulesOverlay);
+}
 
-        pulseRain();
-        rainTimer = setInterval(pulseRain, 260);
-      };
+function initAiOverlay() {
+  const dismiss = $('#ai-block-dismiss');
+  const backdrop = $('#ai-block-backdrop');
+  if (dismiss) dismiss.addEventListener('click', hideAiBlockOverlay);
+  if (backdrop) backdrop.addEventListener('click', hideAiBlockOverlay);
+}
 
-      const stopRain = () => {
-        active = false;
-        if (rainTimer) {
-          clearInterval(rainTimer);
-          rainTimer = null;
-        }
-      };
+function initLogoAndAppButton() {
+  initLogoHover();
+  const selectButton = $('#btn-select');
+  if (selectButton) {
+    selectButton.addEventListener('click', () => {
+      const input = $('#file-input');
+      if (input) input.click();
+    });
+  }
+}
 
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            startRain();
-          } else {
-            stopRain();
-          }
-        });
-      }, { threshold: 0.2 });
+function bootstrap() {
+  initLoadingScreen();
+  initRulesOverlay();
+  initAiOverlay();
+  initLogoAndAppButton();
+  initDragAndDrop();
+  initNavigation();
+  initRevealObservers();
+  initBloom();
+  initFaq();
+  initFileInput();
+  initModeTabs();
+  initConvertButton();
+  updateUI();
+}
 
-      observer.observe(logicSection);
-    })();
-  </script>
-</body>
-</html>
+bootstrap();
