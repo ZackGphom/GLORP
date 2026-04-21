@@ -306,12 +306,18 @@
     #ai-block-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
     #ai-block-card{position:relative;z-index:1;width:min(1040px,calc(100vw - 24px));max-height:min(88vh,920px);overflow:hidden;padding:28px 22px 34px;border-radius:28px;background:rgba(22,22,22,0.76);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.52),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
     #ai-block-overlay.dismissed #ai-block-card{transform:translateY(44px) scale(.98);opacity:0}
-    #ai-block-art{display:block;width:min(94vw,920px);max-height:68vh;object-fit:contain;image-rendering:auto}
+    #ai-block-art{display:block;flex:0 0 auto;width:min(94vw,920px);max-height:min(56vh,560px);object-fit:contain;image-rendering:auto;border:none;border-radius:0;background:none;box-shadow:none;margin:0}
     #ai-block-title{margin:0;font-size:clamp(32px,6vw,74px);line-height:.95;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-shadow:0 0 18px rgba(255,255,255,.04)}
     #ai-block-subtitle{margin:0;font-size:12px;line-height:1.6;letter-spacing:3px;text-transform:uppercase;color:#a6a6a6}
-    #ai-block-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:50px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
+    #ai-block-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;min-height:50px;height:auto;padding:14px 28px;margin:0 auto;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;line-height:1;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease);flex:0 0 auto}
     #ai-block-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
     #ai-block-dismiss:active{transform:translateY(1px) scale(.985)}
+
+    @media (max-width: 900px){
+      #ai-block-card{padding:24px 18px 28px;gap:16px}
+      #ai-block-art{max-height:min(46vh,420px)}
+      #ai-block-dismiss{width:min(100%,240px);padding:14px 22px}
+    }
     body.ai-active{overflow:hidden}
     body.ai-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
     body.ai-active #bloom{opacity:0}
@@ -928,7 +934,7 @@
         const drift = (Math.random() * 120 - 60).toFixed(1) + 'px';
         const rotStart = (Math.random() * 180 - 90).toFixed(1) + 'deg';
         const rotEnd = (Math.random() * 240 - 120).toFixed(1) + 'deg';
-        const duration = 9800 + Math.random() * 3200;
+        const duration = 8500 + Math.random() * 3000;
 
         icon.style.left = left + '%';
         icon.style.width = size + 'px';
@@ -946,28 +952,20 @@
         });
       };
 
-      const pulseRain = () => {
-        if (!active) return;
-
-        const current = rainLayer.children.length;
-        const target = 12;
-        const spawnCount = current < 4 ? 3 : current < target ? 2 : 1;
-
-        for (let i = 0; i < spawnCount; i++) {
-          spawnIcon();
-        }
-      };
-
       const startRain = () => {
         if (active) return;
         active = true;
 
-        for (let i = 0; i < 8; i++) {
-          setTimeout(spawnIcon, i * 140);
+        for (let i = 0; i < 3; i++) {
+          setTimeout(spawnIcon, i * 260);
         }
 
-        pulseRain();
-        rainTimer = setInterval(pulseRain, 260);
+        rainTimer = setInterval(() => {
+          if (!active) return;
+          if (rainLayer.children.length < 7) {
+            spawnIcon();
+          }
+        }, 1200 + Math.random() * 700);
       };
 
       const stopRain = () => {
