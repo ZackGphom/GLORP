@@ -407,36 +407,26 @@ function limitOutputSize(imageData, maxDimension = MAX_NORMALIZED_OUTPUT_DIMENSI
 function normalizePixelArt(imageData) {
   const { width: W, height: H } = imageData;
 
-  if (W <= NORMALIZE_MAX_DIMENSION && H <= NORMALIZE_MAX_DIMENSION && (W * H) <= NORMALIZE_MAX_PIXELS) {
+  if (W <= NORMALIZE_MAX_DIMENSION && H <= NORMALIZE_MAX_DIMENSION) {
     return imageData;
   }
 
+  let processed = imageData;
   const estimate = estimatePixelArtScale(imageData);
-  if (!estimate || !isLikelyPixelArt(imageData, estimate)) {
-    return imageData;
+
+  if (estimate && isLikelyPixelArt(imageData, estimate) && estimate.scale >= 2) {
+    processed = downsampleByMajority(processed, estimate.scale);
+    processed = cleanupPixelNoise(processed);
   }
 
-  const scale = estimate.scale;
-  if (!scale || scale < 2) return imageData;
 
-  const cellsX = Math.floor(W / scale);
-  const cellsY = Math.floor(H / scale);
-  if (cellsX < 4 || cellsY < 4) return imageData;
+  processed = limitOutputSize(processed, MAX_NORMALIZED_OUTPUT_DIMENSION);
 
-  let normalized = downsampleByMajority(imageData, scale);
-  normalized = cleanupPixelNoise(normalized);
-  normalized = limitOutputSize(normalized, MAX_NORMALIZED_OUTPUT_DIMENSION);
-
-  if (
-    normalized &&
-    normalized.width >= 4 &&
-    normalized.height >= 4 &&
-    normalized.width * normalized.height >= 16
-  ) {
-    normalized = cleanupPixelNoise(normalized);
+  if (processed.width >= 4 && processed.height >= 4) {
+    processed = cleanupPixelNoise(processed);
   }
 
-  return normalized;
+  return processed;
 }
 
 // --- CORE MESHING ENGINE ---
@@ -653,7 +643,7 @@ self.onmessage = async (event) => {
   const { id, file, mode } = event.data || {};
 
   try {
-    const { canvas, imageData } = await decodeFile(file);
+    const { canvas, imageData, width, height } = await decodeFile(file);
     const filename = `${baseName(file.name)}.${mode === 'webp' ? 'webp' : 'svg'}`;
 
     if (mode === 'webp') {
@@ -662,11 +652,11 @@ self.onmessage = async (event) => {
       return;
     }
 
-    const normalizedImageData = normalizePixelArt(imageData);
+    const finalImageData = normalizePixelArt(imageData);
 
     const svg = mode === 'lego'
-      ? buildLegoSvgFromImageData(normalizedImageData)
-      : buildMonolithSvgFromImageData(normalizedImageData);
+      ? buildLegoSvgFromImageData(finalImageData)
+      : buildMonolithSvgFromImageData(finalImageData);
 
     const blob = new Blob([svg], { type: 'image/svg+xml' });
     self.postMessage({ id, ok: true, blob, filename });
