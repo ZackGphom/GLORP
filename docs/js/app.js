@@ -5,7 +5,7 @@ const FEEDBACK_COOLDOWN_KEY = 'glorp_feedback_last_submit_at';
 const ACCEPTED_IMAGE_RE = /\.(png|gif|webp|jpe?g)$/i;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/png', 'image/gif', 'image/webp', 'image/jpeg', 'image/jpg']);
 const MAX_COLOR_SAMPLE_PIXELS = 80000;
-const MAX_UNIQUE_COLOR_THRESHOLD = 4096;
+const MAX_UNIQUE_COLOR_THRESHOLD = 15000;
 const AI_BLOCKING_TYPES = new Set(['ai', 'colors']);
 const AI_METADATA_SIGNATURES = [
   /(?:^|[^a-z0-9])ai[-_\s]*generated(?:[^a-z0-9]|$)/i,
