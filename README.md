@@ -64,10 +64,10 @@ To avoid bloated or inefficient SVG output:
     Not suitable for photos, gradients, or blurred imagery.
 
 GLORP is optimized strictly for pixel-perfect artwork.
-
+------------------------------------------------------------------------
 And remember...
 
-##NO AI SLOP!!!
+### NO AI SLOP!!!
 ------------------------------------------------------------------------
 
 ## 🛠 How to Use
