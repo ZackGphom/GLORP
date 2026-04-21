@@ -12,13 +12,6 @@
 const CLOCKWISE = 1;
 const ANTICLOCKWISE = 2;
 
-const PIXEL_ART_SCALES = [2, 3, 4, 6, 8, 10, 12, 16];
-const NORMALIZE_MAX_DIMENSION = 800;
-const NORMALIZE_MAX_PIXELS = 800 * 800;
-const MIN_NORMALIZE_PIXELS = 24 * 24;
-const MAX_SAMPLE_PIXELS = 45000;
-const MAX_NORMALIZED_OUTPUT_DIMENSION = 800;
-
 function rgbaToKey(r, g, b, a) {
   return (((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
 }
@@ -27,406 +20,136 @@ function rgbaToHex(r, g, b) {
   return `#${[r, g, b].map((value) => value.toString(16).padStart(2, '0')).join('')}`;
 }
 
-function keyToRgba(key) {
-  return {
-    r: (key >>> 24) & 255,
-    g: (key >>> 16) & 255,
-    b: (key >>> 8) & 255,
-    a: key & 255,
-  };
-}
-
-function quantizeKey(r, g, b, a) {
-  return (((r >>> 4) << 12) | ((g >>> 4) << 8) | ((b >>> 4) << 4) | (a >>> 4)) >>> 0;
-}
-
 function baseName(fileName) {
   const dot = fileName.lastIndexOf('.');
   return dot > 0 ? fileName.slice(0, dot) : fileName;
 }
 
-function pixelOffset(x, y, width) {
-  return ((y * width) + x) * 4;
-}
+function buildLegoSvgFromImageData(imageData) {
+  const { data, width, height } = imageData;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">`;
 
-function createImageDataSafe(data, width, height) {
-  if (typeof ImageData === 'function') {
-    return new ImageData(data, width, height);
-  }
-  return { data, width, height };
-}
-
-function getPixelRGBA(data, offset) {
-  return {
-    r: data[offset],
-    g: data[offset + 1],
-    b: data[offset + 2],
-    a: data[offset + 3],
-  };
-}
-
-function getPixelKey(data, offset) {
-  return rgbaToKey(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
-}
-
-function estimatePixelArtScale(imageData) {
-  const { data, width: W, height: H } = imageData;
-  const totalPixels = W * H;
-
-  if (W < 24 || H < 24 || totalPixels < MIN_NORMALIZE_PIXELS) {
-    return null;
+  for (let i = 0; i < data.length; i += 4) {
+    const alpha = data[i + 3];
+    if (alpha === 0) continue;
+    const pixel = i / 4;
+    const x = pixel % width;
+    const y = Math.floor(pixel / width);
+    svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="${rgbaToHex(data[i], data[i + 1], data[i + 2])}" fill-opacity="${(alpha / 255).toFixed(3)}"/>`;
   }
 
-  const sampleStep = Math.max(1, Math.floor(Math.sqrt(totalPixels / MAX_SAMPLE_PIXELS)));
-  const sampleCount = Math.max(1, Math.floor(totalPixels / (sampleStep * sampleStep)));
+  svg += '</svg>';
+  return svg;
+}
 
-  const quantizedUnique = new Set();
-  let opaqueSamples = 0;
-  let mixedAlphaSamples = 0;
+// --- AI / UPSCALE NORMALIZATION TOOLS ---
 
-  for (let y = 0; y < H; y += sampleStep) {
-    for (let x = 0; x < W; x += sampleStep) {
-      const off = pixelOffset(x, y, W);
-      const a = data[off + 3];
+function colorDistance(r1, g1, b1, r2, g2, b2) {
+  return Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+}
 
-      if (a > 0) {
-        opaqueSamples++;
-        if (a < 250) mixedAlphaSamples++;
+function detectPixelScale(imageData) {
+  const { data, width, height } = imageData;
+  const runLengths = {};
+  const maxTestLines = 100;
+  const step = Math.max(1, Math.floor(height / maxTestLines));
+
+  for (let y = 0; y < height; y += step) {
+    let currentRun = 1;
+    let lastOff = (y * width) * 4;
+    
+    for (let x = 1; x < width; x++) {
+      const off = (y * width + x) * 4;
+
+      const dist = colorDistance(data[lastOff], data[lastOff+1], data[lastOff+2], data[off], data[off+1], data[off+2]);
+      const alphaMatch = (data[lastOff+3] > 128) === (data[off+3] > 128);
+
+      if (dist < 40 && alphaMatch) {
+        currentRun++;
+      } else {
+        if (currentRun > 1 && currentRun < width / 4) {
+          runLengths[currentRun] = (runLengths[currentRun] || 0) + 1;
+        }
+        currentRun = 1;
+        lastOff = off;
       }
-
-      quantizedUnique.add(quantizeKey(data[off], data[off + 1], data[off + 2], a));
-      if (quantizedUnique.size > 8192) break;
-    }
-    if (quantizedUnique.size > 8192) break;
-  }
-
-  const uniqueRatio = quantizedUnique.size / Math.max(1, sampleCount);
-  const alphaMixRatio = mixedAlphaSamples / Math.max(1, opaqueSamples);
-
-  let best = null;
-
-  for (const scale of PIXEL_ART_SCALES) {
-    const cellsX = Math.floor(W / scale);
-    const cellsY = Math.floor(H / scale);
-
-    if (cellsX < 4 || cellsY < 4) continue;
-
-    const sampleBlocksX = Math.max(2, Math.min(12, cellsX));
-    const sampleBlocksY = Math.max(2, Math.min(12, cellsY));
-    const strideX = Math.max(1, Math.floor(cellsX / sampleBlocksX));
-    const strideY = Math.max(1, Math.floor(cellsY / sampleBlocksY));
-
-    let totalBlockScore = 0;
-    let sampledBlocks = 0;
-
-    for (let by = 0; by < cellsY; by += strideY) {
-      for (let bx = 0; bx < cellsX; bx += strideX) {
-        const startX = bx * scale;
-        const startY = by * scale;
-
-        const blockKeys = new Uint32Array(scale * scale);
-        const counts = new Map();
-
-        let idx = 0;
-        for (let dy = 0; dy < scale; dy++) {
-          let offset = pixelOffset(startX, startY + dy, W);
-          for (let dx = 0; dx < scale; dx++) {
-            const key = quantizeKey(
-              data[offset],
-              data[offset + 1],
-              data[offset + 2],
-              data[offset + 3]
-            );
-            blockKeys[idx++] = key;
-            counts.set(key, (counts.get(key) || 0) + 1);
-            offset += 4;
-          }
-        }
-
-        let dominantCount = 0;
-        for (const value of counts.values()) {
-          if (value > dominantCount) dominantCount = value;
-        }
-
-        let equalAdj = 0;
-        let adjChecks = 0;
-
-        for (let y = 0; y < scale; y++) {
-          const rowBase = y * scale;
-          for (let x = 1; x < scale; x++) {
-            if (blockKeys[rowBase + x] === blockKeys[rowBase + x - 1]) equalAdj++;
-            adjChecks++;
-          }
-        }
-
-        for (let y = 1; y < scale; y++) {
-          const rowBase = y * scale;
-          const prevRowBase = (y - 1) * scale;
-          for (let x = 0; x < scale; x++) {
-            if (blockKeys[rowBase + x] === blockKeys[prevRowBase + x]) equalAdj++;
-            adjChecks++;
-          }
-        }
-
-        const dominantRatio = dominantCount / (scale * scale);
-        const runScore = adjChecks ? (equalAdj / adjChecks) : 0;
-        const blockScore = (dominantRatio * 0.72) + (runScore * 0.28);
-
-        totalBlockScore += blockScore;
-        sampledBlocks++;
-
-        if (sampledBlocks >= 180) break;
-      }
-      if (sampledBlocks >= 180) break;
-    }
-
-    if (!sampledBlocks) continue;
-
-    const avgBlockScore = totalBlockScore / sampledBlocks;
-
-    let score = avgBlockScore;
-    score -= Math.min(0.18, uniqueRatio * 0.12);
-    score -= Math.min(0.12, alphaMixRatio * 0.16);
-
-    if (W % scale === 0 && H % scale === 0) {
-      score += 0.03;
-    }
-
-    if (!best || score > best.score) {
-      best = {
-        scale,
-        score,
-        uniqueRatio,
-        alphaMixRatio,
-        avgBlockScore,
-      };
     }
   }
 
-  return best;
+  let bestScale = 1;
+  let maxCount = 0;
+  
+  // Ищем самую частую длину непрерывного цвета
+  for (const [len, count] of Object.entries(runLengths)) {
+    const l = parseInt(len);
+    if (count > maxCount && l >= 2 && l <= 128) {
+      maxCount = count;
+      bestScale = l;
+    }
+  }
+  
+  return bestScale > 1 ? bestScale : Math.max(2, Math.floor(width / 150));
 }
 
-function isLikelyPixelArt(imageData, stats = null) {
-  const { width: W, height: H } = imageData;
-  const totalPixels = W * H;
-
-  if (W < 24 || H < 24 || totalPixels < MIN_NORMALIZE_PIXELS) {
-    return false;
-  }
-
-  const s = stats || estimatePixelArtScale(imageData);
-  if (!s) return false;
-
-  const score = s.score ?? 0;
-  const uniqueRatio = s.uniqueRatio ?? 1;
-  const alphaMixRatio = s.alphaMixRatio ?? 1;
-
-  if (score >= 0.58) return true;
-  if (score >= 0.50 && uniqueRatio <= 0.65) return true;
-  if (score >= 0.44 && uniqueRatio <= 0.45 && alphaMixRatio <= 0.45) return true;
-
-  if (totalPixels >= 320000 && score >= 0.42 && uniqueRatio <= 0.80) {
-    return true;
-  }
-
-  return false;
-}
-
-function downsampleByMajority(imageData, scale) {
+function downsampleBlockyImage(imageData, scale) {
   const { data, width: W, height: H } = imageData;
   const newW = Math.floor(W / scale);
   const newH = Math.floor(H / scale);
-
-  if (newW < 1 || newH < 1) {
-    return imageData;
-  }
-
   const out = new Uint8ClampedArray(newW * newH * 4);
 
-  for (let by = 0; by < newH; by++) {
-    const srcY = by * scale;
-
-    for (let bx = 0; bx < newW; bx++) {
-      const srcX = bx * scale;
-      const counts = new Map();
+  for (let ny = 0; ny < newH; ny++) {
+    for (let nx = 0; nx < newW; nx++) {
+      const startX = nx * scale;
+      const startY = ny * scale;
+      const colorCounts = new Map();
       let bestKey = 0;
       let bestCount = 0;
-      let bestSample = null;
-      let transparentCount = 0;
+      let bestColor = [0, 0, 0, 0];
 
+      // Голосование за цвет внутри блока (majority vote)
       for (let dy = 0; dy < scale; dy++) {
-        let offset = pixelOffset(srcX, srcY + dy, W);
-
         for (let dx = 0; dx < scale; dx++) {
-          const r = data[offset];
-          const g = data[offset + 1];
-          const b = data[offset + 2];
-          const a = data[offset + 3];
-
-          const key = a < 5 ? 0 : quantizeKey(r, g, b, a > 250 ? 255 : a);
-
-          if (key === 0) {
-            transparentCount++;
+          const x = startX + dx;
+          const y = startY + dy;
+          if (x >= W || y >= H) continue;
+          
+          const off = (y * W + x) * 4;
+          let r = data[off];
+          let g = data[off+1];
+          let b = data[off+2];
+          let a = data[off+3];
+          
+          if (a < 128) {
+             r = 0; g = 0; b = 0; a = 0;
           } else {
-            let entry = counts.get(key);
-            if (!entry) {
-              entry = { count: 0, r, g, b, a: a > 250 ? 255 : a };
-              counts.set(key, entry);
-            }
-            entry.count++;
-
-            if (entry.count > bestCount) {
-              bestCount = entry.count;
-              bestKey = key;
-              bestSample = entry;
-            }
+             a = 255;
+             r = Math.round(r / 16) * 16;
+             g = Math.round(g / 16) * 16;
+             b = Math.round(b / 16) * 16;
           }
 
-          offset += 4;
+          const key = (r << 24) | (g << 16) | (b << 8) | a;
+          let count = (colorCounts.get(key) || 0) + 1;
+          colorCounts.set(key, count);
+
+          if (count > bestCount) {
+            bestCount = count;
+            bestKey = key;
+            // Сохраняем оригинальный цвет (без квантизации) для финального рендера
+            bestColor = [data[off], data[off+1], data[off+2], a]; 
+          }
         }
       }
 
-      if (transparentCount >= bestCount) {
-        bestKey = 0;
-        bestSample = null;
-      }
-
-      const dst = (by * newW + bx) * 4;
-
-      if (bestKey === 0 || !bestSample) {
-        out[dst] = 0;
-        out[dst + 1] = 0;
-        out[dst + 2] = 0;
-        out[dst + 3] = 0;
-      } else {
-        out[dst] = bestSample.r;
-        out[dst + 1] = bestSample.g;
-        out[dst + 2] = bestSample.b;
-        out[dst + 3] = bestSample.a;
-      }
+      const outOff = (ny * newW + nx) * 4;
+      out[outOff] = bestColor[0];
+      out[outOff+1] = bestColor[1];
+      out[outOff+2] = bestColor[2];
+      out[outOff+3] = bestColor[3];
     }
   }
-
-  return createImageDataSafe(out, newW, newH);
-}
-
-function cleanupPixelNoise(imageData) {
-  const { data, width: W, height: H } = imageData;
-  const current = new Uint8ClampedArray(data);
-  const idx = (x, y) => ((y * W) + x) * 4;
-
-  for (let pass = 0; pass < 2; pass++) {
-    const src = pass === 0 ? current : new Uint8ClampedArray(current);
-    const dst = new Uint8ClampedArray(src);
-
-    for (let y = 1; y < H - 1; y++) {
-      for (let x = 1; x < W - 1; x++) {
-        const p = idx(x, y);
-        const a = src[p + 3];
-        if (a < 5) continue;
-
-        const selfKey = rgbaToKey(
-          src[p],
-          src[p + 1],
-          src[p + 2],
-          a > 250 ? 255 : a
-        );
-
-        let orthSame = 0;
-        let validNeighbors = 0;
-        const counts = new Map();
-        let bestNeighborKey = selfKey;
-        let bestNeighborCount = 0;
-
-        const offsets = [
-          idx(x - 1, y),
-          idx(x + 1, y),
-          idx(x, y - 1),
-          idx(x, y + 1),
-          idx(x - 1, y - 1),
-          idx(x + 1, y - 1),
-          idx(x - 1, y + 1),
-          idx(x + 1, y + 1),
-        ];
-
-        for (let n = 0; n < offsets.length; n++) {
-          const q = offsets[n];
-          const na = src[q + 3];
-          if (na < 5) continue;
-
-          const nk = rgbaToKey(
-            src[q],
-            src[q + 1],
-            src[q + 2],
-            na > 250 ? 255 : na
-          );
-
-          validNeighbors++;
-          const nextCount = (counts.get(nk) || 0) + 1;
-          counts.set(nk, nextCount);
-
-          if (nextCount > bestNeighborCount) {
-            bestNeighborCount = nextCount;
-            bestNeighborKey = nk;
-          }
-
-          if (n < 4 && nk === selfKey) orthSame++;
-        }
-
-        if (orthSame > 0) continue;
-        if (validNeighbors < 5) continue;
-        if (bestNeighborCount < 5) continue;
-        if (bestNeighborCount / validNeighbors < 0.7) continue;
-
-        const rgba = keyToRgba(bestNeighborKey);
-        dst[p] = rgba.r;
-        dst[p + 1] = rgba.g;
-        dst[p + 2] = rgba.b;
-        dst[p + 3] = rgba.a;
-      }
-    }
-
-    current.set(dst);
-  }
-
-  return createImageDataSafe(current, W, H);
-}
-
-function limitOutputSize(imageData, maxDimension = MAX_NORMALIZED_OUTPUT_DIMENSION) {
-  const { width: W, height: H } = imageData;
-  const maxSide = Math.max(W, H);
-
-  if (maxSide <= maxDimension) return imageData;
-
-  const safetyScale = Math.ceil(maxSide / maxDimension);
-  if (safetyScale <= 1) return imageData;
-
-  return downsampleByMajority(imageData, safetyScale);
-}
-
-function normalizePixelArt(imageData) {
-  const { width: W, height: H } = imageData;
-
-  if (W <= NORMALIZE_MAX_DIMENSION && H <= NORMALIZE_MAX_DIMENSION) {
-    return imageData;
-  }
-
-  let processed = imageData;
-  const estimate = estimatePixelArtScale(imageData);
-
-  if (estimate && isLikelyPixelArt(imageData, estimate) && estimate.scale >= 2) {
-    processed = downsampleByMajority(processed, estimate.scale);
-    processed = cleanupPixelNoise(processed);
-  }
-
-
-  processed = limitOutputSize(processed, MAX_NORMALIZED_OUTPUT_DIMENSION);
-
-  if (processed.width >= 4 && processed.height >= 4) {
-    processed = cleanupPixelNoise(processed);
-  }
-
-  return processed;
+  
+  return { data: out, width: newW, height: newH };
 }
 
 // --- CORE MESHING ENGINE ---
@@ -540,23 +263,6 @@ function pathFinding(grid, W, H) {
   return path_data;
 }
 
-function buildLegoSvgFromImageData(imageData) {
-  const { data, width, height } = imageData;
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" shape-rendering="crispEdges">`;
-
-  for (let i = 0; i < data.length; i += 4) {
-    const alpha = data[i + 3];
-    if (alpha === 0) continue;
-    const pixel = i / 4;
-    const x = pixel % width;
-    const y = Math.floor(pixel / width);
-    svg += `<rect x="${x}" y="${y}" width="1" height="1" fill="${rgbaToHex(data[i], data[i + 1], data[i + 2])}" fill-opacity="${(alpha / 255).toFixed(3)}"/>`;
-  }
-
-  svg += '</svg>';
-  return svg;
-}
-
 function buildMonolithSvgFromImageData(imageData) {
   const { data, width: W, height: H } = imageData;
 
@@ -643,7 +349,7 @@ self.onmessage = async (event) => {
   const { id, file, mode } = event.data || {};
 
   try {
-    const { canvas, imageData, width, height } = await decodeFile(file);
+    const { canvas, imageData } = await decodeFile(file);
     const filename = `${baseName(file.name)}.${mode === 'webp' ? 'webp' : 'svg'}`;
 
     if (mode === 'webp') {
@@ -652,7 +358,13 @@ self.onmessage = async (event) => {
       return;
     }
 
-    const finalImageData = normalizePixelArt(imageData);
+    let finalImageData = imageData;
+    if (imageData.width > 800 || imageData.height > 800) {
+      const scale = detectPixelScale(imageData);
+      if (scale > 1) {
+        finalImageData = downsampleBlockyImage(imageData, scale);
+      }
+    }
 
     const svg = mode === 'lego'
       ? buildLegoSvgFromImageData(finalImageData)
