@@ -296,6 +296,26 @@
 #feedback-root .feedback-more{pointer-events:auto;background:rgba(22,22,22,0.9);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.24);color:rgba(255,255,255,.92);border-radius:999px;padding:14px 28px;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:all .28s var(--ease);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 #feedback-root .feedback-more:hover{transform:translateY(-3px) scale(1.03);background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);color:#fff}
 
+    #rules-open-btn{position:fixed;right:20px;bottom:20px;z-index:9400;width:54px;height:54px;border:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.92);color:#111;font-size:20px;font-weight:900;line-height:1;cursor:pointer;box-shadow:0 14px 34px rgba(0,0,0,0.34);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease),filter .28s var(--ease)}
+    #rules-open-btn:hover{background:#fff;transform:translateY(-3px) scale(1.04);box-shadow:0 18px 40px rgba(0,0,0,0.42);filter:brightness(1.02)}
+    #rules-open-btn:active{transform:translateY(1px) scale(.96)}
+    body.rules-active #rules-open-btn,body.ai-active #rules-open-btn{opacity:0;pointer-events:none;transform:scale(.85)}
+
+    #ai-block-overlay{position:fixed;inset:0;z-index:9850;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform;isolation:isolate}
+    #ai-block-backdrop{position:absolute;inset:0;z-index:0;background:rgba(5,5,5,0.82);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:auto}
+    #ai-block-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
+    #ai-block-card{position:relative;z-index:1;width:min(1040px,calc(100vw - 24px));max-height:min(88vh,920px);overflow:hidden;padding:28px 22px 22px;border-radius:28px;background:rgba(22,22,22,0.76);border:1px solid rgba(255,255,255,0.06);box-shadow:0 24px 80px rgba(0,0,0,0.52),0 0 0 1px rgba(255,255,255,0.02) inset;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;transition:transform .75s var(--ease),opacity .75s var(--ease);will-change:transform,opacity}
+    #ai-block-overlay.dismissed #ai-block-card{transform:translateY(44px) scale(.98);opacity:0}
+    #ai-block-art{display:block;width:min(94vw,920px);max-height:68vh;object-fit:contain;image-rendering:auto;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.24)}
+    #ai-block-title{margin:0;font-size:clamp(32px,6vw,74px);line-height:.95;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#fff;text-shadow:0 0 18px rgba(255,255,255,.04)}
+    #ai-block-subtitle{margin:0;font-size:12px;line-height:1.6;letter-spacing:3px;text-transform:uppercase;color:#a6a6a6}
+    #ai-block-dismiss{display:inline-flex;align-items:center;justify-content:center;min-width:180px;height:50px;margin-top:4px;border:none;border-radius:14px;background:rgba(255,255,255,0.94);color:#111;font-size:11px;font-weight:900;letter-spacing:4px;text-transform:uppercase;cursor:pointer;transition:transform .28s var(--ease),background .28s var(--ease),box-shadow .28s var(--ease),opacity .28s var(--ease)}
+    #ai-block-dismiss:hover{background:#fff;transform:translateY(-2px) scale(1.02);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+    #ai-block-dismiss:active{transform:translateY(1px) scale(.985)}
+    body.ai-active{overflow:hidden}
+    body.ai-active header{opacity:0;transform:translateX(-50%) translateY(-18px) scale(.98);pointer-events:none;filter:blur(10px)}
+    body.ai-active #bloom{opacity:0}
+
     #rules-overlay{position:fixed;inset:0;z-index:9800;display:flex;align-items:center;justify-content:center;padding:20px;opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0);transition:opacity .75s var(--ease),transform .75s var(--ease),visibility .75s;will-change:opacity,transform;isolation:isolate}
     #rules-backdrop{position:absolute;inset:0;z-index:0;background:rgba(5,5,5,0.72);backdrop-filter:blur(14px) saturate(90%);-webkit-backdrop-filter:blur(14px) saturate(90%);pointer-events:auto}
     #rules-overlay.dismissed{opacity:0;visibility:hidden;pointer-events:none;transform:translateY(48px)}
@@ -435,27 +455,31 @@
   <div id="rules-overlay" role="dialog" aria-modal="true" aria-labelledby="rules-title">
     <div id="rules-backdrop" aria-hidden="true"></div>
     <div id="rules-card" class="rules-card">
-      <div class="rules-hero">
-        <img src="FUCK_AI.png" class="rules-banner" alt="NO AI SLOP">
-        <div class="rules-hero-caption">read the rules in -&gt;</div>
-      </div>
-
-      <h2 id="rules-title" class="rules-title">GLORP: THE RULES</h2>
-
-      <div class="rules-slogan">NO AI SLOP!<span>keep ur ai shit from my glorp away!</span></div>
+      <h2 id="rules-title" class="rules-title">NO AI SLOP!</h2>
+      <div style="margin:-4px 0 18px;font-size:12px;line-height:1.8;letter-spacing:3px;text-transform:uppercase;color:#a7a7a7">keep ur ai shit from my glorp away!</div>
 
       <div class="rules-list">
-        <div class="rules-item"><strong>1:1 Pixel Ratio.</strong> Upload the file exactly as you saved it from your editor (Aseprite, Photoshop, etc.). Do not resize it!</div>
-        <div class="rules-item"><strong>PNG Only.</strong> JPEG compression creates "invisible" color noise. Noise = Broken SVG.</div>
-        <div class="rules-item"><strong>JPG / JPEG files are not accepted.</strong> Keep them out of the queue entirely.</div>
-        <div class="rules-item"><strong>No Post-FX.</strong> No blurs, soft shadows, or gradients. Only solid colors.<br><span class="rules-note">(Note: Gradients work, but the result will be heavy and laggy).</span></div>
-        <div class="rules-item"><strong>NO AI SLOP.</strong> If the filename, caption, metadata, tags, or notes mention AI-generated stuff, the file gets blocked before conversion. That includes <code>ai generated</code>, <code>generated with ai</code>, <code>generated by ai</code>, <code>created with ai</code>, <code>created by ai</code>, <code>made with ai</code>, <code>openai</code>, <code>chatgpt</code>, <code>gpt</code>, <code>gemini</code>, <code>bard</code>, <code>claude</code>, <code>anthropic</code>, <code>midjourney</code>, <code>stable diffusion</code>, <code>sdxl</code>, <code>flux</code>, <code>dall-e</code>, <code>dalle</code>, <code>ideogram</code>, <code>leonardo</code>, <code>runway</code>, <code>firefly</code>, <code>copilot</code>, <code>canva</code>, <code>krea</code>, <code>novelai</code>, <code>pixai</code>, <code>niji</code>, <code>prompt</code>, <code>negative prompt</code>, <code>controlnet</code>, <code>lora</code>, <code>seed</code>, <code>sampler</code>, <code>steps</code>, and anything that smells like AI-gen slop.</div>
-        <div class="rules-item rules-golden"><strong>THE GOLDEN RULE:</strong> If the image looks blurry or "too big" for its resolution, GLORP will see it as trash data and crash. Keep it original.</div>
+        <div class="rules-item"><strong>Original files only.</strong> Keep the image crisp, clean, and saved at the size you actually made it.</div>
+        <div class="rules-item"><strong>PNG, GIF, or WEBP.</strong> JPG and JPEG uploads are blocked.</div>
+        <div class="rules-item"><strong>No blurry upscales.</strong> If it looks smeared, overprocessed, or cooked by a generator, GLORP will stop it.</div>
+        <div class="rules-item rules-golden"><strong>KEEP IT CLEAN:</strong> GLORP works best with real pixel art and other sharp source images. No slop, no mush, no fake detail.</div>
       </div>
 
       <button id="rules-dismiss" class="rules-dismiss" type="button">GOT IT</button>
     </div>
   </div>
+
+  <div id="ai-block-overlay" class="dismissed" role="dialog" aria-modal="true" aria-labelledby="ai-block-title" aria-hidden="true">
+    <div id="ai-block-backdrop" aria-hidden="true"></div>
+    <div id="ai-block-card">
+      <h2 id="ai-block-title">NO AI SLOP!</h2>
+      <img id="ai-block-art" src="FUCK_AI.png" alt="NO AI SLOP" decoding="async" fetchpriority="high">
+      <div id="ai-block-subtitle">read the rules in -&gt; ?</div>
+      <button id="ai-block-dismiss" type="button">GOT IT</button>
+    </div>
+  </div>
+
+  <button id="rules-open-btn" type="button" aria-label="Open rules">?</button>
 
   <div id="drop-overlay"><img src="DropUrStuffHere.png" alt="Drop Here" decoding="async"></div>
 
@@ -500,7 +524,7 @@
       </div>
     </div>
 
-    <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+    <input type="file" id="file-input" multiple accept="image/png,image/gif,image/webp" style="display:none">
     <div id="status-msg"></div>
   </section>
 
@@ -609,31 +633,6 @@
   <div id="bloom" aria-hidden="true"></div>
 
   <script src="./js/app.js" defer></script>
-
-  <script>
-    (function () {
-      const overlay = document.getElementById('rules-overlay');
-      const backdrop = document.getElementById('rules-backdrop');
-      const dismiss = document.getElementById('rules-dismiss');
-      if (!overlay || !dismiss) return;
-
-      const closeRules = () => {
-        if (overlay.classList.contains('dismissed')) return;
-        overlay.classList.add('dismissed');
-        document.body.classList.remove('rules-active');
-        window.setTimeout(() => {
-          overlay.style.display = 'none';
-        }, 800);
-      };
-
-      dismiss.addEventListener('click', closeRules);
-      if (backdrop) backdrop.addEventListener('click', closeRules);
-      document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeRules();
-      });
-    })();
-  </script>
-
 
   <script>
     window.GlorpFeedback = (() => {
